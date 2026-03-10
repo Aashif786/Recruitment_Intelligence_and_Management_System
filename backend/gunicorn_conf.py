@@ -17,8 +17,8 @@ timeout = 30
 keepalive = 5
 
 # Logging
-accesslog = "logs/gunicorn_access.log"
-errorlog = "logs/gunicorn_error.log"
+accesslog = "-"   # stdout — Render captures this automatically
+errorlog = "-"    # stderr — Render captures this automatically
 loglevel = "info"
 
 # Process naming
