@@ -13,17 +13,17 @@ from app.encryption import EncryptedText
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
-        CheckConstraint("role IN ('hr', 'admin')", name='check_users_role'),
+        CheckConstraint("role IN ('admin', 'hr_manager', 'recruiter', 'interviewer', 'candidate', 'hr')", name='check_users_role'),
     )
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
-    role = Column(String(20), nullable=False, index=True)  # 'hr' or 'admin'
+    role = Column(String(20), nullable=False, index=True)  # 'admin', 'hr_manager', 'recruiter', 'interviewer', 'candidate'
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
-    otp_code = Column(String(255), nullable=True)  # Now stores bcrypt hash
+    otp_code = Column(String(255), nullable=True)
     otp_expiry = Column(DateTime(timezone=True), nullable=True, index=True)
     created_at = Column(DateTime, default=func.now(), server_default=func.now())
     updated_at = Column(DateTime, default=func.now(), server_default=func.now(), onupdate=func.now())
@@ -32,6 +32,7 @@ class User(Base):
     jobs = relationship("Job", back_populates="hr")
     hiring_decisions = relationship("HiringDecision", back_populates="hr")
     notifications = relationship("Notification", back_populates="user")
+    stages_handled = relationship("ApplicationStage", back_populates="evaluator")
 
 
 class Job(Base):
@@ -41,30 +42,29 @@ class Job(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    job_id = Column(String(50), unique=True, index=True, nullable=True) # Unique ID for identification
+    job_id = Column(String(50), unique=True, index=True, nullable=True)
     interview_token = Column(String(50), unique=True, index=True, nullable=True)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
-    experience_level = Column(String(50), nullable=False)  # 'junior', 'mid', 'senior'
+    experience_level = Column(String(50), nullable=False)
     location = Column(String(255), default='Remote')
     mode_of_work = Column(String(50), default='Remote')
     job_type = Column(String(50), default='Full-Time')
     domain = Column(String(100), default='Engineering')
-    status = Column(String(50), default='open', index=True)  # 'open', 'closed', 'on_hold'
-    primary_evaluated_skills = Column(Text)  # JSON array of the top 5 core skills
+    status = Column(String(50), default='open', index=True)
+    primary_evaluated_skills = Column(Text)
     aptitude_enabled = Column(Boolean, default=False)
-    aptitude_mode = Column(String(50), default='ai') # 'ai' or 'upload'
+    aptitude_mode = Column(String(50), default='ai')
     first_level_enabled = Column(Boolean, default=False)
-    interview_mode = Column(String(50), nullable=True)  # 'ai', 'mixed', 'upload'
-    behavioral_role = Column(String(50), default='general') # 'junior', 'mid', 'lead', 'general'
+    interview_mode = Column(String(50), nullable=True)
+    behavioral_role = Column(String(50), default='general')
     uploaded_question_file = Column(String(500), nullable=True)
     aptitude_config = Column(Text, nullable=True)
-    aptitude_questions_file = Column(String(500), nullable=True)  # Path to uploaded MCQ JSON
+    aptitude_questions_file = Column(String(500), nullable=True)
     hr_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     created_at = Column(DateTime, default=func.now(), server_default=func.now())
     updated_at = Column(DateTime, default=func.now(), server_default=func.now(), onupdate=func.now())
     closed_at = Column(DateTime, nullable=True)
-
 
     # Relationships
     hr = relationship("User", back_populates="jobs")
@@ -75,8 +75,8 @@ class Application(Base):
     __tablename__ = "applications"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('submitted', 'review_later', 'rejected', 'approved_for_interview', "
-            "'interview_completed', 'hired', 'rejected_post_interview')",
+            "status IN ('submitted', 'resume_screening', 'aptitude_round', 'ai_interview', "
+            "'technical_interview', 'hr_interview', 'final_decision', 'hired', 'rejected')",
             name='check_applications_status'
         ),
         UniqueConstraint('job_id', 'candidate_email', name='uq_application_job_email'),
@@ -93,15 +93,44 @@ class Application(Base):
     candidate_photo_path = Column(String(500), nullable=True)
     status = Column(String(50), default='submitted', index=True)
     hr_notes = Column(EncryptedText)
+    
+    # Composite Scores (Point 2)
+    resume_score = Column(Float, default=0)
+    aptitude_score = Column(Float, default=0)
+    interview_score = Column(Float, default=0)
+    composite_score = Column(Float, default=0, index=True)
+    
+    # Recommendations (Point 4)
+    recommendation = Column(String(50)) # 'Strong Hire', 'Hire', 'Borderline', 'Reject'
+    
     applied_at = Column(DateTime, default=func.now(), server_default=func.now(), index=True)
     updated_at = Column(DateTime, default=func.now(), server_default=func.now(), onupdate=func.now())
-
 
     # Relationships
     job = relationship("Job", back_populates="applications")
     resume_extraction = relationship("ResumeExtraction", back_populates="application", uselist=False, cascade="all, delete-orphan")
     interview = relationship("Interview", back_populates="application", uselist=False, cascade="all, delete-orphan")
     hiring_decision = relationship("HiringDecision", back_populates="application", uselist=False, cascade="all, delete-orphan")
+    pipeline_stages = relationship("ApplicationStage", back_populates="application", cascade="all, delete-orphan")
+
+
+class ApplicationStage(Base):
+    __tablename__ = "application_stages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey('applications.id', ondelete='CASCADE'), nullable=False, index=True)
+    stage_name = Column(String(100), nullable=False) # e.g., 'Aptitude Round'
+    stage_status = Column(String(50), default='pending') # 'pending', 'pass', 'fail', 'hold'
+    score = Column(Float, nullable=True)
+    evaluation_notes = Column(EncryptedText)
+    evaluator_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+    created_at = Column(DateTime, default=func.now(), server_default=func.now())
+
+    # Relationships
+    application = relationship("Application", back_populates="pipeline_stages")
+    evaluator = relationship("User", back_populates="stages_handled")
 
 
 class ResumeExtraction(Base):
@@ -313,3 +342,19 @@ class InterviewFeedback(Base):
 
     # Relationships
     interview = relationship("Interview")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
+    action = Column(String(255), nullable=False) # e.g., 'RESUME_SCREENING_COMPLETED'
+    resource_type = Column(String(100)) # e.g., 'Application'
+    resource_id = Column(Integer)
+    details = Column(EncryptedText) 
+    ip_address = Column(String(50))
+    created_at = Column(DateTime, default=func.now(), server_default=func.now(), index=True)
+
+    # Relationships
+    user = relationship("User")

@@ -135,8 +135,29 @@ class ApplicationResponse(BaseModel):
     candidate_photo_path: Optional[str] = None
     status: str
     hr_notes: Optional[str] = None
+    
+    # Enterprise Scoring (Point 2)
+    resume_score: Optional[float] = 0
+    aptitude_score: Optional[float] = 0
+    interview_score: Optional[float] = 0
+    composite_score: Optional[float] = 0
+    recommendation: Optional[str] = None
+    
     applied_at: datetime
     updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class ApplicationStageResponse(BaseModel):
+    id: int
+    stage_name: str
+    stage_status: str
+    score: Optional[float] = None
+    evaluation_notes: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
     
     class Config:
         from_attributes = True
@@ -145,6 +166,18 @@ class ApplicationDetailResponse(ApplicationResponse):
     job: JobResponse
     resume_extraction: Optional['ResumeExtractionResponse'] = None
     interview: Optional['InterviewResponse'] = None
+    pipeline_stages: List[ApplicationStageResponse] = []
+
+class AuditLogResponse(BaseModel):
+    id: int
+    user_id: Optional[int]
+    action: str
+    resource_type: Optional[str]
+    resource_id: Optional[int]
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
 
 # ============================================================================
 # Resume Schemas
@@ -324,6 +357,7 @@ class GeneralGrievanceCreate(BaseModel):
 class InterviewIssueResolve(BaseModel):
     hr_response: str
     action: str  # 'reissue_key', 'dismiss', 'resolve'
+    send_email: bool = True
 
 class InterviewIssueResponse(BaseModel):
     id: int

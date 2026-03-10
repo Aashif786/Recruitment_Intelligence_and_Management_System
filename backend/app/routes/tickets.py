@@ -10,7 +10,7 @@ from app.schemas import (
     InterviewIssueCreate, InterviewIssueResponse, InterviewIssueResolve,
     InterviewFeedbackCreate, InterviewFeedbackResponse, GeneralGrievanceCreate
 )
-from app.auth import get_current_user, hash_password, verify_password
+from app.auth import get_current_user, hash_password, verify_password, get_current_hr
 from app.services.email_service import send_ticket_resolved_email, send_key_reissued_email
 
 router = APIRouter(prefix="/api/tickets", tags=["Tickets"])
@@ -100,25 +100,19 @@ def submit_feedback(feedback: InterviewFeedbackCreate, db: Session = Depends(get
 
 @router.get("/count")
 def get_ticket_count(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
     """Lightweight endpoint returning just the pending ticket count for sidebar badges."""
-    if current_user.role != 'hr':
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
     count = db.query(InterviewIssue).filter(InterviewIssue.status == 'pending').count()
     return {"count": count}
 
 @router.get("", response_model=List[InterviewIssueResponse])
 def get_tickets(
     status: str = 'pending',
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
-    if current_user.role != 'hr':
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
     query = db.query(InterviewIssue)
     if status != 'all':
         query = query.filter(InterviewIssue.status == status)
@@ -138,19 +132,24 @@ def get_tickets(
 async def resolve_ticket(
     ticket_id: int,
     resolution: InterviewIssueResolve,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
-    if current_user.role != 'hr':
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
     ticket = db.query(InterviewIssue).filter(InterviewIssue.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
-    ticket.status = resolution.action if resolution.action in ['resolved', 'dismissed'] else 'resolved'
+    # Status update logic
+    if resolution.action == 'reissue_key':
+        ticket.status = 'resolved'
+    elif resolution.action in ['resolved', 'dismissed']:
+        ticket.status = resolution.action
+    elif resolution.action == 'reply':
+        # Just update response and send email, keep status as pending
+        ticket.status = 'pending'
+    
     ticket.hr_response = resolution.hr_response
-    ticket.resolved_at = datetime.now()
+    ticket.resolved_at = datetime.now() if ticket.status != 'pending' else None
     
     interview = ticket.interview
     application = interview.application
@@ -163,21 +162,24 @@ async def resolve_ticket(
         ticket.interview.status = 'not_started'
         ticket.is_reissue_granted = True
         
-        # Send reissue email
-        await send_key_reissued_email(
-            to_email=ticket.candidate_email,
-            job_title=application.job.title,
-            new_key=new_key,
-            hr_response=resolution.hr_response
-        )
-        print(f"RE-ISSUED KEY for {ticket.candidate_email}: {new_key}")
+        # Send reissue email if requested
+        if resolution.send_email:
+            await send_key_reissued_email(
+                to_email=ticket.candidate_email,
+                job_title=application.job.title,
+                new_key=new_key,
+                hr_response=resolution.hr_response
+            )
+            print(f"RE-ISSUED KEY for {ticket.candidate_email}: {new_key}")
     else:
-        # Send resolution/dismissal email
-        await send_ticket_resolved_email(
-            to_email=ticket.candidate_email,
-            issue_type=ticket.issue_type,
-            hr_response=resolution.hr_response
-        )
+        # Send resolution/dismissal email if requested
+        if resolution.send_email:
+            await send_ticket_resolved_email(
+                to_email=ticket.candidate_email,
+                issue_type=ticket.issue_type,
+                hr_response=resolution.hr_response,
+                job_title=application.job.title
+            )
 
     db.commit()
     db.refresh(ticket)

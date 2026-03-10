@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { RejectDialog } from "@/components/reject-dialog"
 import useSWR, { useSWRConfig } from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
+import { API_BASE_URL } from '@/lib/config'
 
 export default function HRApplicationDetailPage() {
     const params = useParams()
@@ -120,7 +121,7 @@ export default function HRApplicationDetailPage() {
                     <Avatar className="h-24 w-24 border-2 border-border/50 shadow-sm">
                         {application.candidate_photo_path ? (
                             <AvatarImage
-                                src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/${application.candidate_photo_path.replace(/\\/g, '/')}`}
+                                src={`${API_BASE_URL}/${application.candidate_photo_path.replace(/\\/g, '/')}`}
                                 alt={application.candidate_name}
                                 className="object-cover"
                             />
@@ -147,7 +148,8 @@ export default function HRApplicationDetailPage() {
                             <>
                                 <Button
                                     onClick={() => updateStatus('approved_for_interview')}
-                                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                                    variant="outline"
+                                    className="border-primary text-primary hover:bg-slate-600 hover:text-white hover:scale-105 text-xs font-black uppercase tracking-wider px-6 transition-all duration-300"
                                     disabled={isUpdating}
                                 >
                                     Approve for Interview
@@ -157,10 +159,11 @@ export default function HRApplicationDetailPage() {
                                     onConfirm={(reason, notes) => updateStatus('rejected', reason, notes)}
                                     trigger={
                                         <Button
-                                            variant="destructive"
+                                            variant="outline"
+                                            className="border-red-500 text-red-600 hover:bg-slate-600 hover:text-white hover:scale-105 text-xs font-black uppercase tracking-wider px-6 transition-all duration-300"
                                             disabled={isUpdating}
                                         >
-                                            Reject Application
+                                            REJECT
                                         </Button>
                                     }
                                 />
@@ -172,13 +175,14 @@ export default function HRApplicationDetailPage() {
                                 <Button
                                     onClick={() => updateStatus('review_later')}
                                     variant="outline"
-                                    className="border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                                    className="border-amber-500 text-amber-600 hover:bg-slate-600 hover:text-white hover:scale-105 text-xs font-black uppercase tracking-wider px-6 transition-all duration-300"
                                     disabled={isUpdating}
                                 >
-                                    Review Later
+                                    REVIEW LATER
                                 </Button>
                                 <Button
-                                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                    variant="outline"
+                                    className="border-blue-500 text-blue-600 hover:bg-slate-600 hover:text-white hover:scale-105 text-xs font-black uppercase tracking-wider px-6 transition-all duration-300"
                                     onClick={() => makeDecision('hired')}
                                     disabled={isUpdating}
                                 >
@@ -189,7 +193,8 @@ export default function HRApplicationDetailPage() {
                                     onConfirm={(reason, notes) => makeDecision('rejected', reason, notes)}
                                     trigger={
                                         <Button
-                                            variant="destructive"
+                                            variant="outline"
+                                            className="border-red-500 text-red-600 hover:bg-slate-600 hover:text-white hover:scale-105 text-xs font-black uppercase tracking-wider px-6 transition-all duration-300"
                                             disabled={isUpdating}
                                         >
                                             REJECT
@@ -271,7 +276,7 @@ export default function HRApplicationDetailPage() {
                         {application.resume_file_path ? (
                             <div className="pt-4">
                                 <a
-                                    href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/${application.resume_file_path.replace(/\\/g, '/')}`}
+                                    href={`${API_BASE_URL}/${application.resume_file_path.replace(/\\/g, '/')}`}
                                     target="_blank"
                                     className="text-primary hover:underline text-sm font-medium flex items-center gap-2"
                                 >

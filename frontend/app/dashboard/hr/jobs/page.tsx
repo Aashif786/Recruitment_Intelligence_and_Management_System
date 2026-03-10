@@ -7,7 +7,7 @@ import { useAuth } from '@/app/dashboard/lib/auth-context'
 import { APIClient } from '@/app/dashboard/lib/api-client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Edit2, ChevronRight } from 'lucide-react'
+import { Edit2, ChevronRight, Activity, FileText } from 'lucide-react'
 import useSWR, { useSWRConfig } from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
 
@@ -217,6 +217,24 @@ export default function HRJobsPage() {
                                 <div className="flex items-center gap-2">
                                     {job.status === 'open' && (
                                         <>
+                                            <Link href={`/dashboard/hr/pipelines/${job.id}`} onClick={(e) => e.stopPropagation()}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-primary hover:text-primary/90 hover:bg-primary/10 h-8 px-2"
+                                                >
+                                                    <Activity className="w-4 h-4 mr-1" /> Pipeline
+                                                </Button>
+                                            </Link>
+                                            <Link href={`/dashboard/hr/ranking/${job.id}`} onClick={(e) => e.stopPropagation()}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-primary hover:text-primary/90 hover:bg-primary/10 h-8 px-2"
+                                                >
+                                                    <FileText className="w-4 h-4 mr-1" /> Leaderboard
+                                                </Button>
+                                            </Link>
                                             <Link href={`/dashboard/hr/jobs/${job.id}/edit`} onClick={(e) => e.stopPropagation()}>
                                                 <Button
                                                     variant="ghost"
@@ -229,7 +247,7 @@ export default function HRJobsPage() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="text-muted-foreground hover:text-foreground hover:bg-secondary border-border pl-2 pr-2"
+                                                className="text-muted-foreground hover:text-foreground hover:bg-secondary border-border h-8 pl-2 pr-2"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleClose(job.id);
