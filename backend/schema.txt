@@ -1,0 +1,17 @@
+CREATE TABLE "applications" (
+	id INTEGER NOT NULL, 
+	job_id INTEGER NOT NULL, 
+	candidate_name VARCHAR(255) NOT NULL, 
+	candidate_email VARCHAR(255) NOT NULL, 
+	candidate_phone VARCHAR(50), 
+	resume_file_path VARCHAR(500), 
+	resume_file_name VARCHAR(255), 
+	status VARCHAR(50), 
+	hr_notes TEXT, 
+	applied_at DATETIME, 
+	updated_at DATETIME, 
+	deleted_at DATETIME, 
+	PRIMARY KEY (id), 
+	CONSTRAINT check_applications_status CHECK (status IN ('submitted', 'rejected', 'approved_for_interview', 'interview_completed', 'hired', 'rejected_post_interview')), 
+	FOREIGN KEY(job_id) REFERENCES jobs (id) ON DELETE CASCADE
+)
