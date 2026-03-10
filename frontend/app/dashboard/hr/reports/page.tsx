@@ -148,6 +148,7 @@ export default function ReportsPage() {
 
   const reports = useMemo(() => {
     return rawReports.map(report => {
+<<<<<<< HEAD
       let techSum = 0;
       let commSum = 0;
       let techCount = 0;
@@ -158,15 +159,47 @@ export default function ReportsPage() {
           techSum += q.evaluation.technical_accuracy;
           techCount++;
         }
+=======
+      let techSum = 0, behSum = 0, commSum = 0;
+      let techCount = 0, behCount = 0, commCount = 0;
+      
+      const allQ = [...(report.question_evaluations || []), ...(report.aptitude_question_evaluations || [])];
+
+      allQ.forEach(q => {
+        const score = q.evaluation?.overall ?? q.score ?? 0;
+        const qType = (q.question_type || "technical").toLowerCase();
+
+        if (qType === 'behavioral') {
+          behSum += score;
+          behCount++;
+        } else if (qType === 'technical') {
+          techSum += score;
+          techCount++;
+        }
+
+>>>>>>> fc67732bae97f8da95fde30813676c1c6ceeb92e
         if (q.evaluation?.clarity !== undefined) {
           commSum += q.evaluation.clarity;
           commCount++;
         }
       });
 
+<<<<<<< HEAD
       return {
         ...report,
         tech_score: techCount > 0 ? techSum / techCount : report.tech_score,
+=======
+      // Aptitude Calculation
+      const aptQty = report.aptitude_question_evaluations?.length || 0;
+      const aptCorrect = report.aptitude_question_evaluations?.filter(q => q.correct).length || 0;
+      const aptScore = aptQty > 0 ? (aptCorrect / aptQty) * 10 : report.aptitude_score;
+
+      return {
+        ...report,
+        tech_score: techCount > 0 ? techSum / techCount : report.tech_score,
+        behavioral_score: behCount > 0 ? behSum / behCount : report.behavioral_score,
+        aptitude_score: aptScore,
+>>>>>>> fc67732bae97f8da95fde30813676c1c6ceeb92e
         comm_score: commCount > 0 ? commSum / commCount : report.comm_score,
       };
     });
@@ -888,6 +921,7 @@ export default function ReportsPage() {
 
               <div className="flex-1 overflow-y-auto pr-2 space-y-6 pb-6">
 
+<<<<<<< HEAD
                 {/* Section Score Breakdown */}
                 <div className="space-y-3">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -903,6 +937,8 @@ export default function ReportsPage() {
 
                 </div>
 
+=======
+>>>>>>> fc67732bae97f8da95fde30813676c1c6ceeb92e
                 <div className="space-y-4 mb-8">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Activity className="h-5 w-5 text-primary" />
