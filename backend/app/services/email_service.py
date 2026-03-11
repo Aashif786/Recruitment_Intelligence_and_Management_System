@@ -3,7 +3,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import asyncio
 from typing import Optional
-from app.config import get_settings
+from app.core.config import get_settings
 from tenacity import retry, stop_after_attempt, wait_exponential
 import logging
 

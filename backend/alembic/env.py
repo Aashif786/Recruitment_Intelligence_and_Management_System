@@ -20,11 +20,13 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import Base and all models so metadata is populated
-from app.database import Base
-from app.models import (
+from app.infrastructure.database import Base
+from app.domain.models import (
     User, Job, Application, ResumeExtraction,
     Interview, InterviewQuestion, InterviewAnswer,
-    InterviewReport, HiringDecision, Notification
+    InterviewReport, HiringDecision, Notification,
+    ApplicationStage, AuditLog, InterviewSession,
+    InterviewEvent, QuestionBank, CandidateSkill, AIEvaluation
 )
 
 target_metadata = Base.metadata

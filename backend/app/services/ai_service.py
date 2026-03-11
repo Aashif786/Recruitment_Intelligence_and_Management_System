@@ -3,7 +3,7 @@ import httpx
 import json
 import asyncio
 from functools import partial
-from app.config import get_settings
+from app.core.config import get_settings
 
 # Import from the refactored interview_process package
 # Accessing config via the package modules which now use relative imports

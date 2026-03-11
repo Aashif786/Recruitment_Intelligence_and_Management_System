@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.models import Application, ApplicationStage, User, AuditLog
+from app.domain.models import Application, ApplicationStage, User, AuditLog
 from datetime import datetime
 import json
 

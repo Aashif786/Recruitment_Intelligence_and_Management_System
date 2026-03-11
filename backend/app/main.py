@@ -3,17 +3,18 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
-from app.config import get_settings
-from app.database import Base, engine
-from app.routes import auth, jobs, applications, interviews, decisions, notifications, analytics, tickets
-from app.models import (
+from app.core.config import get_settings
+from app.infrastructure.database import Base, engine
+from app.api import auth, jobs, applications, interviews, decisions, notifications, analytics, tickets
+from app.domain.models import (
     User, Job, Application, ResumeExtraction, 
     Interview, InterviewQuestion, InterviewAnswer,
-    InterviewReport, HiringDecision, Notification,
+    HiringDecision, Notification,
     ApplicationStage, AuditLog
 )
+from app.services.interview_engine.websocket_gateway import router as websocket_router
 
-from app.logging_config import setup_logging
+from app.core.logging_config import setup_logging
 
 settings = get_settings()
 
@@ -27,8 +28,8 @@ settings.validate_production_settings()
 Base.metadata.create_all(bind=engine)
 
 # Run startup migrations (add missing columns to existing tables)
-from app.migrations import run_startup_migrations
-run_startup_migrations(engine)
+# from app.core.migrations import run_startup_migrations
+# run_startup_migrations(engine)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -45,16 +46,22 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from fastapi import Request as FastAPIRequest
 from fastapi.responses import JSONResponse as FastAPIJSONResponse
-from app.rate_limiter import limiter
+from app.core.rate_limiter import limiter
 
 def cors_aware_rate_limit_handler(request: FastAPIRequest, exc: RateLimitExceeded):
     """Wrap slowapi's 429 handler to inject CORS headers so browsers can read the error."""
     response = _rate_limit_exceeded_handler(request, exc)
     origin = request.headers.get("origin")
+    # For dev, if no origin is found but it's localhost, we can fallback or just allow * for errors
+    if not origin and settings.env == "development":
+        origin = "http://localhost:3000"
+        
     allowed_origins = settings.get_allowed_origins()
-    if origin and (origin in allowed_origins or "*" in allowed_origins):
+    if origin and (origin in allowed_origins or "*" in allowed_origins or settings.env == "development"):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
 app.state.limiter = limiter
@@ -72,7 +79,7 @@ app.mount("/uploads", StaticFiles(directory=str(settings.uploads_dir)), name="up
 # This ensures CORS headers are always set before the browser sees the response.
 
 # Performance logging middleware — logs slow routes (>500ms)
-from app.middleware import PerformanceLoggingMiddleware
+from app.core.middleware import PerformanceLoggingMiddleware
 app.add_middleware(PerformanceLoggingMiddleware)
 
 # CORS middleware — must be outermost so it handles OPTIONS preflights first
@@ -117,6 +124,7 @@ app.include_router(decisions.router)
 app.include_router(notifications.router)
 app.include_router(tickets.router)
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
+app.include_router(websocket_router)
 
 # Error handlers
 @app.exception_handler(HTTPException)
@@ -128,11 +136,20 @@ async def http_exception_handler(request, exc):
     )
 
 @app.exception_handler(Exception)
-async def general_exception_handler(request, exc):
+async def general_exception_handler(request: FastAPIRequest, exc: Exception):
     import traceback
     traceback.print_exc()
     detail = f"Internal server error: {str(exc)}" if settings.debug else "Internal server error"
-    return JSONResponse(status_code=500, content={"detail": detail})
+    response = JSONResponse(status_code=500, content={"detail": detail})
+    
+    # Manually add CORS for 500 errors since they might bypass middleware if they crash early
+    origin = request.headers.get("origin")
+    allowed_origins = settings.get_allowed_origins()
+    if origin and (origin in allowed_origins or "*" in allowed_origins or settings.env == "development"):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        
+    return response
 
 
 if __name__ == "__main__":
