@@ -150,25 +150,39 @@ export default function ReportsPage() {
 
   const reports = useMemo(() => {
     return rawReports.map(report => {
-      let techSum = 0;
-      let commSum = 0;
-      let techCount = 0;
-      let commCount = 0;
+      let techSum = 0, behSum = 0, commSum = 0;
+      let techCount = 0, behCount = 0, commCount = 0;
+      
+      const allQ = [...(report.question_evaluations || []), ...(report.aptitude_question_evaluations || [])];
 
-      report.question_evaluations?.forEach(q => {
-        if (q.evaluation?.technical_accuracy !== undefined) {
-          techSum += q.evaluation.technical_accuracy;
+      allQ.forEach(q => {
+        const score = q.evaluation?.overall ?? q.score ?? 0;
+        const qType = (q.question_type || "technical").toLowerCase();
+
+        if (qType === 'behavioral') {
+          behSum += score;
+          behCount++;
+        } else if (qType === 'technical') {
+          techSum += score;
           techCount++;
         }
+
         if (q.evaluation?.clarity !== undefined) {
           commSum += q.evaluation.clarity;
           commCount++;
         }
       });
 
+      // Aptitude Calculation
+      const aptQty = report.aptitude_question_evaluations?.length || 0;
+      const aptCorrect = report.aptitude_question_evaluations?.filter(q => q.correct).length || 0;
+      const aptScore = aptQty > 0 ? (aptCorrect / aptQty) * 10 : report.aptitude_score;
+
       return {
         ...report,
         tech_score: techCount > 0 ? techSum / techCount : report.tech_score,
+        behavioral_score: behCount > 0 ? behSum / behCount : report.behavioral_score,
+        aptitude_score: aptScore,
         comm_score: commCount > 0 ? commSum / commCount : report.comm_score,
       };
     });
@@ -890,6 +904,7 @@ export default function ReportsPage() {
 
               <div className="flex-1 overflow-y-auto pr-2 space-y-6 pb-6">
 
+<<<<<<< HEAD
                 {/* Video Interview Recording */}
                 <div className="space-y-3">
                   <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-600">
@@ -935,6 +950,8 @@ export default function ReportsPage() {
 
                 </div>
 
+=======
+>>>>>>> 983f8d04613418765571aee448519ec838d8c6ec
                 <div className="space-y-4 mb-8">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Activity className="h-5 w-5 text-primary" />

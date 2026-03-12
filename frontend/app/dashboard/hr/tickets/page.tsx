@@ -19,6 +19,7 @@ import {
     MessageSquare,
     Send
 } from 'lucide-react'
+import { Switch } from "@/components/ui/switch"
 import Link from 'next/link'
 import { APIClient } from '@/app/dashboard/lib/api-client'
 import {
@@ -57,6 +58,7 @@ export default function HRTicketsPage() {
     const [hrResponse, setHrResponse] = useState('')
     const [isResolving, setIsResolving] = useState(false)
     const [filter, setFilter] = useState<'pending' | 'all'>('pending')
+    const [sendEmail, setSendEmail] = useState(true)
 
     useEffect(() => {
         fetchTickets()
@@ -75,7 +77,7 @@ export default function HRTicketsPage() {
         }
     }
 
-    const handleResolve = async (ticketId: number, action: 'reissue_key' | 'resolve' | 'dismissed') => {
+    const handleResolve = async (ticketId: number, action: 'reissue_key' | 'resolve' | 'dismissed' | 'reply') => {
         if (!hrResponse.trim() && action !== 'dismissed') {
             toast.error("Please provide a response for the candidate")
             return
@@ -85,9 +87,14 @@ export default function HRTicketsPage() {
             setIsResolving(true)
             await APIClient.put(`/api/tickets/${ticketId}/resolve`, {
                 hr_response: hrResponse,
-                action: action
+                action: action,
+                send_email: sendEmail
             })
-            toast.success(action === 'reissue_key' ? "Key re-issued and ticket resolved" : "Ticket resolved")
+            let msg = "Ticket resolved";
+            if (action === 'reissue_key') msg = "Key re-issued and ticket resolved";
+            else if (action === 'reply') msg = "Reply sent to candidate";
+            
+            toast.success(msg)
             setSelectedTicket(null)
             setHrResponse('')
             fetchTickets()
@@ -280,6 +287,17 @@ export default function HRTicketsPage() {
                                             />
                                             <p className="text-[10px] text-muted-foreground italic">This response will be sent to the candidate's email.</p>
                                         </div>
+
+                                        <div className="flex items-center space-x-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
+                                            <Switch
+                                                id="send-email"
+                                                checked={sendEmail}
+                                                onCheckedChange={setSendEmail}
+                                            />
+                                            <Label htmlFor="send-email" className="text-xs font-bold text-primary cursor-pointer leading-none">
+                                                Send email notification to candidate
+                                            </Label>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="space-y-4 min-w-0">
@@ -305,6 +323,14 @@ export default function HRTicketsPage() {
                             <DialogFooter className="flex flex-col sm:flex-row gap-3 p-6 border-t bg-muted/20">
                                 {selectedTicket.status === 'pending' ? (
                                     <div className="flex flex-wrap gap-3 w-full justify-end">
+                                        <Button
+                                            className="font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-xl h-12 px-8 text-white flex-1 sm:flex-none"
+                                            onClick={() => handleResolve(selectedTicket.id, 'reply')}
+                                            disabled={isResolving}
+                                        >
+                                            <Send className="h-4 w-4 mr-2" />
+                                            Send Reply
+                                        </Button>
                                         <Button
                                             variant="outline"
                                             className="font-bold border-2 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 rounded-xl h-12 px-6 flex-1 sm:flex-none"
