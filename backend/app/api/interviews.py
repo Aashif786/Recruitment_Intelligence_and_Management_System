@@ -1178,7 +1178,7 @@ async def end_interview(
         db.commit()
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to properly calculate intermediate scoring.")
+        raise HTTPException(status_code=500, detail=f"Failed to properly calculate intermediate scoring.")
     
     # Check for system termination reason
     from app.domain.models import InterviewIssue
