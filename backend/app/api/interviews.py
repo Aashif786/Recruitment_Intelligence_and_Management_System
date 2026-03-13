@@ -5,6 +5,10 @@ from datetime import datetime, timezone
 import json
 import os
 import random
+import logging
+import traceback
+import tempfile
+import shutil
 from app.core.config import get_settings
 from app.infrastructure.database import get_db
 from app.domain.models import User, Interview, Application, InterviewQuestion, InterviewAnswer, InterviewReport, Job
@@ -43,6 +47,7 @@ _termination_checker = _RA()
 
 
 router = APIRouter(prefix="/api/interviews", tags=["interviews"])
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 from app.core.rate_limiter import limiter
@@ -221,6 +226,15 @@ async def _generate_aptitude_questions(interview: Interview, job: Job, db: Sessi
 async def _generate_first_level_questions(interview: Interview, job: Job, application, db: Session):
     """Generate first-level interview questions (existing logic)."""
     try:
+        # Idempotency check: if non-aptitude questions already exist, skip generation
+        existing_count = db.query(InterviewQuestion).filter(
+            InterviewQuestion.interview_id == interview.id,
+            InterviewQuestion.question_type != "aptitude"
+        ).count()
+        if existing_count > 0:
+            print(f"✅ {existing_count} questions already exist for interview {interview.id}. Skipping generation.")
+            return
+
         resume_extraction = application.resume_extraction
         resume_text = resume_extraction.extracted_text if resume_extraction else ""
         
@@ -509,7 +523,7 @@ async def access_interview(
     if interview.is_used:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Interview access key has already been used")
         
-    # Ensure the DB timestamp has timezone info before comparing (SQLite returns naive)
+    # Ensure the DB timestamp has timezone info before comparing
     expires_at = interview.expires_at
     if expires_at and expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
@@ -705,13 +719,22 @@ async def submit_answer(
     db: Session = Depends(get_db)
 ):
     """Submit answer to current question (stage-aware)."""
-    if interview_session.id != interview_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-        
-    interview = interview_session
+    # Re-read with row-level lock to prevent race conditions during submission
+    interview = db.query(Interview).filter(
+        Interview.id == interview_id
+    ).with_for_update().first()
     
+    if not interview or interview_session.id != interview_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview session verification failed.")
+        
+    if interview.status != "in_progress":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail=f"Interview submission blocked: Session is in {interview.status} state."
+        )
+
     if interview.interview_stage == STAGE_COMPLETED:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Interview fully completed")
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Interview is already fully completed")
 
     # Use the explicit question_id from the request
     current_question = db.query(InterviewQuestion).filter(
@@ -1118,9 +1141,21 @@ async def end_interview(
     # ENFORCEMENT: Ensure all technical/behavioral questions were answered before ending
     total_non_aptitude_answers = len(scores) + len(behavioral_scores)
     if total_non_aptitude_answers < len(questions) and len(questions) > 0:
+        # Re-calculate missing numbers.
+        all_q_ids = {q.id for q in questions}
+        answered_ones = db.query(InterviewAnswer.question_id).filter(
+            InterviewAnswer.question_id.in_(list(all_q_ids))
+        ).all()
+        answered_set = {r[0] for r in answered_ones}
+        missing_nums = [q.question_number for q in questions if q.id not in answered_set]
+        
+        detail_msg = f"All {len(questions)} technical/behavioral questions must be answered."
+        if missing_nums:
+            detail_msg += f" Missing question numbers: {', '.join(map(str, sorted(missing_nums)))}"
+            
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"All {len(questions)} technical/behavioral questions must be answered before ending."
+            detail=detail_msg
         )
 
     try:
@@ -1139,7 +1174,7 @@ async def end_interview(
         db.commit()
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to properly calculate intermediate scoring.")
+        raise HTTPException(status_code=500, detail=f"Failed to finalize intermediate scores: {str(e)}")
     
     # Generate report
     try:
@@ -1293,19 +1328,26 @@ async def transcribe_interview_audio(
     
     # Secure temporary file handling
     suffix = os.path.splitext(file.filename)[1] if file.filename else ".webm"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        try:
-            shutil.copyfileobj(file.file, tmp)
-            tmp_path = tmp.name
-        finally:
-            file.file.close()
-
+    temp_dir = tempfile.gettempdir()
+    tmp_path = os.path.join(temp_dir, f"transcribe_{interview_id}_{int(datetime.now().timestamp())}{suffix}")
+    
     try:
+        with open(tmp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        file.file.close()
+        
+        file_size = os.path.getsize(tmp_path)
+        print(f"🎙️ Transcription requested for Interview {interview_id}. File: {file.filename}, Size: {file_size} bytes")
+
+        if file_size < 100: # Too small to be valid audio
+             return {"text": ""}
+
         text = await transcribe_audio(tmp_path)
         return {"text": text}
     except Exception as e:
-        print(f"Transcription failure: {e}")
-        raise HTTPException(status_code=500, detail="Failed to process voice audio.")
+        logger.error(f"Transcription failure for interview {interview_id}: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to process voice audio: {str(e)}")
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)

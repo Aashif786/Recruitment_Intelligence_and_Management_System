@@ -3,7 +3,7 @@ from app.infrastructure.database import engine
 import traceback
 import sys
 
-print("Creating tables in MSSQL...")
+print("Creating tables in MySQL...")
 try:
     Base.metadata.create_all(engine)
     print("Tables created successfully!")

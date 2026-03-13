@@ -183,6 +183,7 @@ async def process_application_background(application_id: int, job_id: int, abs_f
     """Heavy AI processing and notification workflow in background"""
     db = SessionLocal()
     try:
+        print(f"[DEBUG] Starting background processing for App {application_id}...")
         from app.services.candidate_service import CandidateService
         cand_service = CandidateService(db)
         
@@ -202,10 +203,14 @@ async def process_application_background(application_id: int, job_id: int, abs_f
         
         # Parse resume text based on file type
         resume_text = ""
+        print(f"[DEBUG] Extracting text from: {abs_file_path}")
         try:
             file_ext = abs_file_path.lower().split('.')[-1]
             if file_ext == 'pdf':
                 from pypdf import PdfReader
+                if not os.path.exists(abs_file_path):
+                    print(f"[ERROR] Resume file not found at: {abs_file_path}")
+                    raise FileNotFoundError(f"Resume file not found: {abs_file_path}")
                 reader = PdfReader(abs_file_path)
                 for page in reader.pages:
                     resume_text += page.extract_text() + "\n"
@@ -245,7 +250,10 @@ async def process_application_background(application_id: int, job_id: int, abs_f
         
         # Update Application summary fields
         application.resume_score = extraction_data.get("score", 0)
+        
+        # Commit extraction immediately before proceeding to stages/notifications
         db.commit()
+        print(f"[DEBUG] Resume extraction saved for App {application_id}")
 
         # Recommendation and Progression
         res_score_norm = extraction_data.get("score", 0) * 10
@@ -427,15 +435,18 @@ def update_application_status(
 
     # Generate Interview Access Key if approved
     raw_access_key = None
-    if application.status == "approved_for_interview":
+    if status_update.status == "approved_for_interview":
         existing_interview = db.query(Interview).filter(Interview.application_id == application.id).first()
+        
+        # We always want a fresh key when HR manually approves, 
+        # especially to fix cases where the initial email failed to send.
+        import uuid
+        raw_access_key = secrets.token_urlsafe(16)
+        hashed_key = pwd_context.hash(raw_access_key)
+        expiration = datetime.now(timezone.utc) + timedelta(hours=24)
+        
         if not existing_interview:
-            import uuid
-            raw_access_key = secrets.token_urlsafe(16)
-            hashed_key = pwd_context.hash(raw_access_key)
-            expiration = datetime.now(timezone.utc) + timedelta(hours=24)
             unique_test_id = f"TEST-{uuid.uuid4().hex[:8].upper()}"
-            
             new_interview = Interview(
                 test_id=unique_test_id,
                 application_id=application.id,
@@ -445,6 +456,17 @@ def update_application_status(
                 is_used=False
             )
             db.add(new_interview)
+        else:
+            # Update existing interview with new key and reset status to allow re-entry if needed
+            existing_interview.access_key_hash = hashed_key
+            existing_interview.expires_at = expiration
+            existing_interview.is_used = False
+            # If it was rejected or completed, reset it to not_started to allow the candidate to try again with the new key
+            if existing_interview.status in ['completed', 'rejected', 'cancelled']:
+                existing_interview.status = 'not_started'
+            else:
+                # Even if in_progress, we update the key so the email being sent now is valid
+                existing_interview.status = 'not_started' 
     
     db.commit()
     db.refresh(application)
@@ -452,9 +474,9 @@ def update_application_status(
     # Notifications (Point 9)
     candidate_email = application.candidate_email
     job_title = application.job.title
-    if application.status == "approved_for_interview" and raw_access_key:
+    if status_update.status == "approved_for_interview" and raw_access_key:
         background_tasks.add_task(send_approved_for_interview_email, candidate_email, job_title, raw_access_key)
-    elif application.status == "rejected":
+    elif status_update.status == "rejected":
         background_tasks.add_task(send_rejected_email, candidate_email, job_title, False)
         
     return application

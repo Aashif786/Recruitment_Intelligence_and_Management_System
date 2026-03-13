@@ -57,9 +57,17 @@ export class APIClient {
 
     if (!response.ok) {
       // Handle 401: Clear token and redirect to login
-      if (response.status === 401 && typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token')
-        window.location.href = '/'
+      if ((response.status === 401 || response.status === 403) && typeof window !== 'undefined') {
+        const isInterviewPath = window.location.pathname.startsWith('/interview')
+        if (isInterviewPath && !window.location.pathname.includes('/access')) {
+          localStorage.removeItem('auth_token')
+          window.location.href = '/interview/access'
+          return {} as T
+        } else if (response.status === 401) {
+          localStorage.removeItem('auth_token')
+          window.location.href = '/'
+          return {} as T
+        }
       }
 
       const error = await response.json().catch(() => ({ detail: response.statusText }))

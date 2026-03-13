@@ -104,7 +104,17 @@ export default function InterviewPage() {
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            const mediaRecorder = new MediaRecorder(stream)
+            
+            // Try to use a standard mime type, but fallback to whatever the browser supports
+            const options = { mimeType: 'audio/webm' }
+            let mediaRecorder: MediaRecorder
+            
+            if (MediaRecorder.isTypeSupported('audio/webm')) {
+                mediaRecorder = new MediaRecorder(stream, options)
+            } else {
+                mediaRecorder = new MediaRecorder(stream)
+            }
+
             mediaRecorderRef.current = mediaRecorder
             audioChunksRef.current = []
 
@@ -115,8 +125,11 @@ export default function InterviewPage() {
             }
 
             mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-                await handleTranscribe(audioBlob)
+                const mimeType = mediaRecorder.mimeType || 'audio/webm'
+                const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
+                if (audioBlob.size > 0) {
+                    await handleTranscribe(audioBlob)
+                }
                 // Clean up stream
                 stream.getTracks().forEach(track => track.stop())
             }
@@ -140,7 +153,10 @@ export default function InterviewPage() {
         setIsTranscribing(true)
         try {
             const formData = new FormData()
-            formData.append('file', audioBlob, 'recording.webm')
+            // Ensure filename extension matches mime type if possible
+            const ext = audioBlob.type.includes('ogg') ? 'ogg' : 'webm'
+            formData.append('file', audioBlob, `recording.${ext}`)
+            
             const res = await APIClient.postMultipart<{ text: string }>(`/api/interviews/${interviewId}/transcribe`, formData)
             if (res.text) {
                 setAnswer(prev => {
@@ -148,9 +164,10 @@ export default function InterviewPage() {
                     return trimmedPrev ? `${trimmedPrev} ${res.text.trim()}` : res.text.trim()
                 })
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Transcription failed", err)
-            alert("Voice transcription failed. You can still type your answer manually.")
+            const detail = err.message || "Please check your microphone and internet connection.";
+            alert(`Voice transcription failed: ${detail}. You can still type your answer manually.`)
         } finally {
             setIsTranscribing(false)
         }
@@ -412,9 +429,15 @@ export default function InterviewPage() {
                 setVisitedIds(new Set([qs[startIdx].id]))
                 setInterviewStatus('active')
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to load interview", err)
-            setInterviewStatus('error')
+            // If unauthorized or forbidden, redirect to access page
+            if (err.message.includes('401') || err.message.includes('403') || err.message.includes('Unauthorized') || err.message.includes('denied')) {
+                localStorage.removeItem('auth_token')
+                router.push('/interview/access')
+            } else {
+                setInterviewStatus('error')
+            }
         } finally {
             setIsLoading(false)
         }
@@ -449,13 +472,16 @@ export default function InterviewPage() {
             setAnswer('')
 
             // Auto-move to next unanswered or just next
-            if (currentIndex < totalQuestions - 1) {
-                setCurrentIndex(currentIndex + 1)
+            const nextUnanswered = updatedQuestions.findIndex((q, idx) => !q.is_answered && idx > currentIndex)
+            if (nextUnanswered !== -1) {
+                setCurrentIndex(nextUnanswered)
             } else {
-                // Check if ALL are answered
-                const isFinished = updatedQuestions.every(q => q.is_answered)
-                if (isFinished) {
-                    finishInterview()
+                // If no more unanswered after this one, check ALL earlier questions
+                const earlierUnanswered = updatedQuestions.findIndex(q => !q.is_answered)
+                if (earlierUnanswered !== -1) {
+                    setCurrentIndex(earlierUnanswered)
+                } else {
+                    finishInterview(updatedQuestions)
                 }
             }
         } catch (err: any) {
@@ -466,14 +492,31 @@ export default function InterviewPage() {
         }
     }
 
-    const finishInterview = async () => {
+    const finishInterview = async (manualQuestions?: Question[]) => {
+        const qsToUse = manualQuestions || questions
+        // Double check all questions are answered
+        const unansweredCount = qsToUse.filter(q => !q.is_answered).length
+        if (unansweredCount > 0) {
+            alert(`Please answer all questions before finishing. You have ${unansweredCount} unanswered question(s).`)
+            // Find first unanswered and jump to it
+            const firstUnanswered = qsToUse.findIndex(q => !q.is_answered)
+            if (firstUnanswered !== -1) {
+                setCurrentIndex(firstUnanswered)
+            }
+            return
+        }
+
         try {
+            setIsSubmitting(true)
             await stopOverallRecording()
             await APIClient.post(`/api/interviews/${interviewId}/end`, {})
             setInterviewStatus('completed')
             setShowFeedbackDialog(true)
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error finishing interview", err)
+            alert(err.message || "Failed to complete interview. Please try again.")
+        } finally {
+            setIsSubmitting(false)
         }
     }
 

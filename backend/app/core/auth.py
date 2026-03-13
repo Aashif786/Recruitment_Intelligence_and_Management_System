@@ -159,10 +159,16 @@ def get_current_interview(
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+    if interview.status == "not_started":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Interview has not been started yet. Please use the access key to start it.",
+        )
+        
     if interview.status != "in_progress":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Interview is not active (status: {interview.status})",
+            detail=f"Interview session is no longer active (Status: {interview.status})",
             headers={"WWW-Authenticate": "Bearer"},
         )
     

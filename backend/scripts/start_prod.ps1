@@ -8,10 +8,6 @@ if (!(Test-Path -Path "logs")) {
     New-Item -ItemType Directory -Path "logs"
 }
 
-# Apply SQLite Runtime Tuning
-Write-Host "🛠️ Applying SQLite Performance PRAGMAs..." -ForegroundColor Yellow
-python scripts/optimize_runtime_db.py
-
 # Detect CPU cores
 $cores = (Get-WmiObject -Class Win32_Processor).NumberOfCores
 $workers = ($cores * 2) + 1

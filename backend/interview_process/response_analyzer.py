@@ -180,18 +180,35 @@ class ResponseAnalyzer:
     
     def _extract_skill_from_text(self, text: str) -> str:
         """Extract skill category from text using config first"""
-        text_lower = text.lower()
+        if not text:
+            return "general"
+            
+        text_lower = text.lower().strip()
+        # Normalize text to handle underscore/space/hyphen mismatches
+        normalized_text = text_lower.replace('_', ' ').replace('-', ' ')
         
         # Use config-driven mapping first (Source of Truth)
         try:
             from .config import SKILL_CATEGORIES
-            # Sort categories to give priority to more specific ones if needed, 
-            # or just iterate.
+            
+            # 1. First check if the text matches any category key directly (normalized)
+            for category in SKILL_CATEGORIES.keys():
+                cat_lower = category.lower()
+                cat_norm = cat_lower.replace('_', ' ').replace('-', ' ')
+                
+                # Direct match OR text contains the normalized category name
+                if text_lower == cat_lower or cat_lower in text_lower or cat_norm in normalized_text:
+                    return category
+
+            # 2. Then check keywords
             for category, keywords in SKILL_CATEGORIES.items():
                 for keyword in keywords:
-                    if keyword.lower() in text_lower:
+                    kw_lower = keyword.lower()
+                    kw_norm = kw_lower.replace('_', ' ').replace('-', ' ')
+                    if kw_lower in text_lower or kw_norm in normalized_text:
                         return category
-        except Exception:
+        except Exception as e:
+            print(f"Error in skill extraction: {e}")
             pass
             
         # Hardcoded fallbacks if config fails

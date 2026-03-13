@@ -13,14 +13,14 @@ class Settings(BaseSettings):
     uploads_dir: Path = BASE_DIR / "uploads"
     videos_dir: Path = BASE_DIR / "uploads" / "videos"
     # Database
-    # To use PostgreSQL, add this to your .env file:
-    # DATABASE_URL=postgresql://user:password@host:port/dbname
-    database_url: str = f"sqlite:///{BASE_DIR}/sql_app.db"
+    # To use MySQL (current):
+    # DATABASE_URL=mysql+pymysql://user:password@host:port/dbname
+    database_url: str = ""
 
     # JWT
     jwt_secret: str = ""
     jwt_algorithm: str = "HS256"
-    jwt_expiration_minutes: int = 60
+    jwt_expiration_minutes: int = 120
     jwt_refresh_expiration_days: int = 7
 
     # OpenAI

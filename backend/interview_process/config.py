@@ -109,9 +109,10 @@ SKILL_CATEGORIES = {
         "tekla", "autocad", "SDS2", "Bluebeam",
         "Shop Drawings", "GA Drawings", "OSHA standards",
         "isometric views", "projection", "Steel detailing",
+        "Tekla EPM", "Power Fab", "PowerFab", "ABM", "KSS",
         "3D Modeling", "2D drawings", "AISC", "CISC",
         "Structural detailing", "Estimation", "BOM",
-        "RFI management", "Steel construction"
+        "RFI management", "Steel construction", "fabrication packages"
     ],
 
     # Human Resources

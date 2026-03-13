@@ -244,6 +244,7 @@ async def get_interview_reports(
                 "tech_score": report.technical_skills_score or tech_avg,
                 "comm_score": report.communication_score,
                 "evaluated_skills": report.evaluated_skills,
+                "video_url": interview.video_recording_path if interview else None,
             }
 
         # Process DB reports
@@ -302,6 +303,7 @@ async def get_interview_reports(
                                     "tech_score": data.get("tech_score") or f_tech_avg,
                                     "comm_score": data.get("comm_score"),
                                     "evaluated_skills": data.get("evaluated_skills"),
+                                    "video_url": data.get("video_url"),
                                     "source": "file"
                                 })
                                 seen_test_ids.add(t_id)

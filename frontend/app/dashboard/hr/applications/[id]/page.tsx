@@ -234,9 +234,29 @@ export default function HRApplicationDetailPage() {
 
                                 <div>
                                     <h4 className="font-semibold text-sm mb-1">Extracted Skills</h4>
-                                    <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                                        {application.resume_extraction.extracted_skills || 'None detected'}
-                                    </p>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {(() => {
+                                            const skillsRaw = application.resume_extraction.extracted_skills;
+                                            if (!skillsRaw) return <span className="text-muted-foreground text-sm italic">None detected</span>;
+                                            
+                                            try {
+                                                // Try to parse if it's a JSON string
+                                                const parsed = JSON.parse(skillsRaw);
+                                                if (Array.isArray(parsed)) {
+                                                    if (parsed.length === 0) return <span className="text-muted-foreground text-sm italic">None detected</span>;
+                                                    return parsed.map((skill: string, i: number) => (
+                                                        <span key={i} className="px-2 py-0.5 bg-primary/5 text-primary border border-primary/10 rounded-md text-xs font-medium">
+                                                            {skill}
+                                                        </span>
+                                                    ));
+                                                }
+                                            } catch (e) {
+                                                // Fallback to comma separated if not JSON
+                                                return <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded w-full">{skillsRaw}</p>;
+                                            }
+                                            return <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded w-full">{skillsRaw}</p>;
+                                        })()}
+                                    </div>
                                 </div>
                                 <div>
                                     <h4 className="font-semibold text-sm mb-1">Summary</h4>
@@ -271,7 +291,10 @@ export default function HRApplicationDetailPage() {
                                 </div>
                             </>
                         ) : (
-                            <p className="text-secondary text-sm">Resume parsing pending or failed.</p>
+                            <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex items-center gap-3">
+                                <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                                <p className="text-amber-700 dark:text-amber-400 text-sm font-medium">Resume parsing pending or failed. Please check back later.</p>
+                            </div>
                         )}
                         {application.resume_file_path ? (
                             <div className="pt-4">
