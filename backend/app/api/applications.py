@@ -209,6 +209,9 @@ async def process_application_background(application_id: int, job_id: int, abs_f
             file_ext = abs_file_path.lower().split('.')[-1]
             if file_ext == 'pdf':
                 from pypdf import PdfReader
+                if not os.path.exists(abs_file_path):
+                    print(f"[ERROR] Resume file not found at: {abs_file_path}")
+                    raise FileNotFoundError(f"Resume file not found: {abs_file_path}")
                 reader = PdfReader(abs_file_path)
                 for page in reader.pages:
                     resume_text += page.extract_text() + "\n"
@@ -474,6 +477,8 @@ async def retry_resume_analysis(
     return {"status": "success", "message": "Analysis restarted in background safely"}
 
 @router.put("/{application_id}/status")
+@router.put("/{application_id}/status", response_model=ApplicationDetailResponse)
+
 def update_application_status(
     application_id: int,
     status_update: ApplicationStatusUpdate,

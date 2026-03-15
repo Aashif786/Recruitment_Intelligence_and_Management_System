@@ -14,6 +14,8 @@ export default function InterviewAccessPage() {
     const [accessKey, setAccessKey] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [isLinkAccess, setIsLinkAccess] = useState(false)
+    const [tokenFromUrl, setTokenFromUrl] = useState<string | null>(null)
 
     // Capture the optional token query parameter to prepopulate the key
     useEffect(() => {
@@ -21,6 +23,8 @@ export default function InterviewAccessPage() {
         const tokenParam = params.get('token')
         if (tokenParam) {
             setAccessKey(tokenParam)
+            setTokenFromUrl(tokenParam)
+            setIsLinkAccess(true)
         }
     }, [])
 
@@ -88,6 +92,15 @@ export default function InterviewAccessPage() {
                     <CardDescription className="text-base text-muted-foreground">
                         Please enter your email and the access key provided by your recruiter to enter the interview session.
                     </CardDescription>
+                    
+                    {isLinkAccess && (
+                        <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-bold border border-green-500/20 mx-auto">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            Secure Link Verified
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent className="pt-8">
                     <form onSubmit={handleAccess} className="space-y-6">
@@ -134,6 +147,11 @@ export default function InterviewAccessPage() {
                                 "Enter Interview"
                             )}
                         </Button>
+                        {!isLinkAccess && (
+                             <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest font-bold">
+                                Note: Direct links are recommended for a smoother experience
+                             </p>
+                        )}
                     </form>
                 </CardContent>
             </Card>

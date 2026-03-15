@@ -23,6 +23,7 @@ def make_hiring_decision(
         InvalidTransitionError, DuplicateTransitionError,
     )
     
+    """Make hiring decision (HR only)"""
     application = db.query(Application).filter(Application.id == application_id).first()
     
     if not application:
@@ -30,6 +31,20 @@ def make_hiring_decision(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Application not found"
         )
+    
+    
+    # Strict Workflow: Check if interview is completed
+    # For HR approval, we require first_level_completed
+    if not application.interview or not application.interview.first_level_completed:
+        # Override manual allowance for candidates who didn't even start, 
+        # but only if HR is rejecting them outright.
+        if decision_data.decision == "rejected" and application.status == "approved_for_interview":
+            pass
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot make hiring decision: Interview's first level is not completed."
+            )
     
     # Validate decision
     if decision_data.decision not in ["hired", "rejected"]:
@@ -73,6 +88,7 @@ def make_hiring_decision(
         decision_comments=decision_data.decision_comments,
         decided_at=datetime.now(timezone.utc)
     )
+    
     
     try:
         db.add(hiring_decision)

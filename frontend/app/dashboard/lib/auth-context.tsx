@@ -87,7 +87,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [API_BASE_URL])
 
-
   const register = useCallback(async (email: string, password: string, full_name: string) => {
     setIsLoading(true)
     try {

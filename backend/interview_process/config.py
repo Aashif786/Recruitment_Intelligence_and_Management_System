@@ -109,9 +109,10 @@ SKILL_CATEGORIES = {
         "tekla", "autocad", "SDS2", "Bluebeam",
         "Shop Drawings", "GA Drawings", "OSHA standards",
         "isometric views", "projection", "Steel detailing",
+        "Tekla EPM", "Power Fab", "PowerFab", "ABM", "KSS",
         "3D Modeling", "2D drawings", "AISC", "CISC",
         "Structural detailing", "Estimation", "BOM",
-        "RFI management", "Steel construction"
+        "RFI management", "Steel construction", "fabrication packages"
     ],
 
     # Human Resources
@@ -162,5 +163,5 @@ SKILL_CATEGORIES = {
 
 
 # Termination keywords
-TERMINATION_KEYWORDS = ["terminate the interview"] 
-ABUSIVE_KEYWORDS = ["tab switching", "stupid", "idiot", "dumb", "worthless", "hate", "useless"]
+TERMINATION_KEYWORDS = ["terminate the interview", "i want to quit", "i want to exit", "i want to terminate the interview", "i want to end the interview", "i want to quit the interview", "i want to exit the interview"] 
+ABUSIVE_KEYWORDS = ["tab switching",  "fuck", "shit", "stupid", "idiot", "dumb", "worthless", "hate", "useless"]

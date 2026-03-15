@@ -180,18 +180,35 @@ class ResponseAnalyzer:
     
     def _extract_skill_from_text(self, text: str) -> str:
         """Extract skill category from text using config first"""
-        text_lower = text.lower()
+        if not text:
+            return "general"
+            
+        text_lower = text.lower().strip()
+        # Normalize text to handle underscore/space/hyphen mismatches
+        normalized_text = text_lower.replace('_', ' ').replace('-', ' ')
         
         # Use config-driven mapping first (Source of Truth)
         try:
             from .config import SKILL_CATEGORIES
-            # Sort categories to give priority to more specific ones if needed, 
-            # or just iterate.
+            
+            # 1. First check if the text matches any category key directly (normalized)
+            for category in SKILL_CATEGORIES.keys():
+                cat_lower = category.lower()
+                cat_norm = cat_lower.replace('_', ' ').replace('-', ' ')
+                
+                # Direct match OR text contains the normalized category name
+                if text_lower == cat_lower or cat_lower in text_lower or cat_norm in normalized_text:
+                    return category
+
+            # 2. Then check keywords
             for category, keywords in SKILL_CATEGORIES.items():
                 for keyword in keywords:
-                    if keyword.lower() in text_lower:
+                    kw_lower = keyword.lower()
+                    kw_norm = kw_lower.replace('_', ' ').replace('-', ' ')
+                    if kw_lower in text_lower or kw_norm in normalized_text:
                         return category
-        except Exception:
+        except Exception as e:
+            print(f"Error in skill extraction: {e}")
             pass
             
         # Hardcoded fallbacks if config fails
@@ -775,7 +792,7 @@ class ResponseAnalyzer:
 
     def _fallback_evaluation(self, question: str, answer: str, word_count: int, metrics: Dict) -> Dict:
         """Fallback evaluation when AI fails"""
-        base_score = 0
+        base_score = 5
         
         # Adjust based on word count
         if 100 <= word_count <= 250:
@@ -863,34 +880,24 @@ class ResponseAnalyzer:
             return False, ""
         
         response_lower = response.lower().strip()
-        word_count = len(response_lower.split())
         
-        # 1. Abusive Language (Immediate Termination)
+        # Check for abusive language
         for keyword in ABUSIVE_KEYWORDS:
-            if re.search(r'\b' + re.escape(keyword) + r'\b', response_lower):
+            if keyword in response_lower:
                 return True, "misconduct"
         
-        # 2. Explicit Candidate Request to Terminate
-        # We only consider it a request if the answer is relatively short. 
-        # Deep technical answers that happen to use words like "terminate" or "quit" 
-        # (e.g. "To terminate the process we...") should NOT trigger termination.
-        if word_count < 15:
-            for keyword in TERMINATION_KEYWORDS:
-                if re.search(r'\b' + re.escape(keyword) + r'\b', response_lower):
-                    # For extra safety with generic words like "stop" or "quit":
-                    # If it's a very generic word, require an exact or near-exact match phrase like "i want to quit"
-                    intent_phrases = [
-                        "i want to", "let me", "i need to", "can we", "please", "i'm going to"
-                    ]
-                    
-                    if len(keyword.split()) > 1:
-                        # Multi-word phrase like "terminate the interview" is explicit enough
-                        return True, "candidate_request"
-                    else:
-                        # Single word like "quit" needs to be the ENTIRE message or paired with an intent phrase
-                        if word_count <= 2 or any(phrase in response_lower for phrase in intent_phrases):
-                            return True, "candidate_request"
-
+        # Check for explicit termination request
+        # Use regex to match whole words only to avoid false positives (e.g., "backend" matching "end")
+        for keyword in TERMINATION_KEYWORDS:
+            if re.search(r'\b' + re.escape(keyword) + r'\b', response_lower):
+                return True, "candidate_request"
+        
+        # Check for extremely poor responses
+        # SKIP THIS for aptitude stage — short answers (e.g., "42", "Paris") are common and valid.
+        # DISABLED: Too aggressive for single short responses. AI will handle scoring.
+        # if question_type != "aptitude" and len(response.split()) < 5 and "skip" not in response_lower:
+        #     return True, "poor_response"
+        
         return False, ""
     
     def analyze_introduction(self, response: str, job_title: str = "") -> Dict:

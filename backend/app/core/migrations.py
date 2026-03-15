@@ -1,6 +1,6 @@
 """
 Startup migration helper — safely adds missing columns to existing tables.
-Works with both SQLite and PostgreSQL.
+Works with MySQL.
 Called from main.py AFTER Base.metadata.create_all().
 """
 from sqlalchemy import text, inspect
@@ -28,6 +28,9 @@ _REQUIRED_COLUMNS = [
     ("interview_reports", "application_id", "INTEGER"),
     ("interview_reports", "job_id", "INTEGER"),
     ("interview_reports", "termination_reason", "VARCHAR(255)"),
+    ("jobs", "interview_token", "VARCHAR(50)"),
+    ("interviews", "test_id", "VARCHAR(50)"),
+    ("interviews", "video_recording_path", "VARCHAR(500)"),
 ]
 
 

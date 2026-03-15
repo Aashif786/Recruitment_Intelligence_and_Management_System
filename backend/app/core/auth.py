@@ -138,10 +138,37 @@ def get_current_interview(
     interview_id = int(payload.get("sub"))
     
     interview = db.query(Interview).filter(Interview.id == interview_id).first()
-    if not interview or interview.status != "in_progress":
+    if not interview:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview session not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    if interview.status == "completed":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This interview has already been completed",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    if interview.status == "terminated":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This interview was terminated due to a policy violation",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    if interview.status == "not_started":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Interview has not been started yet. Please use the access key to start it.",
+        )
+        
+    if interview.status != "in_progress":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Interview not found or not active",
+            detail=f"Interview session is no longer active (Status: {interview.status})",
             headers={"WWW-Authenticate": "Bearer"},
         )
     

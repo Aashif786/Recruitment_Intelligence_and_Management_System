@@ -14,7 +14,7 @@ We have recently overhauled the frontend to deliver a state-of-the-art visual ex
 
 This is a production-ready recruitment system consisting of:
 
-1. **PostgreSQL Database** - Relational database with 11 tables
+1. **MySQL Database** - Relational database for persistent storage
 2. **Python FastAPI Backend** - RESTful API with AI integration
 3. **Next.js 16 Frontend** - Modern React UI for candidates and HR
 
@@ -62,13 +62,16 @@ This is a production-ready recruitment system consisting of:
 │   │   ├── schemas.py                # Pydantic schemas
 │   │   ├── routes/                   # API endpoints
 │   │   └── services/
-│   │       └── ai_service.py         # OpenAI integration
+│   │       └── ai_service.py         # AI integration (Groq/OpenAI)
 │   ├── requirements.txt              # Python dependencies
-│   ├── .env.example                  # Example env vars
-│   └── SETUP.md                      # Backend setup guide
+│   ├── .env                          # Local env vars
+│   └── scripts/                      # Deployment & Dev scripts
 │
-├── DATABASE_SCHEMA.sql               # PostgreSQL schema
-├── SYSTEM_ARCHITECTURE.md            # Detailed architecture docs
+├── frontend/                         # Next.js frontend
+│   ├── app/                          # Next.js pages & layouts
+│   ├── components/                   # UI components
+│   └── lib/                          # API client & utilities
+│
 └── README.md                         # This file
 ```
 
@@ -94,7 +97,7 @@ This is a production-ready recruitment system consisting of:
 └──────────────┬──────────────────────────┘
                │ (SQLAlchemy ORM)
 ┌──────────────▼──────────────────────────┐
-│  PostgreSQL Database (hr_system)        │
+│  MySQL Database (rims_db)               │
 │  - Users, Jobs, Applications            │
 │  - Interviews, Reports, Decisions       │
 └──────────────────────────────────────────┘
@@ -122,11 +125,9 @@ This is a production-ready recruitment system consisting of:
 ### 1. Database Setup
 
 ```bash
-# Create PostgreSQL database
-createdb -U postgres -h localhost hr_system
-
-# OR via psql
-psql -U postgres -c "CREATE DATABASE hr_system;"
+# Ensure MySQL is running locally (default port 3306)
+# Create the database 'rims_db'
+mysql -u root -p -e "CREATE DATABASE rims_db;"
 ```
 
 ### 2. Backend Setup
@@ -140,22 +141,20 @@ python -m venv venv
 # Activate (Windows: venv\Scripts\activate)
 source venv/bin/activate
 
-# Copy env file
-cp .env.example .env
-
-# Edit .env with your settings
-# DATABASE_URL=postgresql+psycopg2://postgres:8765@localhost:5432/hr_system
-# OPENAI_API_KEY=sk-your-api-key-here
+# Copy example env or create .env
+# Edit .env with your settings:
+# DATABASE_URL=mysql+pymysql://root:password@localhost/rims_db
+# GROQ_API_KEY=gsk_your_key
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run server (tables auto-created)
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Run server (tables are auto-created on startup)
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 10000
 ```
 
-Server: `http://localhost:8000`
-API Docs: `http://localhost:8000/docs`
+Server: `http://localhost:10000`
+API Docs: `http://localhost:10000/docs`
 
 ### 3. Frontend Setup
 
@@ -166,7 +165,7 @@ API Docs: `http://localhost:8000/docs`
 npm install
 
 # Create .env.local
-echo "NEXT_PUBLIC_API_BASE_URL=http://localhost:8000" > .env.local
+echo "NEXT_PUBLIC_API_BASE_URL=http://localhost:10000" > .env.local
 
 # Run dev server
 npm run dev
@@ -192,10 +191,8 @@ HR Manager:
 
 ## Support & Documentation
 
-- **System Architecture**: See `SYSTEM_ARCHITECTURE.md`
-- **Database Schema**: See `DATABASE_SCHEMA.sql`
-- **Backend Setup**: See `backend/SETUP.md`
-- **API Documentation**: `http://localhost:8000/docs` (Swagger UI)
+- **API Documentation**: `http://localhost:10000/docs` (Swagger UI)
+- **Frontend Dashboard**: `http://localhost:3000`
 
 ---
 

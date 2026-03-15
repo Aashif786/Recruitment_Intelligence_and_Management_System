@@ -16,6 +16,9 @@ export function GlobalNavbar() {
 
   const isDashboard = pathname?.startsWith('/dashboard')
   const isAuth = pathname?.startsWith('/auth')
+  const isInterview = pathname?.startsWith('/interview')
+
+  if (isInterview) return null
 
   return (
     <nav className="sticky top-0 w-full z-50 bg-[#0a1a3c]/90 backdrop-blur-xl border-b border-white/5 shadow-2xl h-16 flex items-center shrink-0">

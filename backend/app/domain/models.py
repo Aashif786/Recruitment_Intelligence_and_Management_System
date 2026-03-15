@@ -60,8 +60,9 @@ class Job(Base):
     behavioral_role = Column(String(50), default='general')
     uploaded_question_file = Column(String(500), nullable=True)
     aptitude_config = Column(Text, nullable=True)
-    aptitude_questions_file = Column(String(500), nullable=True)
-    hr_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=False, index=True)
+    aptitude_questions_file = Column(String(500), nullable=True)  # Path to uploaded MCQ JSON
+    duration_minutes = Column(Integer, default=60) # Global interview duration
+    hr_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     created_at = Column(DateTime, default=func.now(), server_default=func.now())
     updated_at = Column(DateTime, default=func.now(), server_default=func.now(), onupdate=func.now())
     closed_at = Column(DateTime, nullable=True)
@@ -75,8 +76,9 @@ class Application(Base):
     __tablename__ = "applications"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('applied', 'aptitude_round', 'ai_interview', 'ai_interview_completed', "
-            "'review_later', 'physical_interview', 'hired', 'rejected')",
+            "status IN ('submitted', 'resume_screening', 'aptitude_round', 'ai_interview', "
+            "'technical_interview', 'hr_interview', 'final_decision', 'hired', 'rejected', "
+            "'approved_for_interview', 'review_later', 'rejected_post_interview', 'interview_completed')",
             name='check_applications_status'
         ),
         UniqueConstraint('job_id', 'candidate_email', name='uq_application_job_email'),
@@ -91,7 +93,7 @@ class Application(Base):
     resume_file_path = Column(String(500))
     resume_file_name = Column(String(255))
     candidate_photo_path = Column(String(500), nullable=True)
-    status = Column(String(50), default='applied', index=True)
+    status = Column(String(50), default='submitted', index=True)
     hr_notes = Column(EncryptedText)
     
     # Composite Scores (Point 2)
@@ -178,9 +180,11 @@ class Interview(Base):
     interview_stage = Column(String(50), default='first_level')  # 'aptitude', 'first_level'
     aptitude_score = Column(Float, nullable=True)
     aptitude_completed_at = Column(DateTime, nullable=True)
+    duration_minutes = Column(Integer, default=60) # Snapshot of job duration when started
     aptitude_completed = Column(Boolean, default=False)
     first_level_completed = Column(Boolean, default=False)
     first_level_score = Column(Float, nullable=True)
+    video_recording_path = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=func.now(), server_default=func.now())
     updated_at = Column(DateTime, default=func.now(), server_default=func.now(), onupdate=func.now())
 
@@ -190,16 +194,16 @@ class Interview(Base):
     questions = relationship(
         "InterviewQuestion",
         back_populates="interview",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        passive_deletes=True
     )
     report = relationship(
         "InterviewReport",
         back_populates="interview",
         uselist=False,
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        passive_deletes=True
     )
-    issues = relationship("InterviewIssue", back_populates="interview", cascade="all, delete-orphan")
-    feedback = relationship("InterviewFeedback", back_populates="interview", cascade="all, delete-orphan")
 
 
 class InterviewQuestion(Base):
@@ -211,9 +215,7 @@ class InterviewQuestion(Base):
     question_text = Column(Text, nullable=False)
     question_type = Column(String(50))  # 'aptitude', 'behavioral', 'technical', 'follow_up'
     options = Column(Text, nullable=True)  # JSON array for multiple choice options
-    question_options = Column(Text, nullable=True)  # JSON array for MCQ options (aptitude)
     correct_answer = Column(Text, nullable=True)
-    correct_option = Column(Integer, nullable=True)  # Index of correct MCQ option
     ai_generated_at = Column(DateTime, default=datetime.datetime.now(timezone.utc))
     created_at = Column(DateTime, default=datetime.datetime.now(timezone.utc))
     

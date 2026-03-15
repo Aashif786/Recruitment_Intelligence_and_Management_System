@@ -28,8 +28,8 @@ settings.validate_production_settings()
 Base.metadata.create_all(bind=engine)
 
 # Run startup migrations (add missing columns to existing tables)
-from app.core.migrations import run_startup_migrations
-run_startup_migrations(engine)
+# from app.core.migrations import run_startup_migrations
+# run_startup_migrations(engine)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -69,10 +69,12 @@ app.add_exception_handler(RateLimitExceeded, cors_aware_rate_limit_handler)
 
 # Ensure essential directories exist
 settings.uploads_dir.mkdir(parents=True, exist_ok=True)
+settings.videos_dir.mkdir(parents=True, exist_ok=True)
 settings.logs_dir.mkdir(parents=True, exist_ok=True)
 
 # Static files (Resume Uploads)
 app.mount("/uploads", StaticFiles(directory=str(settings.uploads_dir)), name="uploads")
+app.mount("/uploads/videos", StaticFiles(directory=str(settings.videos_dir)), name="videos")
 
 # Middleware order matters: Starlette applies middleware in reverse-add order,
 # so add performance logger first (innermost), CORS last (outermost).
