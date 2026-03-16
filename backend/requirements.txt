@@ -90,3 +90,7 @@ gunicorn==23.0.0
 watchdog==6.0.0
 yarl==1.22.0
 slowapi
+pymysql==1.1.2
+alembic==1.18.4
+
+

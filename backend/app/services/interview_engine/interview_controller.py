@@ -57,12 +57,12 @@ async def process_interview_message(session_id: str, data: dict):
         # 4. Give feedback to candidate (optional in real interviews, but good for demo)
         await session_manager.send_personal_message({
             "type": "evaluation",
-            "score": eval_result.get("technical_score"),
+            "score": eval_result.get("technical_accuracy"),
             "feedback": eval_result.get("feedback_text")
         }, session_id)
         
         # 5. Adaptive difficulty engine
-        new_difficulty = adjust_difficulty(state["difficulty"], eval_result.get("technical_score", 5.0))
+        new_difficulty = adjust_difficulty(state["difficulty"], eval_result.get("technical_accuracy", 5.0))
         state["difficulty"] = new_difficulty
         
         # 6. Generate next question

@@ -477,7 +477,7 @@ async def retry_resume_analysis(
     return {"status": "success", "message": "Analysis restarted in background safely"}
 
 @router.put("/{application_id}/status")
-@router.put("/{application_id}/status", response_model=ApplicationDetailResponse)
+
 
 def update_application_status(
     application_id: int,

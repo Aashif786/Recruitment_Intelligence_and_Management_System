@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from typing import Optional, List
 
@@ -196,7 +196,6 @@ class AuditLogResponse(BaseModel):
         from_attributes = True
 
 
-ApplicationDetailResponse.model_rebuild()
 
 # ============================================================================
 # Resume Schemas
@@ -418,3 +417,6 @@ class InterviewFeedbackResponse(BaseModel):
 class UserVerifyOTP(BaseModel):
     email: EmailStr
     otp: str
+
+# Rebuild model to resolve forward references
+ApplicationDetailResponse.model_rebuild()

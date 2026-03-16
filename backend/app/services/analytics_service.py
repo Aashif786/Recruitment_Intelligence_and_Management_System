@@ -59,8 +59,8 @@ class AnalyticsService:
         Get count of candidates in each stage for a specific job (Point 12).
         """
         stages = [
-            'submitted', 'resume_screening', 'aptitude_round', 'ai_interview',
-            'technical_interview', 'hr_interview', 'final_decision', 'hired', 'rejected'
+            'applied', 'aptitude_round', 'ai_interview', 'ai_interview_completed',
+            'review_later', 'physical_interview', 'hired', 'rejected'
         ]
         
         stats = []

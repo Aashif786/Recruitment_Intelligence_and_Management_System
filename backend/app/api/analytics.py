@@ -169,6 +169,21 @@ async def get_interview_reports(
                             except Exception:
                                 evaluation = {}
                         evaluation.setdefault("overall", ans.answer_score or 0)
+                        # If the stored evaluation JSON is missing structured metric keys (common when evaluation failed
+                        # or older data was stored), fall back to the per-metric columns on InterviewAnswer so the
+                        # frontend doesn't render all zeros.
+                        base_overall = float(ans.answer_score or 0)
+                        q_type_lower = (q.question_type or "technical").lower()
+                        if q_type_lower == "behavioral":
+                            evaluation.setdefault("relevance", float(ans.technical_score or ans.skill_relevance_score or base_overall))
+                            evaluation.setdefault("action_impact", float(ans.completeness_score or base_overall))
+                            evaluation.setdefault("clarity", float(ans.clarity_score or base_overall))
+                        elif q_type_lower != "aptitude":
+                            evaluation.setdefault("technical_accuracy", float(ans.technical_score or ans.skill_relevance_score or base_overall))
+                            evaluation.setdefault("completeness", float(ans.completeness_score or base_overall))
+                            evaluation.setdefault("clarity", float(ans.clarity_score or base_overall))
+                            evaluation.setdefault("depth", float(ans.depth_score or base_overall))
+                            evaluation.setdefault("practicality", float(ans.practicality_score or base_overall))
 
                     q_type = (q.question_type or "technical").lower()
                     entry = {

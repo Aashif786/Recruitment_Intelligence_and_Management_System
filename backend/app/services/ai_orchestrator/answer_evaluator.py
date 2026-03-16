@@ -21,11 +21,15 @@ async def evaluate_answer(question: str, answer: str, expected_points: List[str]
     Candidate's Answer: {answer}
     
     Evaluate the candidate's answer based on the expected points and overall technical depth.
-    Return a JSON object with: 
-    - 'technical_score' (float 0-10)
-    - 'communication_score' (float 0-10)
-    - 'reasoning_score' (float 0-10)
-    - 'feedback_text' (string with constructive feedback)
+    Return a JSON object with EXACTLY the following fields: 
+    - 'technical_accuracy' (float 0-10)
+    - 'completeness' (float 0-10)
+    - 'clarity' (float 0-10)
+    - 'depth' (float 0-10)
+    - 'practicality' (float 0-10)
+    - 'strengths' (list of strings, constructively outlining positives)
+    - 'weaknesses' (list of strings, constructively outlining negatives/gaps)
+    - 'feedback_text' (string summarizing constructive feedback)
     """
     
     try:
@@ -41,8 +45,12 @@ async def evaluate_answer(question: str, answer: str, expected_points: List[str]
     except Exception as e:
         logger.error(f"Failed to evaluate answer: {str(e)}", exc_info=True)
         return {
-            "technical_score": 5.0,
-            "communication_score": 5.0,
-            "reasoning_score": 5.0,
+            "technical_accuracy": 5.0,
+            "completeness": 5.0,
+            "clarity": 5.0,
+            "depth": 5.0,
+            "practicality": 5.0,
+            "strengths": [],
+            "weaknesses": [],
             "feedback_text": "Failed to parse answer evaluation due to an error."
         }

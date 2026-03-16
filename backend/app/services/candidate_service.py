@@ -27,12 +27,14 @@ class CandidateService:
         # Update application status to the programmatic name of the stage
         status_map = {
             "Application Submitted": "applied",
-            "Resume Screening": "resume_screening",
+            "Resume Screening": "applied",
             "Aptitude Round": "aptitude_round",
             "Automated AI Interview": "ai_interview",
-            "Technical Interview": "technical_interview",
-            "HR Interview": "hr_interview",
-            "Final Decision": "physical_interview"
+            "AI Interview Completed": "ai_interview_completed",
+            "Review Later": "review_later",
+            "Physical Interview": "physical_interview",
+            "Hired": "hired",
+            "Rejected": "rejected"
         }
         
         if stage_name in status_map:

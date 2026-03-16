@@ -498,13 +498,15 @@ class ResponseAnalyzer:
             - Word count: {word_count} (ideal: 50-200 words)
             - Use of specific, real-world examples?
 
-            Provide scores in this exact format:
-            Relevance: [score]
-            Action & Impact: [score]
-            Clarity: [score]
-            Overall: [average score]
-            Strengths: [1-3 key strengths]
-            Weaknesses: [1-3 areas for improvement]
+            Provide the evaluation scores in this exact JSON structure and nothing else:
+            {{
+                "Relevance": [score],
+                "Action & Impact": [score],
+                "Clarity": [score],
+                "Overall": [average score],
+                "Strengths": ["key strength 1", "key strength 2"],
+                "Weaknesses": ["area for improvement 1"]
+            }}
             """
             system_msg = "You are an HR recruiter evaluating behavioral answers using behavioral competency frameworks. Be fair but critical."
             
@@ -516,9 +518,28 @@ class ResponseAnalyzer:
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.4,
-                    max_tokens=300
+                    max_tokens=350
                 )
                 eval_text = evaluation.choices[0].message.content  # type: ignore
+                
+                try:
+                    import json as _json
+                    cleaned = eval_text.replace("```json", "").replace("```", "").strip()
+                    parsed = _json.loads(cleaned)
+                    
+                    res = {
+                        "relevance": float(parsed.get("Relevance", parsed.get("relevance", 0))),
+                        "action_impact": float(parsed.get("Action & Impact", parsed.get("action_impact", 0))),
+                        "clarity": float(parsed.get("Clarity", parsed.get("clarity", 0))),
+                        "overall": float(parsed.get("Overall", parsed.get("overall", 0))),
+                        "strengths": parsed.get("Strengths", parsed.get("strengths", [])),
+                        "weaknesses": parsed.get("Weaknesses", parsed.get("weaknesses", []))
+                    }
+                    if res["overall"] > 0:
+                        return res
+                except Exception:
+                    pass
+                
                 return self._parse_behavioral_evaluation(eval_text, word_count)
             except Exception as e:
                 print(f"AI behavioral evaluation error: {e}")
@@ -583,17 +604,19 @@ class ResponseAnalyzer:
             - Examples provided?
             - Structure and organization?
             
-            Provide scores in this exact format:
-            Technical Accuracy: [score]
-            Completeness: [score]
-            Clarity: [score]
-            Depth: [score]
-            Practicality: [score]
-            Overall: [average score]
-            Strengths: [1-2 key strengths]
-            Weaknesses: [1-2 areas for improvement]
+            Provide the evaluation scores in this exact JSON structure and nothing else:
+            {{
+                "Technical Accuracy": [score],
+                "Completeness": [score],
+                "Clarity": [score],
+                "Depth": [score],
+                "Practicality": [score],
+                "Overall": [average score],
+                "Strengths": ["key strength 1", "key strength 2"],
+                "Weaknesses": ["area for improvement 1"]
+            }}
             """
-            system_msg = "You are a technical interviewer evaluating answers. Be fair but critical."
+            system_msg = "You are a technical recruiter. Return valid JSON only, following the exact structure without markdown enclosing blocks."
         
         try:
             evaluation = self.client.chat.completions.create(
@@ -602,11 +625,33 @@ class ResponseAnalyzer:
                     {"role": "system", "content": system_msg},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.4,
-                max_tokens=250
+                temperature=0.3, # slightly lower temperature for more absolute score indexing triggers
+                max_tokens=350
             )
             
             eval_text = evaluation.choices[0].message.content # type: ignore
+            
+            # JSON Fallback extractor integration Node triggers
+            try:
+                import json as _json
+                cleaned = eval_text.replace("```json", "").replace("```", "").strip()
+                parsed = _json.loads(cleaned)
+                
+                res = {
+                    "technical_accuracy": float(parsed.get("Technical Accuracy", parsed.get("technical_accuracy", 0))),
+                    "completeness": float(parsed.get("Completeness", parsed.get("completeness", 0))),
+                    "clarity": float(parsed.get("Clarity", parsed.get("clarity", 0))),
+                    "depth": float(parsed.get("Depth", parsed.get("depth", 0))),
+                    "practicality": float(parsed.get("Practicality", parsed.get("practicality", 0))),
+                    "overall": float(parsed.get("Overall", parsed.get("overall", 0))),
+                    "strengths": parsed.get("Strengths", parsed.get("strengths", [])),
+                    "weaknesses": parsed.get("Weaknesses", parsed.get("weaknesses", []))
+                }
+                if res["overall"] > 0:
+                     return res
+            except Exception:
+                pass # Continue to standard line splits fallback Node triggers
+                
             return self._parse_detailed_evaluation(eval_text, word_count, metrics)
             
         except Exception as e:
@@ -716,6 +761,10 @@ class ResponseAnalyzer:
                             scores["clarity"], scores["depth"], scores["practicality"]]
         scores["overall"] = sum(category_scores) / len(category_scores)
         
+        # Raise error if everything is 0 to trigger overall fallback safety layouts
+        if scores["overall"] == 0:
+            raise ValueError("Parsed score is 0.0 across categories, likely parsing failed setup")
+
         # Round scores
         for key in scores:
             if isinstance(scores[key], (int, float)):

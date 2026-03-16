@@ -76,9 +76,8 @@ class Application(Base):
     __tablename__ = "applications"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('submitted', 'resume_screening', 'aptitude_round', 'ai_interview', "
-            "'technical_interview', 'hr_interview', 'final_decision', 'hired', 'rejected', "
-            "'approved_for_interview', 'review_later', 'rejected_post_interview', 'interview_completed')",
+            "status IN ('applied', 'aptitude_round', 'ai_interview', 'ai_interview_completed', 'review_later', "
+            "'physical_interview', 'hired', 'rejected')",
             name='check_applications_status'
         ),
         UniqueConstraint('job_id', 'candidate_email', name='uq_application_job_email'),
@@ -93,7 +92,8 @@ class Application(Base):
     resume_file_path = Column(String(500))
     resume_file_name = Column(String(255))
     candidate_photo_path = Column(String(500), nullable=True)
-    status = Column(String(50), default='submitted', index=True)
+    status = Column(String(50), default='applied', index=True)
+
     hr_notes = Column(EncryptedText)
     
     # Composite Scores (Point 2)
@@ -204,6 +204,20 @@ class Interview(Base):
         cascade="all, delete-orphan",
         passive_deletes=True
     )
+    issues = relationship(
+        "InterviewIssue",
+        back_populates="interview",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
+    feedback = relationship(
+        "InterviewFeedback",
+        back_populates="interview",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
+
 
 
 class InterviewQuestion(Base):

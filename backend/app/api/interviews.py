@@ -865,7 +865,9 @@ async def submit_answer(
         # Get detailed evaluation
         try:
             # Pass question type so AI service knows whether to run technical or behavioral eval
-            evaluation = await ai_service.evaluate_detailed_answer(
+            # NOTE: `evaluate_detailed_answer` is imported directly above; using it avoids a NameError
+            # (there is no `ai_service` module object in this file).
+            evaluation = await evaluate_detailed_answer(
                 current_question.question_text, 
                 data.answer_text,
                 question_type=current_question.question_type or "technical"
@@ -961,8 +963,12 @@ async def submit_answer(
     except Exception as e:
         db.rollback()
         print(f"Error evaluating answer safely: {e}")
-    
-    return {"success": True, "answer_id": answer.id}
+        
+    return {
+        "success": True, 
+        "answer_id": answer.id,
+        "evaluation": evaluation if 'evaluation' in locals() else {"error": "Evaluation not fully saved"}
+    }
 
 
 @router.post("/{interview_id}/complete-aptitude")
@@ -1256,6 +1262,9 @@ async def end_interview(
         interview.first_level_score = interview_score
         interview.status = "completed"
         interview.ended_at = datetime.now(timezone.utc)
+        if interview.application:
+            interview.application.status = "ai_interview_completed"
+
         
         # Final score = first-level interview score ONLY
         # Aptitude is a sample test and does NOT contribute to the final score
@@ -1487,6 +1496,8 @@ async def upload_interview_video(
     # Generate a unique filename: interview_{id}_{timestamp}.webm
     timestamp = int(datetime.now(timezone.utc).timestamp())
     filename = f"interview_{interview_id}_{timestamp}.webm"
+    # Ensure the directory exists
+    os.makedirs(settings.videos_dir, exist_ok=True)
     file_path = settings.videos_dir / filename
 
     try:
