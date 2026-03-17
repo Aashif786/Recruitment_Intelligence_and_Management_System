@@ -276,57 +276,49 @@ async def _generate_first_level_questions(interview: Interview, job: Job, applic
         
         if interview_mode in ['upload', 'mixed']:
             file_name = getattr(job, 'uploaded_question_file', None)
-            if not file_name:
-                raise HTTPException(status_code=400, detail="Uploaded question file is missing for the selected mode.")
-            
-            file_path = settings.base_dir / file_name
-            if not file_path.exists():
-                raise HTTPException(status_code=400, detail="Uploaded question file not found on server.")
-                
-            try:
-                import json
-                # Robust reading for potential encoding issues
-                data = None
-                for encoding in ['utf-8-sig', 'latin-1']:
+            if file_name:
+                file_path = settings.base_dir / file_name
+                if file_path.exists():
                     try:
-                        with open(file_path, 'r', encoding=encoding) as f:
-                            data = json.load(f)
-                        break
-                    except (UnicodeDecodeError, json.JSONDecodeError):
-                        continue
-                
-                if data is None:
-                     # Fallback: Extract text and use AI to structure it
-                     raw_text = parse_content_from_path(str(file_path))
-                     if raw_text:
-                         print(f"Non-JSON question file detected. Extracting via AI...")
-                         data = await extract_questions_from_text(raw_text)
-                     else:
-                         raise ValueError("File is not a valid JSON list or has invalid encoding, and text extraction failed.")
-                
-                if not isinstance(data, list):
-                    raise ValueError("File content is not a list")
-                    
-                for item in data:
-                    if isinstance(item, dict) and 'question' in item:
-                        q_text = item['question']
-                        q_type = str(item.get('type', 'technical')).lower()
-                        options = item.get('options', [])
-                        if options:
-                            q_text += '\n' + '\n'.join([f"{chr(65+j)}) {opt}" for j, opt in enumerate(options)])
+                        import json
+                        # Robust reading for potential encoding issues
+                        data = None
+                        for encoding in ['utf-8-sig', 'latin-1']:
+                            try:
+                                with open(file_path, 'r', encoding=encoding) as f:
+                                    data = json.load(f)
+                                break
+                            except (UnicodeDecodeError, json.JSONDecodeError):
+                                continue
                         
-                        if 'behavioral' in q_type:
-                            uploaded_behav.append(q_text)
-                        else:
-                            uploaded_tech.append(q_text)
-                    elif isinstance(item, str):
-                        uploaded_tech.append(item)
+                        if data is None:
+                             # Fallback: Extract text and use AI to structure it
+                             raw_text = parse_content_from_path(str(file_path))
+                             if raw_text:
+                                 print(f"Non-JSON question file detected. Extracting via AI...")
+                                 data = await extract_questions_from_text(raw_text)
                         
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Uploaded question file is corrupt: {str(e)}")
-            
-            if not uploaded_tech and not uploaded_behav:
-                raise HTTPException(status_code=400, detail="Uploaded question file contains no valid questions.")
+                        if data and isinstance(data, list):
+                            for item in data:
+                                if isinstance(item, dict) and 'question' in item:
+                                    q_text = item['question']
+                                    q_type = str(item.get('type', 'technical')).lower()
+                                    options = item.get('options', [])
+                                    if options:
+                                        q_text += '\n' + '\n'.join([f"{chr(65+j)}) {opt}" for j, opt in enumerate(options)])
+                                    
+                                    if 'behavioral' in q_type:
+                                        uploaded_behav.append(q_text)
+                                    else:
+                                        uploaded_tech.append(q_text)
+                                elif isinstance(item, str):
+                                    uploaded_tech.append(item)
+                    except Exception as e:
+                        print(f"⚠️ Warning: Uploaded question file is corrupt/unreadable: {str(e)}")
+                else:
+                    print(f"⚠️ Warning: Uploaded question file not found on server at {file_path}. Falling back to AI.")
+            else:
+                print(f"⚠️ Warning: Uploaded question file is missing for mode '{interview_mode}'. Falling back to AI.")
                 
         # Offset question numbers based on whether aptitude was done
         q_offset = db.query(InterviewQuestion).filter(
@@ -1145,6 +1137,10 @@ async def end_interview(
     if not interview:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview not found")
 
+    import os
+    # Ensure logs directory exists for debugging
+    os.makedirs(settings.logs_dir, exist_ok=True)
+
     # Handle transition if still in aptitude or mixed stage (Unified Flow)
     if interview.interview_stage == STAGE_APTITUDE:
         # Calculate/Sync Aptitude Score before finishing
@@ -1230,30 +1226,25 @@ async def end_interview(
     
     # If explicitly terminated early (e.g. low score, abusive language), bypass the enforcement
     if interview.status != "terminated" and total_non_aptitude_answers < len(questions) and len(questions) > 0:
-        
-        # Re-calculate missing questions
+        # Calculate missing questions for logging
         all_q_ids = {q.id for q in questions}
-        
         answered_ones = db.query(InterviewAnswer.question_id).filter(
             InterviewAnswer.question_id.in_(list(all_q_ids))
         ).all()
-        
         answered_set = {r[0] for r in answered_ones}
+        missing_nums = [q.question_number for q in questions if q.id not in answered_set]
         
-        missing_nums = [
-            q.question_number for q in questions
-            if q.id not in answered_set
-        ]
-
-        detail_msg = f"All {len(questions)} technical/behavioral questions must be answered before ending."
-
-        if missing_nums:
-            detail_msg += f" Missing question numbers: {', '.join(map(str, sorted(missing_nums)))}"
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=detail_msg
-        )
+        warn_msg = f"Interview {interview_id} ending with {len(missing_nums)} missing answers: {missing_nums}"
+        print(f"⚠️ {warn_msg}")
+        
+        # Soft Enforcement: If only 1-3 are missing, let it pass but log it.
+        # This prevents race condition blocks while still catching major skips.
+        if len(missing_nums) > 3:
+            detail_msg = f"All {len(questions)} technical/behavioral questions must be answered before ending. Missing: {missing_nums}"
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=detail_msg
+            )
     
     try:
         interview.overall_score = interview_score
@@ -1453,6 +1444,12 @@ async def transcribe_interview_audio(
     if interview_session.id != interview_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     
+    import os
+    import tempfile
+    import shutil
+    import traceback
+    from datetime import datetime
+
     # Secure temporary file handling
     suffix = os.path.splitext(file.filename)[1] if file.filename else ".webm"
     temp_dir = tempfile.gettempdir()
@@ -1493,6 +1490,9 @@ async def upload_interview_video(
     if interview_session.id != interview_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    import os
+    import shutil
+    from datetime import datetime
     # Generate a unique filename: interview_{id}_{timestamp}.webm
     timestamp = int(datetime.now(timezone.utc).timestamp())
     filename = f"interview_{interview_id}_{timestamp}.webm"
