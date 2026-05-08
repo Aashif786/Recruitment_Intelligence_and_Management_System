@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, and_
 from typing import List, Dict, Any, Optional
 from app.infrastructure.database import get_db
 from app.domain.models import User, Job, Application, Interview, InterviewReport, InterviewQuestion, InterviewAnswer
@@ -120,19 +120,24 @@ def get_interview_reports(
             query = query.filter(Application.hr_id == current_user.id)
         
         # Apply Filters
-        if job_id:
+        if job_id and str(job_id).lower() != "all":
             query = query.filter(Application.job_id == job_id)
         
-        if status and status != "All":
-            if status == "Select":
-                query = query.filter(Interview.overall_score > 6)
-            elif status == "Consider":
-                query = query.filter(Interview.overall_score > 4, Interview.overall_score <= 6)
-            elif status == "Reject":
-                query = query.filter(Interview.overall_score <= 4)
-            elif status == "Not Completed":
+        if status and str(status).lower() != "all":
+            status_lower = status.lower()
+            if status_lower == "select":
+                query = query.filter(or_(Interview.overall_score > 6, InterviewReport.overall_score > 6))
+            elif status_lower == "consider":
+                query = query.filter(or_(
+                    and_(Interview.overall_score > 4, Interview.overall_score <= 6),
+                    and_(InterviewReport.overall_score > 4, InterviewReport.overall_score <= 6)
+                ))
+            elif status_lower == "reject":
+                query = query.filter(or_(Interview.overall_score <= 4, InterviewReport.overall_score <= 4))
+            elif status_lower == "not completed":
                 query = query.filter(or_(Interview.id == None, Interview.status != "completed"))
             else:
+                # Direct application status match
                 query = query.filter(Application.status == status)
 
         if experience and experience != "All":
@@ -346,66 +351,80 @@ def get_interview_reports(
                         pass
 
                 # Calculate averages for return
-                all_q = question_evaluations + aptitude_evals
-                tech_s = [q.get("score", 0) for q in all_q if q.get("question_type") == "technical"]
-                beh_s = [q.get("score", 0) for q in all_q if q.get("question_type") == "behavioral"]
-                apt_q = aptitude_evals
+                all_q = (question_evaluations or []) + (aptitude_evals or [])
+                tech_s = [q.get("score", 0) for q in all_q if q.get("question_type") == "technical" and q.get("score") is not None]
+                beh_s = [q.get("score", 0) for q in all_q if q.get("question_type") == "behavioral" and q.get("score") is not None]
+                apt_q = aptitude_evals or []
                 
                 tech_avg = sum(tech_s) / len(tech_s) if tech_s else 0
                 beh_avg = sum(beh_s) / len(beh_s) if beh_s else 0
                 apt_qty = len(apt_q)
-                apt_correct = sum(1 for q in apt_q if q.get("correct"))
+                apt_correct = sum(1 for q in apt_q if q.get("correct") is True)
 
                 apt_score = (apt_correct / apt_qty * 10) if apt_qty > 0 else 0
 
                 # 4. Construct Final Response with Safe Timestamps
                 created = None
-                if report and hasattr(report, 'created_at') and report.created_at:
+                # Use getattr for maximum safety against detached objects or missing attributes
+                if report and getattr(report, 'created_at', None):
                     created = report.created_at
-                elif interview and hasattr(interview, 'created_at') and interview.created_at:
+                elif interview and getattr(interview, 'created_at', None):
                     created = interview.created_at
-                else:
+                elif app and getattr(app, 'applied_at', None):
                     created = app.applied_at
                 
                 # Identification Fallbacks
-                report_id = report.id if report else (f"skel_{interview.id}" if interview else f"app_{app.id}")
-                interview_id = interview.id if interview else None
-                test_id = interview.test_id if interview else None
-                filename = f"report_{interview.id}.json" if interview else f"app_{app.id}.json"
-                video_url = f"/api/interviews/{interview.id}/video-stream" if (interview and hasattr(interview, 'video_recording_path') and interview.video_recording_path) else None
+                rid = getattr(report, 'id', None) if report else None
+                iid = getattr(interview, 'id', None) if interview else None
+                aid = getattr(app, 'id', '0')
+                
+                report_id = rid if rid else (f"skel_{iid}" if iid else f"app_{aid}")
+                interview_id = iid
+                test_id = getattr(interview, 'test_id', None) if interview else None
+                filename = f"report_{iid}.json" if iid else f"app_{aid}.json"
+                
+                vpath = getattr(interview, 'video_recording_path', None) if interview else None
+                video_url = f"/api/interviews/{iid}/video-stream" if (iid and vpath) else None
+
+                # Score fallbacks
+                r_overall = getattr(report, 'overall_score', None)
+                i_overall = getattr(interview, 'overall_score', None)
+                r_combined = getattr(report, 'combined_score', None)
+                r_tech = getattr(report, 'technical_skills_score', None)
+                r_beh = getattr(report, 'behavioral_score', None)
+                r_apt = getattr(report, 'aptitude_score', None)
 
                 reports.append({
-                    "id": report_id,
+                    "id": str(report_id),
                     "interview_id": interview_id,
                     "filename": filename,
                     "test_id": test_id,
-                    "timestamp": created.isoformat() if created else "",
+                    "timestamp": created.isoformat() if created else datetime.now().isoformat(),
                     "display_date": created.strftime("%Y-%m-%d %H:%M:%S") if created else "",
                     "display_date_short": created.strftime("%b %d, %Y") if created else "",
-                    "status": app.status if app else (interview.status if interview else "unknown"),
-                    "overall_score": float(report.overall_score if (report and report.overall_score is not None) else (interview.overall_score if (interview and interview.overall_score is not None) else 0)),
-                    "final_score": float(report.combined_score if (report and report.combined_score is not None) else (interview.overall_score if (interview and interview.overall_score is not None) else 0)),
-                    "technical_score": float(tech_avg if tech_s else (report.technical_skills_score if (report and report.technical_skills_score is not None) else 0)),
-                    "behavioral_score": float(beh_avg if beh_s else (report.behavioral_score if (report and report.behavioral_score is not None) else 0)),
-                    "aptitude_score": float(apt_score if apt_qty > 0 else (report.aptitude_score if (report and report.aptitude_score is not None) else 0)),
+                    "status": getattr(app, 'status', 'unknown'),
+                    "overall_score": float(r_overall if r_overall is not None else (i_overall if i_overall is not None else 0)),
+                    "final_score": float(r_combined if r_combined is not None else (i_overall if i_overall is not None else 0)),
+                    "technical_score": float(tech_avg if tech_s else (r_tech if r_tech is not None else 0)),
+                    "behavioral_score": float(beh_avg if beh_s else (r_beh if r_beh is not None else 0)),
+                    "aptitude_score": float(apt_score if apt_qty > 0 else (r_apt if r_apt is not None else 0)),
                     "total_questions_answered": len([e for e in question_evaluations if e.get("answer")]),
                     "aptitude_questions_answered": apt_qty,
                     "question_evaluations": question_evaluations,
                     "aptitude_question_evaluations": aptitude_evals,
                     "candidate_profile": candidate_profile,
-                    "recommendation": report.recommendation if report else "consider",
+                    "recommendation": getattr(report, 'recommendation', 'consider') if report else "consider",
                     "video_url": video_url,
-                    "assigned_hr_id": app.hr_id,
-                    "assigned_hr_name": app.hr.full_name if (hasattr(app, 'hr') and app.hr) else "Unknown",
-                    "is_owner": (app.hr_id == current_user.id) if (current_user and hasattr(current_user, 'id')) else False,
+                    "assigned_hr_id": getattr(app, 'hr_id', None),
+                    "assigned_hr_name": getattr(app.hr, 'full_name', 'Unknown') if (app and getattr(app, 'hr', None)) else "Unknown",
+                    "is_owner": (getattr(app, 'hr_id', None) == current_user.id) if (current_user and hasattr(current_user, 'id')) else False,
                     "termination_reason": getattr(report, 'termination_reason', None)
                 })
             except Exception as e:
-                # Log specific error and keep going
-                logger.warning(f"[REPORTS][SKIPPED] Application record failed processing: {str(e)}")
+                # Log specific error and keep going - DO NOT CRASH THE WHOLE LIST
+                logger.warning(f"[REPORTS][SKIPPED] Application {getattr(app, 'id', 'unknown')} failed processing: {str(e)}")
                 failed_count += 1
                 continue
-
 
         # Final sort - newest first by timestamp
         reports.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
@@ -420,24 +439,9 @@ def get_interview_reports(
             "pages": (total + limit - 1) // limit if limit > 0 else 1
         }
 
-
-
-        # Final sort - newest first by timestamp (avoiding mixed type ID comparison crash)
-        reports.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
-        
-        logger.info(f"[REPORTS] Found {len(reports)} records for HR {current_user.id} (failed: {failed_count})")
-        
-        return {
-            "reports": reports,
-            "total": total,
-            "count": len(reports),
-            "failed": failed_count,
-            "pages": (total + limit - 1) // limit if limit > 0 else 1
-        }
-
     except Exception as e:
         import traceback
-        logger.critical("CRITICAL ERROR in get_interview_reports:")
+        logger.critical(f"CRITICAL ERROR in get_interview_reports: {str(e)}")
         logger.error(traceback.format_exc())
         return {
             "reports": [],
@@ -446,6 +450,7 @@ def get_interview_reports(
             "failed": 0,
             "pages": 0
         }
+
 
 @router.get("/interviews")
 def get_filtered_interviews(
@@ -456,6 +461,7 @@ def get_filtered_interviews(
     search: Optional[str] = None,
     date: Optional[str] = None,
     status: Optional[str] = None,
+    job_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 50,
     current_user: User = Depends(get_current_hr),
@@ -466,8 +472,10 @@ def get_filtered_interviews(
     Basing this on Applications ensures the list count matches the 'Total Candidates' metric.
     """
     from sqlalchemy.orm import selectinload
-    from sqlalchemy import or_
+    from sqlalchemy import or_, and_
     
+    logger.info(f"Filtering interviews: status={status}, job_id={job_id}, search={search}")
+
     # Source of truth is Application to ensure 100% data alignment with Total Candidates card
     query = db.query(Application)\
         .outerjoin(Job, Application.job_id == Job.id)\
@@ -480,6 +488,10 @@ def get_filtered_interviews(
     # Apply visibility isolation
     if current_user.role.lower() != "super_admin":
         query = query.filter(Application.hr_id == current_user.id)
+
+    # Filter by Job ID
+    if job_id:
+        query = query.filter(Application.job_id == job_id)
 
     # Apply global search if present
     if search:
@@ -504,32 +516,33 @@ def get_filtered_interviews(
         query = query.filter(Job.title.ilike(f"%{role_applied}%"))
     
     if status and status != "all":
-        if status == "hired":
+        status_lower = status.lower()
+        if status_lower == "hired":
             query = query.filter(Application.status.in_(['hired', 'accepted', 'onboarded']))
-        elif status == "completed":
+        elif status_lower == "completed":
             query = query.filter(or_(
                 Interview.status == 'completed',
-                Application.status == 'interview_completed'
+                and_(Interview.id == None, Application.status == 'interview_completed')
             ))
-        elif status == "rejected":
+        elif status_lower == "rejected":
             query = query.filter(Application.status == 'rejected')
-        elif status == "not_started":
-            # Either interview explicitly not started, or application still in early stages
+        elif status_lower == "not_started":
+            # Priority: If interview exists, must be not_started. If not, application must be early stage.
             query = query.filter(or_(
                 Interview.status == 'not_started',
-                Application.status.in_(['applied', 'screened']),
-                Interview.id == None # No interview record yet
+                and_(Interview.id == None, Application.status.in_(['applied', 'screened']))
             ))
-        elif status == "in_progress":
+        elif status_lower == "in_progress":
+            # Priority: If interview exists, must be in_progress. If not, application must be in-progress stage.
             query = query.filter(or_(
                 Interview.status == 'in_progress',
-                Application.status.in_(['aptitude_round', 'ai_interview', 'physical_interview'])
+                and_(Interview.id == None, Application.status.in_(['aptitude_round', 'ai_interview', 'physical_interview']))
             ))
         else:
-            # Fallback for any other specific status
+            # Fallback for any other specific status (e.g., 'terminated', 'cancelled')
             query = query.filter(or_(
-                Interview.status == status,
-                Application.status == status
+                Interview.status == status_lower,
+                and_(Interview.id == None, Application.status == status_lower)
             ))
     
     if date:
@@ -546,7 +559,7 @@ def get_filtered_interviews(
 
     # Order by newest first
     total = query.count()
-    applications = query.order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
+    applications = query.order_by(Application.applied_at.desc(), Application.id.desc()).offset(skip).limit(limit).all()
 
     result = []
     for app in applications:
