@@ -182,7 +182,7 @@ export class APIClient {
         if (response.status === 401) {
           localStorage.removeItem('auth_token')
           if (!window.location.pathname.includes('/interview')) {
-             window.location.href = '/'
+             window.location.href = '/calrims/'
           }
         }
       }

@@ -17,12 +17,14 @@ services:
     build: 
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=https://caldimproducts.com/calrims/api
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_BASE_URL=https://caldimproducts.com/calrims
+      - NEXT_PUBLIC_API_BASE_URL=https://caldimproducts.com/calrims/api
       - HOSTNAME=0.0.0.0
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/calrims"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/calrims/"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -51,12 +53,14 @@ services:
     build: 
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=https://caldimproducts.com/calrims/api
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_BASE_URL=https://caldimproducts.com/calrims
+      - NEXT_PUBLIC_API_BASE_URL=https://caldimproducts.com/calrims/api
       - HOSTNAME=0.0.0.0
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/calrims"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/calrims/"]
       interval: 10s
       timeout: 5s
       retries: 5

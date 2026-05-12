@@ -16,6 +16,7 @@ REDIRECT_URI = os.getenv("LINKEDIN_REDIRECT_URI")
 if not CLIENT_ID or not CLIENT_SECRET:
     print("Error: LINKEDIN_CLIENT_ID or LINKEDIN_CLIENT_SECRET is missing in .env")
     exit(1)
+    
 
 def generate_token():
     print("\n--- LinkedIn Access Token Generator ---")

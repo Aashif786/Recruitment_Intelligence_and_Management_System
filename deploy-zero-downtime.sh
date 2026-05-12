@@ -65,8 +65,12 @@ echo "✅ New environment $DEPLOY_ENV is healthy."
 
 # 4. Traffic Switching (Step 4 & 7)
 echo "🔀 Switching NGINX traffic to $DEPLOY_ENV..."
-sed -i "s/server frontend_$ACTIVE_ENV:3000;/server frontend_$DEPLOY_ENV:3000;/g" nginx.conf
-sed -i "s/server backend_$ACTIVE_ENV:10000;/server backend_$DEPLOY_ENV:10000;/g" nginx.conf
+# Use a temporary file and 'cat' to preserve the inode, ensuring Docker bind-mounts update correctly
+sed "s/frontend_$ACTIVE_ENV:3000/frontend_$DEPLOY_ENV:3000/g" nginx.conf > nginx.conf.tmp
+sed -i "s/backend_$ACTIVE_ENV:10000/backend_$DEPLOY_ENV:10000/g" nginx.conf.tmp
+cat nginx.conf.tmp > nginx.conf
+rm nginx.conf.tmp
+
 docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
 
 echo "✅ Traffic successfully routed to $DEPLOY_ENV."
