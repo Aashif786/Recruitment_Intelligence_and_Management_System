@@ -276,8 +276,9 @@ export default function OnboardingPage() {
                                     const today = new Date()
                                     today.setHours(0, 0, 0, 0)
                                     const diff = jDate.getTime() - today.getTime()
-                                    // Include today (0) and up to 7 days in the future
-                                    return diff >= 0 && diff <= 7 * 24 * 60 * 60 * 1000
+                                    // Task: upcoming filter sis not properly working... diff == 7 days
+                                    // Use exactly 7 days (604800000 ms)
+                                    return diff === 7 * 24 * 60 * 60 * 1000
                                 }).length || 0}
                             </div>
                             <p className="text-xs text-muted-foreground">Reminders sent automatically</p>

@@ -15,6 +15,7 @@ import { Check, ArrowRight, Trash2, UserCheck } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { toast } from 'sonner'
 
 interface HRUser {
   id: number
@@ -29,6 +30,24 @@ export default function ApprovalsPage() {
   const [processingId, setProcessingId] = React.useState<number | null>(null)
   const [status, setStatus] = React.useState<string>('pending')
   const [confirmAction, setConfirmAction] = React.useState<{ type: 'reject' | 'remove'; userId: number; message: string } | null>(null)
+  const [otpConfirmUser, setOtpConfirmUser] = React.useState<HRUser | null>(null)
+  const [isSendingOtp, setIsSendingOtp] = React.useState(false)
+
+  const handleSendOTP = async () => {
+    if (!otpConfirmUser) return
+    setIsSendingOtp(true)
+    try {
+      // We use the public forgot-password endpoint to trigger the OTP
+      await APIClient.post('/api/auth/forgot-password', { email: otpConfirmUser.email })
+      toast.success(`Password reset OTP sent to ${otpConfirmUser.email}`)
+      setOtpConfirmUser(null)
+    } catch (err) {
+      console.error('Failed to send OTP', err instanceof Error ? err.message : String(err))
+      toast.error('Failed to send password reset email. Please try again.')
+    } finally {
+      setIsSendingOtp(false)
+    }
+  }
 
   const isSuperAdmin = user?.role === 'super_admin'
   const shouldFetch = isSuperAdmin
@@ -210,18 +229,37 @@ export default function ApprovalsPage() {
                 {hrUsers.map((hrUser) => (
                   <TableRow key={hrUser.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell>{hrUser.id}</TableCell>
-                    <TableCell>{hrUser.email}</TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto font-medium text-primary hover:underline decoration-primary/30"
+                        onClick={() => setOtpConfirmUser(hrUser)}
+                      >
+                        {hrUser.email}
+                      </Button>
+                    </TableCell>
                     <TableCell>{hrUser.full_name}</TableCell>
                     <TableCell>
                       {getStatusBadge(hrUser)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        {status === 'approved' && hrUser.is_active && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary font-bold"
+                            onClick={() => setOtpConfirmUser(hrUser)}
+                          >
+                            Send OTP
+                          </Button>
+                        )}
                         {status === 'pending' && (
                           <>
                             <Button
                               size="sm"
                               variant="destructive"
+                              className="h-8 text-xs font-bold"
                               disabled={processingId === hrUser.id}
                               onClick={() => handleReject(hrUser.id)}
                             >
@@ -229,10 +267,11 @@ export default function ApprovalsPage() {
                             </Button>
                             <Button
                               size="sm"
+                              className="h-8 text-xs font-bold shadow-sm shadow-primary/20"
                               disabled={processingId === hrUser.id}
                               onClick={() => handleApprove(hrUser.id)}
                             >
-                              <Check className="mr-2 h-4 w-4" />
+                              <Check className="mr-1.5 h-3.5 w-3.5" />
                               Approve
                             </Button>
                           </>
@@ -241,10 +280,11 @@ export default function ApprovalsPage() {
                           <Button
                             size="sm"
                             variant="destructive"
+                            className="h-8 text-xs font-bold"
                             disabled={processingId === hrUser.id}
                             onClick={() => handleRemove(hrUser.id)}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                             Deactivate
                           </Button>
                         )}
@@ -262,14 +302,55 @@ export default function ApprovalsPage() {
       </Card>
 
       <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Confirm Action</DialogTitle>
-            <DialogDescription>{confirmAction?.message}</DialogDescription>
+            <DialogTitle className="text-xl font-bold">Confirm Action</DialogTitle>
+            <DialogDescription className="text-base">{confirmAction?.message}</DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleConfirm} disabled={!!processingId}>Confirm</Button>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" className="rounded-xl font-bold h-11" onClick={() => setConfirmAction(null)}>Cancel</Button>
+            <Button variant="destructive" className="rounded-xl font-bold h-11 shadow-lg shadow-destructive/20" onClick={handleConfirm} disabled={!!processingId}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Reset OTP Confirmation Dialog */}
+      <Dialog open={!!otpConfirmUser} onOpenChange={() => setOtpConfirmUser(null)}>
+        <DialogContent className="max-w-md rounded-2xl border-primary/20 shadow-2xl">
+          <DialogHeader className="space-y-3">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
+              <UserCheck className="h-6 w-6 text-primary" />
+            </div>
+            <DialogTitle className="text-2xl font-black tracking-tight">Send Password Reset?</DialogTitle>
+            <DialogDescription className="text-base text-muted-foreground leading-relaxed">
+              You are about to trigger a password reset OTP for <strong className="text-foreground">{otpConfirmUser?.full_name}</strong> ({otpConfirmUser?.email}). 
+              <br /><br />
+              The user will receive an email with a 6-digit code to update their password.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-6 flex gap-2">
+            <Button 
+              variant="ghost" 
+              className="flex-1 font-bold h-12 rounded-xl text-muted-foreground" 
+              onClick={() => setOtpConfirmUser(null)}
+              disabled={isSendingOtp}
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="flex-1 font-bold h-12 rounded-xl bg-primary shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all" 
+              onClick={handleSendOTP}
+              disabled={isSendingOtp}
+            >
+              {isSendingOtp ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Sending...
+                </>
+              ) : (
+                'Send OTP'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

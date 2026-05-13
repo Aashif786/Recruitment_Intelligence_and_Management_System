@@ -48,7 +48,8 @@ class AnalyticsService:
             metrics_query = db.query(
                 func.count(Application.id).label("total_apps"),
                 func.count(case((Application.status.in_(['accepted', 'hired', 'onboarded']), Application.id))).label("hired_apps"),
-                func.count(case((Application.offer_sent == True, Application.id))).label("offered_apps"),
+                func.count(case((Application.status == 'offer_sent', Application.id))).label("offered_apps"),
+                func.count(case((Application.status.in_(['accepted', 'hired', 'onboarded', 'rejected']), Application.id))).label("closed_apps"),
                 func.avg(case((Application.composite_score > 0, Application.composite_score))).label("avg_score")
             )
             
@@ -58,6 +59,7 @@ class AnalyticsService:
             total_applications = m_res.total_apps or 0
             hired_count = m_res.hired_apps or 0
             offered_count = m_res.offered_apps or 0
+            closed_apps_count = m_res.closed_apps or 0
             average_score = m_res.avg_score or 0
 
             # Interview stats
@@ -72,7 +74,9 @@ class AnalyticsService:
             total_interviews = i_res.total_ints or 0
             completed_interviews = i_res.completed_ints or 0
             
-            success_rate = (hired_count / total_applications * 100) if total_applications > 0 else 0
+            # Task: Candidates 'pending' should not be calculated in success rate.
+            # Success Rate = Hired / Closed (Hired + Onboarded + Rejected)
+            success_rate = (hired_count / closed_apps_count * 100) if closed_apps_count > 0 else 0
 
             result = {
                 "total_applications": total_applications,
@@ -155,7 +159,7 @@ class AnalyticsService:
         
         # Hired Count and Offered Count
         hired_metrics = self.db.query(func.count(Application.id)).filter(Application.status.in_(['accepted', 'hired', 'onboarded'])).outerjoin(Job, Application.job_id == Job.id)
-        offered_metrics = self.db.query(func.count(Application.id)).filter(Application.offer_sent == True).outerjoin(Job, Application.job_id == Job.id)
+        offered_metrics = self.db.query(func.count(Application.id)).filter(Application.status == 'offer_sent').outerjoin(Job, Application.job_id == Job.id)
 
         if hr_id:
             app_metrics = app_metrics.filter(or_(Job.hr_id == hr_id, Application.hr_id == hr_id))
