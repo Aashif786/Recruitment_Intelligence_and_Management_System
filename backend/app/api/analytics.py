@@ -156,9 +156,14 @@ def get_interview_reports(
 
         if skill and skill != "All":
             from app.domain.models import ResumeExtraction
+            skill_space = skill.replace('_', ' ')
             query = query.filter(or_(
-                Application.resume_extraction.has(ResumeExtraction.extracted_skills.ilike(f"%{skill}%")),
-                Interview.locked_skill.ilike(f"%{skill}%")
+                Application.resume_extraction.has(or_(
+                    ResumeExtraction.extracted_skills.ilike(f"%{skill}%"),
+                    ResumeExtraction.extracted_skills.ilike(f"%{skill_space}%")
+                )),
+                Interview.locked_skill.ilike(f"%{skill}%"),
+                Interview.locked_skill.ilike(f"%{skill_space}%")
             ))
 
         if search:

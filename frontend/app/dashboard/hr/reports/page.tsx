@@ -571,17 +571,37 @@ export default function ReportsPage() {
   }
 
   const downloadCSV = () => {
-    const headers = ['Candidate,Date,Primary Skill,Experience,Score,Status']
-    const rows = filteredReports.map((r: Report) => [
-      `"${r.filename.replace('.json', '')}"`,
-      `"${r.display_date_short}"`,
-      `"${r.candidate_profile.primary_skill || 'N/A'}"`,
-      `"${r.candidate_profile.experience_level || 'N/A'}"`,
-      `"${r.overall_score.toFixed(2)}"`,
-      `"${r.status}"`
-    ].join(','))
+    // Reorganized headers to put important metrics first, long skills list last
+    const headers = ['Candidate,Date,Role,Score,Status,Experience,Skills']
+    const rows = filteredReports.map((r: Report) => {
+      // Clean up skills and handle commas/quotes for CSV safety
+      let cleanSkills = 'N/A';
+      try {
+        const skillsData = r.candidate_profile.primary_skill || r.candidate_profile.skills;
+        if (skillsData) {
+          const skillsArray = typeof skillsData === 'string' ? JSON.parse(skillsData) : skillsData;
+          cleanSkills = Array.isArray(skillsArray) ? skillsArray.join('; ') : String(skillsData);
+        }
+      } catch (e) {
+        cleanSkills = String(r.candidate_profile.primary_skill || 'N/A');
+      }
 
-    const csvContent = [headers, ...rows].join('\n')
+      // Format status for readability
+      const status = r.status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+      return [
+        `"${r.candidate_profile.candidate_name || r.filename.replace('.json', '')}"`,
+        `"${r.display_date_short}"`,
+        `"${r.candidate_profile.applied_role || 'N/A'}"`,
+        `"${r.overall_score.toFixed(2)}"`,
+        `"${status}"`,
+        `"${r.candidate_profile.experience_level || 'N/A'}"`,
+        `"${cleanSkills.replace(/"/g, '""')}"` // Skills at the end
+      ].join(',')
+    })
+
+    // Add UTF-8 BOM for better Excel compatibility
+    const csvContent = '\uFEFF' + [headers, ...rows].join('\n')
     downloadFile(csvContent, `interview_reports_${new Date().toISOString().split('T')[0]}.csv`, 'csv')
   }
 
@@ -995,6 +1015,7 @@ export default function ReportsPage() {
                             sx: {
                               '& .MuiInputBase-root': { 
                                 fontSize: '0.875rem',
+                                fontFamily: 'var(--font-sans) !important',
                               },
                               '& .MuiInputBase-input': {
                                 color: 'hsl(var(--foreground)) !important',
@@ -1118,6 +1139,8 @@ export default function ReportsPage() {
                       overflow: 'hidden',
                       display: 'flex',
                       justifyContent: 'center',
+                      fontFamily: 'var(--font-sans)',
+                      '& *': { fontFamily: 'var(--font-sans) !important' },
                       '& .MuiDateCalendar-root': {
                         width: '100%',
                         height: 'auto',
@@ -1184,44 +1207,133 @@ export default function ReportsPage() {
                   - The Main Layout/Body will NOT scroll; this div scrolls instead.
                   - Added padding-right/bottom for scrollbar comfort.
                 */}
-        <div className="lg:col-span-3 md:col-span-2 h-full overflow-y-auto pr-2 pb-2 space-y-4">
+        <div className="lg:col-span-3 md:col-span-2 space-y-4">
 
 
           {/* Compact Metrics Strip */}
           <div className="animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-100 rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Total Reports</p>
-                <p className="text-xl font-semibold leading-tight">{metrics.total}</p>
+                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Reports</p>
+                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.total}</p>
               </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Avg Score</p>
-                <p className="text-xl font-semibold leading-tight">{metrics.avgScore}</p>
+                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Avg Score</p>
+                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.avgScore}</p>
               </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Avg Questions</p>
-                <p className="text-xl font-semibold leading-tight">{metrics.avgQuestions}</p>
+                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Avg Questions</p>
+                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.avgQuestions}</p>
               </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Selection Rate</p>
-                <p className="text-xl font-semibold leading-tight">{metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%</p>
+                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Selection Rate</p>
+                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%</p>
               </div>
             </div>
           </div>
 
+          {/* Active Filters Summary */}
+          {isAnyFilterActive && (
+            <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-4 duration-500">
+              {appliedFilters.search && (
+                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+                  Search: {appliedFilters.search}
+                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setSearchQuery('')} />
+                </Badge>
+              )}
+              {appliedFilters.status !== 'Default' && (
+                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+                  Status: {getStatusLabel(appliedFilters.status)}
+                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setStatusFilter('Default')} />
+                </Badge>
+              )}
+              {appliedFilters.job !== 'All' && (
+                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+                  Job: {allJobsData?.find((j: any) => String(j.id) === String(appliedFilters.job))?.title || 'Selected Job'}
+                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setJobFilter('All')} />
+                </Badge>
+              )}
+              {appliedFilters.skill !== 'All' && (
+                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+                  Skill: {appliedFilters.skill.split(/[_-]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
+                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setSkillFilter('All')} />
+                </Badge>
+              )}
+              {appliedFilters.experience !== 'All' && (
+                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+                  Exp: {appliedFilters.experience}
+                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setExperienceFilter('All')} />
+                </Badge>
+              )}
+              {(appliedFilters.score[0] !== 0 || appliedFilters.score[1] !== 10) && (
+                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+                  Score: {appliedFilters.score[0]} - {appliedFilters.score[1]}
+                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setScoreRange([0, 10])} />
+                </Badge>
+              )}
+              {appliedFilters.from && (
+                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+                  From: {appliedFilters.from.format('MMM D, YYYY')}
+                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setFromDate(null)} />
+                </Badge>
+              )}
+              {appliedFilters.to && (
+                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+                  To: {appliedFilters.to.format('MMM D, YYYY')}
+                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setToDate(null)} />
+                </Badge>
+              )}
+              {appliedFilters.date && (
+                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+                  On: {dayjs(appliedFilters.date).format('MMM D, YYYY')}
+                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setDateFilter(undefined)} />
+                </Badge>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  setSearchQuery('')
+                  setStatusFilter('Default')
+                  setJobFilter('All')
+                  setSkillFilter('All')
+                  setExperienceFilter('All')
+                  setScoreRange([0, 10])
+                  setFromDate(null)
+                  setToDate(null)
+                  setDateFilter(undefined)
+                  setAppliedFilters({
+                    search: '',
+                    status: 'Default',
+                    job: 'All',
+                    skill: 'All',
+                    experience: 'All',
+                    score: [0, 10],
+                    from: null,
+                    to: null,
+                    date: undefined
+                  })
+                }}
+                className="h-6 text-[10px] uppercase text-muted-foreground hover:text-destructive font-bold"
+              >
+                Clear All
+              </Button>
+            </div>
+          )}
+
           {/* Status Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-emerald-500 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Selected</p>
               <div className="text-emerald-500 font-bold text-2xl">{metrics.selected}</div>
-              <div className="text-slate-500 dark:text-slate-400 text-sm">Selected</div>
             </div>
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-amber-500 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">On Hold</p>
               <div className="text-amber-500 font-bold text-2xl">{metrics.hold}</div>
-              <div className="text-slate-500 dark:text-slate-400 text-sm">On Hold</div>
             </div>
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-red-500 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Rejected</p>
               <div className="text-red-500 font-bold text-2xl">{metrics.rejected}</div>
-              <div className="text-slate-500 dark:text-slate-400 text-sm">Rejected</div>
             </div>
           </div>
 
@@ -1315,7 +1427,9 @@ export default function ReportsPage() {
                     <TableBody>
                       {filteredReports.map((report: Report, idx: number) => (
                         <TableRow key={idx}>
-                          <TableCell className="font-medium">{report.filename.replace('.json', '')}</TableCell>
+                          <TableCell className="font-semibold text-slate-700 dark:text-slate-200">
+                            {report.candidate_profile.candidate_name || report.filename.replace('.json', '')}
+                          </TableCell>
                           <TableCell>{report.display_date_short}</TableCell>
                           <TableCell className="text-sm">{report.candidate_profile.applied_role || 'N/A'}</TableCell>
                           <TableCell className="text-right font-medium">
@@ -1540,7 +1654,47 @@ export default function ReportsPage() {
 
               <Separator className="mb-2 shrink-0" />
 
-              <div className="flex-1 overflow-y-auto pr-2 space-y-6 pb-6">
+              <div className="flex-1 overflow-y-auto pr-2 space-y-6 pb-6 mt-4">
+                
+                {/* Skill Match Section */}
+                <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div className="flex flex-col sm:flex-row gap-4 items-start">
+                    <div className="flex items-center gap-2 shrink-0 pt-1">
+                      <div className="w-1.5 h-6 bg-primary rounded-full" />
+                      <span className="text-xs font-black uppercase tracking-widest text-primary/80">Skill Match:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {(() => {
+                        try {
+                          const rawSkills = viewingReport.candidate_profile.primary_skill || viewingReport.candidate_profile.skills;
+                          const skillsArray = typeof rawSkills === 'string' ? JSON.parse(rawSkills) : rawSkills;
+                          
+                          if (Array.isArray(skillsArray) && skillsArray.length > 0) {
+                            return skillsArray.map((skill, i) => (
+                              <Badge 
+                                key={i} 
+                                variant="secondary" 
+                                className={`text-[11px] font-bold px-3 py-1 rounded-lg border-none shadow-sm
+                                  ${skillFilter !== 'All' && skill.toLowerCase().includes(skillFilter.replace('_', ' ').toLowerCase())
+                                    ? 'bg-primary text-primary-foreground' 
+                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                                  }`}
+                              >
+                                {skill}
+                              </Badge>
+                            ));
+                          }
+                        } catch (e) {
+                          // Fallback if not a JSON array
+                          if (viewingReport.candidate_profile.primary_skill) {
+                            return <Badge variant="secondary" className="bg-primary text-primary-foreground font-bold">{viewingReport.candidate_profile.primary_skill}</Badge>
+                          }
+                        }
+                        return <span className="text-sm text-muted-foreground italic font-medium">No detected skills for this profile.</span>;
+                      })()}
+                    </div>
+                  </div>
+                </div>
 
                 {/* Video Interview Recording */}
                 <div className="space-y-3">

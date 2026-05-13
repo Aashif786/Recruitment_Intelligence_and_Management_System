@@ -9,7 +9,7 @@ interface Report {
 }
 
 export const StatusChart = React.memo(({ data }: { data: { name: string, value: number, color: string }[] }) => (
-    <ResponsiveContainer width="100%" height={200}>
+    <ResponsiveContainer width="100%" height={200} style={{ fontFamily: 'var(--font-sans)' }}>
         <PieChart>
             <Pie
                 data={data}
@@ -77,14 +77,14 @@ export const DetailedMetricsChart = React.memo(({ report, showNoData }: { report
     }
 
     return (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" style={{ fontFamily: 'var(--font-sans)' }}>
             <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="var(--border)" />
                 <XAxis type="number" domain={[0, 10]} hide />
-                <YAxis dataKey="name" type="category" tick={{ fill: 'currentColor', fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
+                <YAxis dataKey="name" type="category" tick={{ fill: 'currentColor', fontSize: 11, fontFamily: 'var(--font-sans)' }} axisLine={false} tickLine={false} width={80} />
                 <Tooltip
                     cursor={{ fill: 'var(--muted)' }}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontFamily: 'var(--font-sans)' }}
                     formatter={(value: number) => value.toFixed(1)}
                 />
                 <Bar dataKey="score" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
@@ -117,14 +117,14 @@ export const SkillProficiencyChart = React.memo(({ report }: { report: Report })
     const data = skillsData.length > 0 ? skillsData : [];
 
     return (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" style={{ fontFamily: 'var(--font-sans)' }}>
             <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="var(--border)" />
                 <XAxis type="number" domain={[0, 10]} hide />
-                <YAxis dataKey="name" type="category" tick={{ fill: 'currentColor', fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
+                <YAxis dataKey="name" type="category" tick={{ fill: 'currentColor', fontSize: 11, fontFamily: 'var(--font-sans)' }} axisLine={false} tickLine={false} width={80} />
                 <Tooltip
                     cursor={{ fill: 'var(--muted)' }}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontFamily: 'var(--font-sans)' }}
                     formatter={(value: number) => value.toFixed(1)}
                 />
                 <Bar dataKey="score" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
@@ -176,14 +176,14 @@ export const AllReportsMetricsChart = React.memo(({ reports }: { reports: any[] 
     if (counts.practicality > 0) data.push({ name: 'Practicality', score: sums.practicality / counts.practicality });
 
     return (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" style={{ fontFamily: 'var(--font-sans)' }}>
             <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="var(--border)" />
                 <XAxis type="number" domain={[0, 10]} hide />
-                <YAxis dataKey="name" type="category" tick={{ fill: 'currentColor', fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
+                <YAxis dataKey="name" type="category" tick={{ fill: 'currentColor', fontSize: 11, fontFamily: 'var(--font-sans)' }} axisLine={false} tickLine={false} width={80} />
                 <Tooltip
                     cursor={{ fill: 'var(--muted)' }}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontFamily: 'var(--font-sans)' }}
                     formatter={(value: number) => value.toFixed(1)}
                 />
                 <Bar dataKey="score" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
