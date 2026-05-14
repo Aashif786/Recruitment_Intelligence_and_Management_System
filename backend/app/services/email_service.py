@@ -337,8 +337,7 @@ async def execute_email_with_retries(
                     update(Application)
                     .where(and_(
                         Application.id == application.id,
-                        Application.email_status != 'processing',
-                        Application.email_status != 'sent'
+                        Application.email_status != 'processing'
                     ))
                     .values(email_status='processing')
                 )

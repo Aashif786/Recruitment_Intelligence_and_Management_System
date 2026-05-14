@@ -289,8 +289,6 @@ class CandidateStateMachine:
             is_critical=is_critical,
         )
 
-        )
-
 
         # 5. Handle Automated Side Effects (Point 3)
         if target_state == CandidateState.INTERVIEW_COMPLETED and background_tasks:
