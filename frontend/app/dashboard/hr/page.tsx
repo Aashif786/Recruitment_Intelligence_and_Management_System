@@ -348,7 +348,6 @@ export default function HRDashboard() {
           </Card>
         </div>
       </div>
-onb
       {/* Recent Interviews Table */}
       <Card className="shadow-none border border-border dark:border-slate-800 bg-card dark:bg-slate-900 rounded-xl animate-in fade-in duration-500 delay-700">
         <CardHeader>

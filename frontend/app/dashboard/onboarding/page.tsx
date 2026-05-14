@@ -70,6 +70,7 @@ interface OnboardingCandidate {
     candidate_photo_path?: string
     id_card_url?: string
     onboarding_approval_status?: string
+    onboarded_at?: string
 }
 
 interface OnboardingResponse {
@@ -282,6 +283,9 @@ export default function OnboardingPage() {
                             <div className="text-2xl font-black">
                                 {candidates?.filter(c => {
                                     if (!c.joining_date || c.status === 'onboarded') return false
+                                    // Robust check: only count candidates who have actually accepted
+                                    if (c.status !== 'accepted' && c.offer_response_status !== 'accept' && c.offer_response_status !== 'accepted') return false
+                                    
                                     const jDate = new Date(c.joining_date)
                                     jDate.setHours(0, 0, 0, 0)
                                     const today = new Date()
@@ -304,7 +308,13 @@ export default function OnboardingPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-black">
-                                {candidates?.filter(c => c.status === 'onboarded').length || 0}
+                                {candidates?.filter(c => {
+                                    if (c.status !== 'onboarded') return false
+                                    if (!c.onboarded_at) return true // Fallback for legacy records
+                                    const oDate = new Date(c.onboarded_at)
+                                    const now = new Date()
+                                    return oDate.getMonth() === now.getMonth() && oDate.getFullYear() === now.getFullYear()
+                                }).length || 0}
                             </div>
                             <p className="text-xs text-muted-foreground">Successfully closed hires</p>
                         </CardContent>

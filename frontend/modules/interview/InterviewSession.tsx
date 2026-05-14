@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { APIClient } from '@/app/dashboard/lib/api-client';
+import { API_BASE_URL } from '@/lib/config';
 
 interface InterviewSessionProps {
   sessionId: string;
@@ -84,11 +85,13 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   }, [currentQuestion]);
 
   useEffect(() => {
+    // Construct WebSocket URL from API_BASE_URL to preserve path prefixes (e.g. /calrims)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = process.env.NEXT_PUBLIC_API_BASE_URL
-      ? new URL(process.env.NEXT_PUBLIC_API_BASE_URL).host
-      : '127.0.0.1:10000';
-    const wsUrl = `${protocol}//${host}/ws/interview/${sessionId}?token=${token}`;
+    let wsBase = API_BASE_URL.replace(/^https?:\/\//, protocol + '//');
+    if (wsBase.endsWith('/')) {
+      wsBase = wsBase.slice(0, -1);
+    }
+    const wsUrl = `${wsBase}/ws/interview/${sessionId}?token=${token}`;
 
     ws.current = new WebSocket(wsUrl);
 

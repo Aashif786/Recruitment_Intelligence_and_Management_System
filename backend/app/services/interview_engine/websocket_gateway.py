@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 
 from app.core.auth import verify_token
 from app.core.config import get_settings
@@ -36,7 +36,7 @@ class SessionLockManager:
 lock_manager = SessionLockManager()
 
 @router.websocket("/ws/interview/{session_id}")
-async def interview_websocket_endpoint(websocket: WebSocket, session_id: str, token: str):
+async def interview_websocket_endpoint(websocket: WebSocket, session_id: str, token: str = Query(...)):
     """WebSocket endpoint for real-time live interviews."""
     user_id = "temp_user_id"
 

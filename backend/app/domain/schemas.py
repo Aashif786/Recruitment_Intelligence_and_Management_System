@@ -366,6 +366,7 @@ class ApplicationResponse(BaseModel):
     offer_email_status: Optional[str] = 'pending'
     offer_email_retry_count: int = 0
     reminder_sent_at: Optional[datetime] = None
+    onboarded_at: Optional[datetime] = None
 
     @field_validator('status')
     @classmethod

@@ -103,31 +103,50 @@ class AnalyticsService:
             # Map of internal status -> Display Name
             status_map = {
                 'applied': 'Applied',
+                'screened': 'Screened',
                 'aptitude_round': 'Aptitude',
                 'ai_interview': 'AI Interview',
-                'ai_interview_completed': 'Completed',
+                'interview_completed': 'Interview completed',
                 'review_later': 'Review',
                 'physical_interview': 'Physical',
-                'hired': 'Hired',
                 'pending_approval': 'Pending Approval',
                 'offer_sent': 'Offer Sent',
                 'accepted': 'Accepted',
+                'hired': 'Hired',
                 'onboarded': 'Onboarded',
                 'rejected': 'Rejected'
             }
             
+            # Strict chronological order for the pipeline chart
+            CHART_ORDER = [
+                'Applied', 'Screened', 'Aptitude', 'AI Interview', 'Interview completed',
+                'Review', 'Physical', 'Pending Approval', 'Offer Sent', 
+                'Accepted', 'Hired', 'Onboarded', 'Rejected'
+            ]
+            
             # Initialize with 0s for expected stages to keep chart consistent
-            counts = {name: 0 for name in status_map.values()}
+            counts = {name: 0 for name in CHART_ORDER}
             for stat, count in pipeline_results:
                 display_name = status_map.get(stat, stat.replace('_', ' ').capitalize())
-                counts[display_name] = counts.get(display_name, 0) + count
+                if display_name in counts:
+                    counts[display_name] += count
+                else:
+                    counts[display_name] = count
             
             # Format for Recharts: [{ name: "Applied", value: 10 }, ...]
-            result["chart_data"] = [
-                {"name": name, "value": count} 
-                for name, count in counts.items()
-                if count > 0 or name in ["Applied", "AI Interview", "Hired"] # Keep some core stages even if 0
-            ]
+            # We follow the CHART_ORDER but only include stages with data OR core stages
+            core_stages = ["Applied", "AI Interview", "Hired", "Rejected"]
+            result["chart_data"] = []
+            
+            for name in CHART_ORDER:
+                value = counts.get(name, 0)
+                if value > 0 or name in core_stages:
+                    result["chart_data"].append({"name": name, "value": value})
+            
+            # Catch any other statuses not in CHART_ORDER
+            for name, value in counts.items():
+                if name not in CHART_ORDER and value > 0:
+                    result["chart_data"].append({"name": name, "value": value})
 
             logger.info(f"[ANALYTICS DATA] {result}")
             return result
@@ -229,8 +248,9 @@ class AnalyticsService:
         Get count of candidates in each stage for a specific job (Point 12).
         """
         stages = [
-            'applied', 'aptitude_round', 'ai_interview', 'ai_interview_completed',
-            'review_later', 'physical_interview', 'hired', 'rejected'
+            'applied', 'screened', 'aptitude_round', 'ai_interview', 'interview_completed',
+            'review_later', 'physical_interview', 'pending_approval', 'offer_sent', 
+            'accepted', 'hired', 'onboarded', 'rejected'
         ]
         # Calculate all stage counts in a single GROUP BY query
         results = self.db.query(
