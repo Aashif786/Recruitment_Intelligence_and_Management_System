@@ -18,15 +18,7 @@ export default function LiveInterviewPage() {
     }, [searchParams]);
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] flex flex-col pt-12">
-            <header className="fixed top-0 w-full h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 px-10 flex items-center justify-between z-20">
-                <div className="flex items-center gap-6">
-                    <h1 className="text-xl font-black text-slate-900 tracking-tight">Enterprise WebSockets Interview</h1>
-                </div>
-                <div className="text-sm font-medium text-slate-500">
-                    Session: {sessionId}
-                </div>
-            </header>
+        <div className="min-h-screen bg-[#f8fafc] flex flex-col">
 
             <main className="flex-1 w-full max-w-7xl mx-auto p-6 md:p-12 overflow-hidden">
                 {token ? (
