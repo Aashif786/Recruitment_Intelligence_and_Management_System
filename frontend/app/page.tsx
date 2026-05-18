@@ -35,15 +35,7 @@ export default function Home() {
     return () => clearTimeout(timeout);
   }, [isLoading]);
 
-  useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
-      if (user.role === "candidate") {
-        router.push("/jobs");
-      } else {
-        router.push("/dashboard/hr");
-      }
-    }
-  }, [isAuthenticated, user, isLoading, router]);
+
 
   if (showError) {
     return (
