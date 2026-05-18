@@ -860,19 +860,20 @@ async def process_application_background(application_id: int, job_id: int, abs_f
                 except Exception as e:
                     logger.warning(f"Failed to clean up files for duplicate application #{application_id}: {e}")
 
-                # Delete related resume_extraction first if it exists in session to avoid ForeignKeyViolation
-                if resume_extraction:
-                    try:
-                        if resume_extraction in db:
-                            db.delete(resume_extraction)
-                    except Exception:
-                        pass
+                # Clean up any related child records first to completely avoid ForeignKeyViolation
+                try:
+                    db.query(ResumeExtractionVersion).filter(ResumeExtractionVersion.application_id == application_id).delete()
+                    db.query(ResumeExtraction).filter(ResumeExtraction.application_id == application_id).delete()
+                except Exception as e:
+                    logger.warning(f"Failed to delete child records for application {application_id}: {e}")
                 
                 try:
                     if application in db:
                         db.delete(application)
-                except Exception:
-                    pass
+                    else:
+                        db.query(Application).filter(Application.id == application_id).delete()
+                except Exception as e:
+                    logger.warning(f"Failed to delete application {application_id}: {e}")
                 db.commit()
                 db.close()
                 return
