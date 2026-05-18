@@ -831,8 +831,9 @@ async def process_application_background(application_id: int, job_id: int, abs_f
         duplicate_app_id = None
         
         # Check for placeholder status BEFORE any updates
-        email_is_placeholder = application.candidate_email and "@batch." in application.candidate_email
-        name_is_placeholder = not application.candidate_name or len(application.candidate_name.split()) < 2
+        is_emailed_app = application.hr_notes == "Ingested automatically from Email Recruiter Channel."
+        email_is_placeholder = (application.candidate_email and "@batch." in application.candidate_email) or is_emailed_app
+        name_is_placeholder = not application.candidate_name or len(application.candidate_name.split()) < 2 or is_emailed_app
         
         # 1. Duplicate Detection via Extracted Email (Point 1: Prevent Clashes)
         if extracted_email:
