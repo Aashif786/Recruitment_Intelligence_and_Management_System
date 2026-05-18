@@ -820,23 +820,14 @@ export default function InterviewPage() {
                 const isNowFullscreen = !!document.fullscreenElement
                 setIsFullscreen(isNowFullscreen)
 
-                if (!isNowFullscreen && interviewStatus === 'active') {
-                    // Start a timer to enforce re-entry
-                    const timer = setTimeout(() => {
-                        if (!document.fullscreenElement && interviewStatusRef.current === 'active') {
-                            handleViolation("Fullscreen Exited")
-                        }
-                    }, 15000) // 15 seconds grace period to re-enter fullscreen
-                    return () => clearTimeout(timer)
+                if (!isNowFullscreen && interviewStatusRef.current === 'active') {
+                    handleViolation("Fullscreen Exited")
                 }
             }
             document.addEventListener('fullscreenchange', handleFullscreenChange)
 
             // Initial check
             setIsFullscreen(!!document.fullscreenElement)
-
-            // NO AUTO-FULLSCREEN HERE. It causes "Permissions check failed".
-            // We rely on startInterviewManual and the manual button in the header.
 
             return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
         }
@@ -1450,9 +1441,9 @@ export default function InterviewPage() {
                     </div>
                 )}
 
-                {/* Fixed Camera Preview */}
-                {isCameraActive && (
-                    <div className="fixed bottom-6 right-6 z-[100] w-48 h-36 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 bg-slate-900 group transition-all hover:scale-110 select-none">
+                {/* Fixed Camera Preview or Voice/Audio Only Fallback */}
+                {isCameraActive ? (
+                    <div className="fixed bottom-6 right-6 z-[100] w-48 h-36 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 bg-slate-900 group transition-all hover:scale-110 select-none animate-in fade-in zoom-in duration-300">
                         <video
                             ref={(el) => {
                                 videoRef.current = el;
@@ -1492,6 +1483,24 @@ export default function InterviewPage() {
                             <span className="text-[8px] font-black text-white uppercase tracking-wider flex items-center gap-1">
                                 <Video className="w-2 h-2 animate-pulse" /> Live Proctoring
                             </span>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="fixed bottom-6 right-6 z-[100] w-48 h-36 rounded-2xl overflow-hidden shadow-2xl border-2 border-slate-800 bg-slate-950/95 flex flex-col items-center justify-center p-3 select-none text-center animate-in fade-in zoom-in duration-300">
+                        {/* High-tech warning corners */}
+                        <div className="absolute top-3 left-3 w-3 h-3 border-t-2 border-l-2 border-slate-800 rounded-tl-sm pointer-events-none"></div>
+                        <div className="absolute top-3 right-3 w-3 h-3 border-t-2 border-r-2 border-slate-800 rounded-tr-sm pointer-events-none"></div>
+                        <div className="absolute bottom-3 left-3 w-3 h-3 border-b-2 border-l-2 border-slate-800 rounded-bl-sm pointer-events-none"></div>
+                        <div className="absolute bottom-3 right-3 w-3 h-3 border-b-2 border-r-2 border-slate-800 rounded-br-sm pointer-events-none"></div>
+
+                        <div className="w-10 h-10 bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-center text-slate-500 mb-2.5 animate-pulse">
+                            <CameraOff className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">CAMERA DEACTIVATED</h4>
+                        <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest leading-none">VOICE TRACKING ACTIVE</span>
+                        <div className="absolute bottom-2 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            <span className="text-[6px] font-bold text-slate-500/80 tracking-widest">SECURE</span>
                         </div>
                     </div>
                 )}
@@ -1780,7 +1789,9 @@ export default function InterviewPage() {
                             <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Proctoring Warning</h2>
                             <p className="text-sm font-bold text-red-500 uppercase tracking-wider">{violationModalType || 'Window Focus Loss'} Detected</p>
                             <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                                You switched tabs or lost window focus. Leaving the test screen is strictly monitored and recorded. Doing this multiple times will result in automatic termination.
+                                {violationModalType === 'Fullscreen Exited'
+                                    ? 'Exiting fullscreen mode is strictly prohibited. You must remain in fullscreen mode to ensure interview integrity.'
+                                    : 'You switched tabs or lost window focus. Leaving the test screen is strictly monitored and recorded. Doing this multiple times will result in automatic termination.'}
                             </p>
                         </div>
                         
@@ -1810,7 +1821,16 @@ export default function InterviewPage() {
                         </div>
 
                         <Button
-                            onClick={() => setShowViolationModal(false)}
+                            onClick={async () => {
+                                setShowViolationModal(false)
+                                if (!document.fullscreenElement) {
+                                    try {
+                                        await document.documentElement.requestFullscreen()
+                                    } catch (e) {
+                                        console.warn("Fullscreen request failed", e)
+                                    }
+                                }
+                            }}
                             className="w-full h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-sm transition-all shadow-lg shadow-red-200"
                         >
                             I Understand & Return to Test
