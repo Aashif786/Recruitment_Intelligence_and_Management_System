@@ -27,6 +27,27 @@ interface Notification {
     created_at: string
 }
 
+function formatNotificationDate(dateStr: string) {
+    try {
+        const date = new Date(dateStr)
+        const now = new Date()
+        const diffMs = now.getTime() - date.getTime()
+        const diffMins = Math.floor(diffMs / 60000)
+        const diffHours = Math.floor(diffMins / 60)
+        const diffDays = Math.floor(diffHours / 24)
+
+        if (diffMins < 1) return 'Just now'
+        if (diffMins < 60) return `${diffMins}m ago`
+        if (diffHours < 24) return `${diffHours}h ago`
+        if (diffDays === 1) return 'Yesterday'
+        if (diffDays < 7) return `${diffDays}d ago`
+        
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    } catch {
+        return ''
+    }
+}
+
 export function NotificationBell() {
     const { user } = useAuth()
     const router = useRouter()
@@ -94,19 +115,19 @@ export function NotificationBell() {
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[380px] p-0 shadow-2xl border-primary/20 overflow-hidden rounded-2xl" align="end" sideOffset={8}>
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-                    <h4 className="font-semibold text-sm">Notifications</h4>
+            <PopoverContent className="w-[410px] p-0 shadow-2xl border border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md overflow-hidden rounded-2xl" align="end" sideOffset={8}>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Notifications</h4>
                     {unreadCount > 0 && (
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">
+                            <span className="text-xs font-black text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
                                 {unreadCount} new
                             </span>
                             <Button 
                                 variant="ghost" 
                                 size="sm" 
                                 onClick={markAllAsRead}
-                                className="text-[10px] h-7 font-bold text-muted-foreground hover:text-primary hover:bg-primary/5 px-2"
+                                className="text-[10px] h-7 font-black text-slate-500 hover:text-primary hover:bg-primary/5 px-2 rounded-lg"
                             >
                                 Mark all as read
                             </Button>
@@ -116,11 +137,11 @@ export function NotificationBell() {
                 <ScrollArea className={cn(notificationsArray.length > 0 ? "h-[450px]" : "h-auto")}>
                     {notificationsArray.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Bell className="h-6 w-6 text-muted-foreground/40" />
+                            <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-4">
+                                <Bell className="h-6 w-6 text-slate-400 dark:text-slate-500" />
                             </div>
-                            <p className="text-sm font-semibold text-foreground">No new notifications</p>
-                            <p className="text-xs text-muted-foreground mt-1">We'll alert you when something happens.</p>
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No new notifications</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">We'll alert you when something happens.</p>
                         </div>
                     ) : (
                         <div className="flex flex-col">
@@ -135,33 +156,32 @@ export function NotificationBell() {
                                         }
                                     }}
                                     className={cn(
-                                        "w-full text-left p-4 hover:bg-muted/80 transition-all border-l-4 group flex items-start gap-4 border-b border-border last:border-b-0",
-                                        !n.is_read ? 'bg-primary/[0.03] border-l-primary' : 'bg-background border-l-transparent'
+                                        "w-full text-left p-4 pr-8 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all border-l-4 group flex items-start gap-3 border-b border-slate-100 dark:border-slate-800 last:border-b-0 relative",
+                                        !n.is_read ? 'bg-primary/[0.02] border-l-primary' : 'bg-transparent border-l-transparent'
                                     )}
                                 >
-                                    <div className="flex-1 min-w-0 pr-4 relative">
-                                        <div className="flex justify-between items-start mb-1">
+                                    <div className="flex-1 min-w-0 pr-2 relative">
+                                        <div className="flex items-center justify-between gap-3 mb-1">
                                             <p className={cn(
-                                                "text-sm truncate pr-2",
-                                                !n.is_read ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground'
+                                                "text-sm truncate flex-1 min-w-0 pr-1",
+                                                !n.is_read ? 'font-bold text-slate-800 dark:text-slate-100' : 'font-semibold text-slate-500 dark:text-slate-400'
                                             )}>
                                                 {n.title}
                                             </p>
-                                            <span className="text-[10px] text-muted-foreground/60 whitespace-nowrap mt-0.5">
-                                                {new Date(n.created_at).toLocaleDateString()}
+                                            <span className="text-[10px] font-black text-slate-400/80 whitespace-nowrap shrink-0">
+                                                {formatNotificationDate(n.created_at)}
                                             </span>
                                         </div>
                                         <p className={cn(
-                                            "text-xs line-clamp-2",
-                                            !n.is_read ? 'text-foreground/80' : 'text-muted-foreground/80'
+                                            "text-xs line-clamp-2 leading-relaxed pr-2",
+                                            !n.is_read ? 'text-slate-600 dark:text-slate-300 font-medium' : 'text-slate-400 dark:text-slate-500'
                                         )}>
                                             {n.message}
                                         </p>
 
                                         {n.related_application_id && (
                                             <div className={cn(
-                                                "absolute top-1/2 -translate-y-1/2 -right-2 transition-all duration-200",
-                                                !n.is_read ? 'opacity-100 translate-x-0 cursor-pointer text-primary' : 'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 cursor-pointer text-muted-foreground'
+                                                "absolute top-1/2 -translate-y-1/2 -right-4 transition-all duration-200 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 text-slate-400 dark:text-slate-500"
                                             )}>
                                                 <ChevronRight className="h-4 w-4" />
                                             </div>
