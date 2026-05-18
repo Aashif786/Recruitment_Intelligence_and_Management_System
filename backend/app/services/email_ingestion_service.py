@@ -66,13 +66,32 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                     match = re.search(r'<([^>]+)>', sender)
                     raw_email = match.group(1).lower().strip() if match else sender.lower().strip()
                     
-                    # Duplicate Check: Skip if this candidate already applied via Web or emailed before
-                    from app.domain.models import Application
-                    has_applied_web = db.query(Application).filter(Application.candidate_email == raw_email).first()
-                    has_emailed_before = db.query(AttachmentResume).filter(AttachmentResume.sender_email.ilike(f"%{raw_email}%")).first()
+                    # Smart Duplicate Check: Skip only if they already applied to the same specific job
+                    # to allow candidates to apply for different jobs, or for seamless testing.
+                    from app.domain.models import Application, Job
+                    import re
                     
-                    if has_applied_web or has_emailed_before:
-                        continue # Skip duplicate applicant
+                    job_code_match = re.search(r'JOB-[A-Z0-9]{6}', str(subject), re.IGNORECASE)
+                    target_job = None
+                    if job_code_match:
+                        extracted_code = job_code_match.group(0).upper().strip()
+                        target_job = db.query(Job).filter(Job.job_id == extracted_code, Job.status == 'open').first()
+                        
+                    if target_job:
+                        existing_app = db.query(Application).filter(
+                            Application.job_id == target_job.id,
+                            Application.candidate_email == raw_email
+                        ).first()
+                        if existing_app:
+                            continue # Skip duplicate application for this specific job
+                    else:
+                        # Fallback: if no specific job code in subject, avoid double-fetching if they already have an unprocessed resume
+                        has_pending = db.query(AttachmentResume).filter(
+                            AttachmentResume.sender_email.ilike(f"%{raw_email}%"),
+                            AttachmentResume.processed == False
+                        ).first()
+                        if has_pending:
+                            continue
                     
                     email_body = ""
                     
