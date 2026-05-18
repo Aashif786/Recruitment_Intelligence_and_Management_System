@@ -22,13 +22,6 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // 2. Prevent logged-in users from hitting /auth/login (optional but good UX)
-  if (pathname === '/auth/login' && token) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
-
   return NextResponse.next()
 }
 
