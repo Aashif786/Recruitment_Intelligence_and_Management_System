@@ -1888,6 +1888,33 @@ async def update_application_status(
             )
             db.add(decision)
 
+    if action in (TransitionAction.HIRE, TransitionAction.ACCEPT_OFFER):
+        # Auto-withdraw other active duplicate applications of the same candidate
+        candidate_email = application.candidate_email
+        if candidate_email:
+            from app.domain.constants import CandidateState
+            active_duplicates = db.query(Application).filter(
+                Application.candidate_email == candidate_email,
+                Application.id != application.id,
+                Application.status.notin_([
+                    CandidateState.REJECTED.value,
+                    CandidateState.ONBOARDED.value
+                ])
+            ).all()
+            
+            for dup in active_duplicates:
+                try:
+                    fsm.transition(
+                        application=dup,
+                        action=TransitionAction.REJECT,
+                        user_id=current_user.id,
+                        notes=f"Auto-withdrawn: Candidate accepted another offer (App ID: {application.id})",
+                        is_critical=False,
+                        background_tasks=background_tasks
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to auto-withdraw duplicate App {dup.id}: {e}")
+
     if action == TransitionAction.REJECT:
         from app.domain.models import HiringDecision, Notification
         existing = db.query(HiringDecision).filter(
