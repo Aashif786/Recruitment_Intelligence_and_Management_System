@@ -86,6 +86,8 @@ def create_support_ticket(payload: dict, request: Request, db: Session = Depends
         raise HTTPException(status_code=400, detail="Please provide a short description (minimum 10 characters).")
     if len(description) > 5000:
         raise HTTPException(status_code=400, detail="Description is too long.")
+    if "[system context]" in description.lower():
+        raise HTTPException(status_code=400, detail="Invalid characters or system tags in description.")
 
     request_id_header = request.headers.get("X-Request-ID")
     if settings.enable_request_id_idempotency and is_duplicate_request(
@@ -174,30 +176,6 @@ def create_support_ticket(payload: dict, request: Request, db: Session = Depends
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials. Use the access key from your email.",
         )
-
-    # Ensure support applies only to valid states (if interview exists)
-    if interview:
-        report = getattr(interview, "report", None)
-        termination_reason = getattr(report, "termination_reason", None) if report else None
-        valid_states = {"completed", "cancelled"}
-        if interview.status not in valid_states and not termination_reason:
-            log_json(
-                logger,
-                "support_ticket_rejected",
-                request_id=get_request_id(request),
-                endpoint="/api/support/ticket",
-                status=400,
-                level="warning",
-                extra={
-                    "reason": "invalid_interview_state",
-                    "email_hash": safe_hash(email),
-                    "interview_id": interview.id,
-                },
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="Support requests can only be created after an interview is completed or terminated.",
-            )
 
     # Prevent duplicate active tickets.
     if interview:

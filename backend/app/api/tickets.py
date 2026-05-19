@@ -51,13 +51,37 @@ def report_issue(
 
     application = interview.application
     
+    # Prevent duplicate active tickets.
+    existing_pending = (
+        db.query(InterviewIssue)
+        .filter(
+            InterviewIssue.interview_id == issue.interview_id,
+            InterviewIssue.status == "pending",
+        )
+        .first()
+    )
+    if existing_pending:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An active support request for this interview is already under review.",
+        )
+
     # Input validation and XSS mitigation
+    if not issue.description.strip():
+        raise HTTPException(status_code=400, detail="Description cannot be empty.")
     if len(issue.description) > 5000:
         raise HTTPException(status_code=400, detail="Description exceeds maximum allowed length of 5000 characters.")
+    if not issue.issue_type.strip():
+        raise HTTPException(status_code=400, detail="Issue type cannot be empty.")
     if len(issue.issue_type) > 100:
         raise HTTPException(status_code=400, detail="Issue type exceeds maximum allowed length of 100 characters.")
         
-    sanitized_issue_type = html.escape(issue.issue_type.strip())
+    valid_types = {"technical", "interruption", "misconduct_appeal", "other"}
+    normalized_type = issue.issue_type.strip().lower()
+    if normalized_type not in valid_types:
+        raise HTTPException(status_code=400, detail="Invalid issue type.")
+        
+    sanitized_issue_type = html.escape(normalized_type)
     sanitized_description = html.escape(issue.description.strip())
     
     new_issue = InterviewIssue(
@@ -100,13 +124,37 @@ def report_grievance(issue: GeneralGrievanceCreate, db: Session = Depends(get_db
         raise generic_error
 
     # Input validation and XSS mitigation
+    if not issue.description.strip():
+        raise HTTPException(status_code=400, detail="Description cannot be empty.")
     if len(issue.description) > 5000:
         raise HTTPException(status_code=400, detail="Description exceeds maximum allowed length of 5000 characters.")
+    if not issue.issue_type.strip():
+        raise HTTPException(status_code=400, detail="Issue type cannot be empty.")
     if len(issue.issue_type) > 100:
         raise HTTPException(status_code=400, detail="Issue type exceeds maximum allowed length of 100 characters.")
 
-    sanitized_issue_type = html.escape(issue.issue_type.strip())
+    valid_types = {"technical", "interruption", "misconduct_appeal", "other"}
+    normalized_type = issue.issue_type.strip().lower()
+    if normalized_type not in valid_types:
+        raise HTTPException(status_code=400, detail="Invalid issue type.")
+
+    sanitized_issue_type = html.escape(normalized_type)
     sanitized_description = html.escape(issue.description.strip())
+
+    # Prevent duplicate active tickets.
+    existing_pending = (
+        db.query(InterviewIssue)
+        .filter(
+            InterviewIssue.interview_id == interview.id,
+            InterviewIssue.status == "pending",
+        )
+        .first()
+    )
+    if existing_pending:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An active support request for this interview is already under review.",
+        )
 
     new_issue = InterviewIssue(
         interview_id=interview.id,
@@ -307,6 +355,10 @@ def resolve_ticket(
     pass
     
     # Removal of strict filtering: HR can now resolve any ticket.
+
+    # Check if the ticket is already resolved/dismissed to prevent concurrency double-processing
+    if ticket.status in ['resolved', 'dismissed'] and resolution.action in ['resolve', 'resolved', 'dismiss', 'dismissed', 'reissue_key']:
+        raise HTTPException(status_code=400, detail="This ticket has already been resolved or dismissed.")
 
     # Status update logic – accept both canonical forms (e.g. 'resolve'/'resolved', 'dismiss'/'dismissed')
     if resolution.action == 'reissue_key':

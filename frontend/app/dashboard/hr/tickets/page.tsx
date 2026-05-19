@@ -293,7 +293,7 @@ export default function HRTicketsPage() {
             ) : (
                 <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
                     {/* List Header */}
-                    <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-muted/50 border-b border-border text-xs uppercase tracking-widest font-black text-muted-foreground">
+                    <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-muted/50 border-b border-border text-xs uppercase tracking-widest font-black text-muted-foreground">
                         <div className="col-span-1 text-center">#</div>
                         <div className="col-span-2">Type</div>
                         <div className="col-span-3">Candidate</div>
@@ -306,9 +306,9 @@ export default function HRTicketsPage() {
                             <div
                                 key={ticket.id}
                                 onClick={() => { setSelectedTicket(ticket); setHrResponse(ticket.hr_response || '') }}
-                                className="grid grid-cols-12 gap-4 px-4 py-4 items-center hover:bg-muted/30 transition-all cursor-pointer group"
+                                className="flex flex-col md:grid md:grid-cols-12 gap-4 px-4 py-4 items-start md:items-center hover:bg-muted/30 transition-all cursor-pointer group w-full"
                             >
-                                <div className="col-span-1 flex justify-center text-sm font-bold text-muted-foreground">
+                                <div className="hidden md:flex col-span-1 justify-center text-sm font-bold text-muted-foreground">
                                     {ticket.id}
                                 </div>
                                 <div className="col-span-2">
@@ -316,16 +316,16 @@ export default function HRTicketsPage() {
                                         {ticket.issue_type.replace(/_/g, ' ')}
                                     </Badge>
                                 </div>
-                                <div className="col-span-3 min-w-0">
+                                <div className="col-span-3 min-w-0 w-full">
                                     <div className="font-bold text-base truncate">{ticket.candidate_name}</div>
                                     <div className="text-xs text-muted-foreground truncate">{ticket.candidate_email}</div>
                                 </div>
-                                <div className="col-span-3">
+                                <div className="col-span-3 w-full">
                                     <p className="text-sm text-muted-foreground line-clamp-2 pr-2">
                                         {ticket.description}
                                     </p>
                                 </div>
-                                <div className="col-span-2 flex justify-center">
+                                <div className="col-span-2 flex md:justify-center">
                                     {ticket.status === 'pending' && (
                                         <Badge className="bg-amber-100 text-amber-700 border-amber-200 border font-bold text-xs">Pending</Badge>
                                     )}
@@ -336,7 +336,7 @@ export default function HRTicketsPage() {
                                         <Badge className="bg-slate-100 text-slate-500 border-slate-200 border font-bold text-xs">Dismissed</Badge>
                                     )}
                                 </div>
-                                <div className="col-span-1 text-right text-xs font-medium text-muted-foreground">
+                                <div className="col-span-1 text-left md:text-right text-xs font-medium text-muted-foreground">
                                     {new Date(ticket.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                 </div>
                             </div>
@@ -403,7 +403,12 @@ export default function HRTicketsPage() {
             )}
 
             {/* Resolution Dialog */}
-            <Dialog open={!!selectedTicket} onOpenChange={(open) => !open && setSelectedTicket(null)}>
+            <Dialog open={!!selectedTicket} onOpenChange={(open) => {
+                if (!open) {
+                    setSelectedTicket(null)
+                    setHrResponse('')
+                }
+            }}>
                 <DialogContent className="max-w-5xl w-[95vw] sm:w-[90vw] bg-card border-border shadow-2xl p-0 overflow-hidden">
                     <DialogHeader className="p-6 pb-0">
                         <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-2">

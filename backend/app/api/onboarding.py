@@ -3,7 +3,7 @@ from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 from app.infrastructure.database import get_db
-from app.domain.models import User, Application, GlobalSettings, Notification
+from app.domain.models import User, Application, GlobalSettings, Notification, AuditLog
 from app.domain.schemas import ApplicationResponse, OfferResponseRequest
 from app.core.auth import get_current_hr, get_current_admin
 from app.services.offer_letter_service import generate_offer_letter_pdf, get_offer_letter_data
@@ -360,7 +360,8 @@ async def request_offer_approval(
             
             if is_resend:
                 audit = AuditLog(
-                    application_id=application.id,
+                    resource_id=application.id,
+                    resource_type="Application",
                     user_id=current_user.id,
                     action="OFFER_RESENT",
                     details=json.dumps({
