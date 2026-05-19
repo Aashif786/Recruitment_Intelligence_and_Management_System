@@ -27,7 +27,7 @@ export default function SupportPage() {
     const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
     const descriptionTrimmed = description.trim()
     const descriptionValid = descriptionTrimmed.length >= 10 && descriptionTrimmed.length <= 5000
-    const canSubmit = Boolean(email.trim() && accessKey.trim() && emailValid && descriptionValid && !isSubmitting)
+    const canSubmit = Boolean(email.trim() && accessKey.trim() && descriptionTrimmed && !isSubmitting)
 
     useEffect(() => {
         const e = searchParams.get('email')
@@ -54,7 +54,7 @@ export default function SupportPage() {
             return
         }
         if (!descriptionValid) {
-            const msg = "Description must be between 10 and 5000 characters."
+            const msg = "Description must be at least 10 characters long."
             setFormError(msg)
             toast.error(msg)
             return
@@ -106,8 +106,8 @@ export default function SupportPage() {
                     </CardContent>
                     <CardFooter className="flex flex-col gap-3 p-12 pt-0">
                         <Button 
-                            onClick={() => router.push('/')} 
-                            className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-lg shadow-xl"
+                             onClick={() => router.push('/')} 
+                             className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-lg shadow-xl"
                         >
                             RETURN TO PORTAL
                         </Button>
@@ -220,7 +220,12 @@ export default function SupportPage() {
                             </div>
 
                             <div className="space-y-3">
-                                <Label htmlFor="description" className="text-xs font-black uppercase tracking-widest text-slate-400">Detailed Description</Label>
+                                <div className="flex justify-between items-center">
+                                    <Label htmlFor="description" className="text-xs font-black uppercase tracking-widest text-slate-400">Detailed Description</Label>
+                                    <span className={`text-xs font-bold ${descriptionTrimmed.length > 0 && descriptionTrimmed.length < 10 ? 'text-rose-500 animate-pulse' : 'text-slate-400'}`}>
+                                        {descriptionTrimmed.length} / 10 characters min
+                                    </span>
+                                </div>
                                 <Textarea
                                     id="description"
                                     placeholder="Please describe exactly what happened..."
@@ -229,9 +234,14 @@ export default function SupportPage() {
                                     onChange={(e) => setDescription(e.target.value)}
                                     required
                                 />
-                                <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-tighter italic">
-                                    <ShieldCheck className="h-3 w-3" />
-                                    Your IP and session data will be correlated for verification
+                                <div className="flex justify-between items-center text-[10px] text-slate-400 font-black uppercase tracking-tighter italic">
+                                    <div className="flex items-center gap-2">
+                                        <ShieldCheck className="h-3 w-3" />
+                                        Your IP and session data will be correlated for verification
+                                    </div>
+                                    {descriptionTrimmed.length > 0 && descriptionTrimmed.length < 10 && (
+                                        <span className="text-rose-500 font-black animate-pulse">Needs at least {10 - descriptionTrimmed.length} more characters</span>
+                                    )}
                                 </div>
                             </div>
 
