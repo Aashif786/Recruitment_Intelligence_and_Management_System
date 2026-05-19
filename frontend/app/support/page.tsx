@@ -199,7 +199,7 @@ export default function SupportPage() {
                                     {[
                                         { id: 'technical', label: 'Technical Glitch', desc: 'Audio, Video, or UI issues' },
                                         { id: 'interruption', label: 'Session Interrupted', desc: 'Browser crash or exit' },
-                                        { id: 'misconduct', label: 'Misconduct Appeal', desc: 'Appeal a proctoring warning' },
+                                        { id: 'misconduct_appeal', label: 'Misconduct Appeal', desc: 'Appeal a proctoring warning' },
                                         { id: 'other', label: 'Other Issue', desc: 'Process or scheduling' }
                                     ].map((opt) => (
                                         <label key={opt.id} htmlFor={opt.id} className={`relative flex flex-col p-5 rounded-2xl border-2 transition-all cursor-pointer group ${issueType === opt.id
