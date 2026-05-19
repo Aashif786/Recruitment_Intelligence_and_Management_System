@@ -1329,6 +1329,20 @@ def get_ingested_emails(
                 Application.resume_file_path.like(f"%{bucket_path}%")
             ).first()
         
+        # Check if candidate has already applied (Duplicate Profile Detection)
+        match = re.search(r'<([^>]+)>', item.sender_email)
+        raw_email = match.group(1).lower().strip() if match else item.sender_email.lower().strip()
+        candidate_email_to_check = app.candidate_email if app else raw_email
+        
+        is_duplicate = False
+        if candidate_email_to_check:
+            dup_query = db.query(Application).filter(
+                Application.candidate_email.ilike(candidate_email_to_check)
+            )
+            if app:
+                dup_query = dup_query.filter(Application.id != app.id)
+            is_duplicate = dup_query.count() > 0
+        
         results.append({
             "id": item.id,
             "sender_email": item.sender_email,
@@ -1339,7 +1353,8 @@ def get_ingested_emails(
             "processed": item.processed,
             "application_id": app.id if app else None,
             "job_title": app.job.title if app and app.job else None,
-            "job_code": app.job.job_id if app and app.job else None
+            "job_code": app.job.job_id if app and app.job else None,
+            "is_duplicate": is_duplicate
         })
         
     return {

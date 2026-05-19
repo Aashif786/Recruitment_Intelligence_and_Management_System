@@ -62,6 +62,7 @@ interface IngestedEmail {
     application_id: number | null
     job_title: string | null
     job_code: string | null
+    is_duplicate: boolean
 }
 
 interface PaginatedResponse {
@@ -390,7 +391,14 @@ export default function IngestedEmailsPage() {
                                                     {getInitials(item.sender_email)}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <div className="text-sm font-bold text-foreground truncate max-w-[180px]">{senderCleaned}</div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="text-sm font-bold text-foreground truncate max-w-[150px]">{senderCleaned}</div>
+                                                        {item.is_duplicate && (
+                                                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-orange-50 text-orange-600 border-orange-200 font-semibold shrink-0">
+                                                                Duplicate
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                     <div className="text-xs text-muted-foreground truncate max-w-[180px]">{emailAddress}</div>
                                                 </div>
                                             </div>
