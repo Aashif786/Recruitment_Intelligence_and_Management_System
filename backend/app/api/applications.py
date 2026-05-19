@@ -1422,6 +1422,7 @@ async def assign_ingested_email(
     candidate_phone_hash = None
     candidate_phone_raw = None
     if phone_matches:
+        from app.core.phone_utils import normalize_phone_digits, compute_phone_hash
         candidate_phone_raw = phone_matches[0]
         norm_p, _ = normalize_phone_digits(candidate_phone_raw)
         if norm_p and len(norm_p) >= 10:
