@@ -803,6 +803,13 @@ class InterviewFeedbackCreate(BaseModel):
     ui_ux_rating: int
     feedback_text: Optional[str] = None
 
+    @field_validator('ui_ux_rating')
+    @classmethod
+    def validate_rating(cls, v):
+        if v < 1 or v > 5:
+            raise ValueError("Rating must be between 1 and 5")
+        return v
+
 class InterviewFeedbackResponse(BaseModel):
     id: int
     interview_id: int

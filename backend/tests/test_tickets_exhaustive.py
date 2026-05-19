@@ -57,15 +57,15 @@ def test_candidate_issue_reporting_and_sanitization(client: TestClient, sample_i
     # 3. Test XSS / HTML Injection sanitization on success
     xss_payload = {
         "interview_id": sample_interview.id,
-        "issue_type": "<script>alert('XSS')</script>",
-        "description": "<b>HTML Content</b>"
+        "issue_type": "technical",
+        "description": "<b>HTML Content</b><script>alert('XSS')</script>"
     }
     resp_ok = client.post("/api/tickets", json=xss_payload, headers=headers)
     assert resp_ok.status_code == 200
     data = resp_ok.json()
-    assert "&lt;script&gt;" in data["issue_type"]
     assert "&lt;b&gt;" in data["description"]
-    assert "<script>" not in data["issue_type"]
+    assert "&lt;script&gt;" in data["description"]
+    assert "<script>" not in data["description"]
 
 
 def test_grievance_email_enumeration_protection(client: TestClient):
