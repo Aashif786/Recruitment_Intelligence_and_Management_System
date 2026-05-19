@@ -134,17 +134,6 @@ def create_support_ticket(payload: dict, request: Request, db: Session = Depends
     application = None
     
     # Try finding an interview first (standard flow)
-    interviews = (
-        db.query(Interview)
-        .join(Application)
-        .filter(Application.candidate_email == email)
-        .options(
-            joinedload(Interview.application).joinedload(Application.job),
-            joinedload(Interview.report),
-        )
-        .order_by(Interview.created_at.desc())
-        .all()
-    )
     
     for inv in interviews:
         try:
@@ -229,6 +218,8 @@ def create_support_ticket(payload: dict, request: Request, db: Session = Depends
     }
     issue_type = issue_type_map.get(grievance_type, grievance_type.lower() or "other")
 
+    termination_reason = getattr(getattr(interview, "report", None), "termination_reason", None) if interview else None
+
     # Keep candidate input separate from system context.
     # Avoid dumping all internals while preserving consistent metadata.
     structured_context = [
@@ -266,7 +257,7 @@ def create_support_ticket(payload: dict, request: Request, db: Session = Depends
         level="info",
         extra={
             "ticket_id": ticket.id,
-            "interview_id": interview.id,
+            "interview_id": interview.id if interview else None,
             "issue_type": issue_type,
             "email_hash": safe_hash(email),
         },

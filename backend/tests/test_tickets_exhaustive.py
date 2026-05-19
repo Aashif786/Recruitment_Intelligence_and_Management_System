@@ -162,3 +162,31 @@ def test_collaborative_hr_ticket_resolution_flow(
     db_session.refresh(sample_interview)
     assert sample_interview.status == "not_started"
     assert sample_interview.is_used is False
+
+
+def test_candidate_support_ticket_creation(client: TestClient, sample_interview: Interview, db_session: Session):
+    """Verify that the new /api/support/ticket endpoint accepts valid candidate payloads without crashing."""
+    # This simulates a candidate trying to report a ticket using their actual offer/interview access key
+    # Wait, we need to pass the raw access key, not the hash. Since the test fixture uses a pre-hashed key, 
+    # we can bypass the auth for testing by creating a candidate with an offer token instead.
+    
+    app_record = sample_interview.application
+    app_record.offer_token = "valid_offer_token_123"
+    db_session.commit()
+
+    payload = {
+        "email": app_record.candidate_email,
+        "access_key": "valid_offer_token_123",
+        "grievance_type": "technical",
+        "description": "My browser crashed during the interview process, please assist."
+    }
+
+    resp = client.post("/api/support/ticket", json=payload)
+    assert resp.status_code == 200
+    
+    data = resp.json()
+    assert "id" in data
+    assert data["issue_type"] == "technical"
+    assert "My browser crashed" in data["description"]
+    assert "[System Context]" in data["description"]
+    assert data["status"] == "pending"
