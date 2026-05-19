@@ -170,7 +170,6 @@ def get_interview_reports(
             term = f"%{search}%"
             query = query.filter(or_(
                 Application.candidate_name.ilike(term),
-                Application.candidate_email.ilike(term),
                 Job.title.ilike(term)
             ))
 
@@ -396,7 +395,7 @@ def get_interview_reports(
                 filename = f"report_{iid}.json" if iid else f"app_{aid}.json"
                 
                 vpath = getattr(interview, 'video_recording_path', None) if interview else None
-                video_url = f"/api/interviews/{iid}/video-stream" if (iid and vpath) else None
+                video_url = f"/api/interviews/{iid}/video-stream" if iid else None
 
                 # Score fallbacks
                 r_overall = getattr(report, 'overall_score', None)
@@ -509,7 +508,6 @@ def get_filtered_interviews(
     if search:
         query = query.filter(or_(
             Application.candidate_name.ilike(f"%{search}%"),
-            Application.candidate_email.ilike(f"%{search}%"),
             Interview.test_id.ilike(f"%{search}%"),
             Job.title.ilike(f"%{search}%")
         ))

@@ -277,7 +277,7 @@ function TooltipOverlay() {
   }, [referenceElRef, refs, update, rendered.data]);
 
   const ready = x != null && y != null;
-  const Component = rendered.data?.contentAsChild ? Slot : motion.div;
+  const Component: any = rendered.data?.contentAsChild ? Slot : motion.div;
   const resolvedSide = getResolvedSide(context.placement);
 
   return (
@@ -534,7 +534,7 @@ function TooltipTrigger({
     [hideTooltip, onBlur],
   );
 
-  const Component = asChild ? Slot : motion.div;
+  const Component: any = asChild ? Slot : motion.div;
 
   return (
     <Component

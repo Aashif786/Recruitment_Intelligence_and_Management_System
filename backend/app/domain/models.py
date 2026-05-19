@@ -4,7 +4,7 @@ from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Boolean, Float,
     ForeignKey, UniqueConstraint, CheckConstraint, Index, JSON, Enum
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
 from app.infrastructure.database import Base
 from app.core.encryption import EncryptedText
@@ -521,6 +521,23 @@ class InterviewEvent(Base):
 
     # Relationships
     session = relationship("InterviewSession", back_populates="events")
+
+
+class InterviewMonitoringEvent(Base):
+    __tablename__ = "interview_monitoring_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    interview_id = Column(Integer, ForeignKey('interviews.id', ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String(50), nullable=False, index=True)  # 'focus_lost', 'multiple_faces', 'no_face', 'normal'
+    timestamp = Column(DateTime(timezone=True), default=get_ist_now, index=True)
+    confidence_score = Column(Float, nullable=True)
+    frame_image_path = Column(String(500), nullable=True)  # Cloud storage path
+    video_reference = Column(String(255), nullable=True)  # Video offset or segment
+
+    interview = relationship(
+        "Interview",
+        backref=backref("monitoring_events", cascade="all, delete-orphan", passive_deletes=True),
+    )
 
 
 class QuestionBank(Base):

@@ -954,13 +954,14 @@ async def transcribe_audio(audio_file_path: str) -> str:
                 
             logger.info(f"Sending audio to Groq Whisper: {filename} ({file_size} bytes)")
             with open(audio_file_path, "rb") as audio_file:
-                # Passing as a tuple (filename, file_object) is robust for format detection in Whisper APIs
+                # Passing as a tuple (filename, file_object) is robust for format detection in Whisper APIs.
+                # Do NOT lock language="en" — it causes silent empty returns for non-English accents
+                # or ambiguous codec detection (especially audio/webm;codecs=opus from Chrome).
                 transcript = await ai_client.client.audio.transcriptions.create(
                     file=(filename, audio_file),
                     model="whisper-large-v3",
                     response_format="json",
-                    language="en",
-                    temperature=0.0
+                    temperature=0.1  # Slight tolerance to avoid over-suppression of uncertain audio
                 )
                 
                 text = (getattr(transcript, 'text', "") or "").strip()

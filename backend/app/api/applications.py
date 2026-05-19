@@ -6,7 +6,7 @@ try:
     from fastapi.responses import ORJSONResponse
 except ImportError:
     from fastapi.responses import JSONResponse as ORJSONResponse
-from sqlalchemy import or_, func, text, cast, String, extract, inspect as sa_inspect
+from sqlalchemy import or_, and_, func, text, cast, String, extract, inspect as sa_inspect
 from sqlalchemy.orm import Session, joinedload, selectinload, defer, load_only
 from sqlalchemy.orm.exc import ObjectDeletedError
 from app.core.storage import upload_file, get_signed_url, get_public_url
@@ -839,6 +839,7 @@ async def process_application_background(application_id: int, job_id: int, abs_f
             # Heuristic: Check if this email exists anywhere in the system (global check)
             # OR if it was already extracted for this job in a concurrent batch task.
             existing_match = db.query(Application).outerjoin(ResumeExtraction).filter(
+                Application.job_id == application.job_id,
                 or_(
                     Application.candidate_email == norm_email,
                     ResumeExtraction.email == norm_email
@@ -861,7 +862,14 @@ async def process_application_background(application_id: int, job_id: int, abs_f
 
                 # Delete related resume_extraction first if it exists in session to avoid ForeignKeyViolation
                 if resume_extraction:
-                    db.delete(resume_extraction)
+                    try:
+                        insp = sa_inspect(resume_extraction)
+                        if insp.persistent:
+                            db.delete(resume_extraction)
+                        elif resume_extraction in db:
+                            db.expunge(resume_extraction)
+                    except Exception:
+                        pass
                 
                 db.delete(application)
                 db.commit()
@@ -1111,7 +1119,6 @@ def get_hr_applications(
             term = f"%{search}%"
             query = query.filter(or_(
                 Application.candidate_name.ilike(term),
-                Application.candidate_email.ilike(term),
                 Job.title.ilike(term)
             ))
 

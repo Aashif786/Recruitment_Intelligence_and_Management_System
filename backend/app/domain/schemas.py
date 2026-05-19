@@ -691,6 +691,26 @@ class InterviewResponse(BaseModel):
 class InterviewDetailResponse(InterviewResponse):
     questions: List[InterviewQuestionResponse] = []
 
+class MonitoringEventCreate(BaseModel):
+    event_type: str
+    confidence_score: Optional[float] = None
+    frame_snapshot: Optional[str] = None  # Base64 string
+    video_reference: Optional[str] = None
+
+class MonitoringEventResponse(BaseModel):
+    id: int
+    interview_id: int
+    event_type: str
+    timestamp: datetime
+    confidence_score: Optional[float] = None
+    frame_image_path: Optional[str] = None
+    frame_image_url: Optional[str] = None  # Signed URL
+    video_reference: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 # ============================================================================
 # Hiring Decision Schemas
 # ============================================================================

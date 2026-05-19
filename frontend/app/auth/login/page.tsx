@@ -22,6 +22,7 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const hasSubmitted = React.useRef(false)
 
   const { data: settings } = useSWR('/api/settings', (url) => APIClient.get(url)) as { data: any }
   const companyLogo = settings?.company_logo_url || "/calrims/logo-dark.png"
@@ -52,6 +53,7 @@ function LoginContent() {
     }
 
     setIsSubmitting(true)
+    hasSubmitted.current = true
 
     try {
       await login(email, password)
@@ -70,6 +72,7 @@ function LoginContent() {
       
       router.push(restoreUrl)
     } catch (err) {
+      hasSubmitted.current = false
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
       setIsSubmitting(false)
@@ -79,7 +82,7 @@ function LoginContent() {
   useEffect(() => {
     // Enforce strict security: navigating to the login page terminates any active session.
     // This ensures HR must explicitly authenticate every time they want to access the system.
-    if (isAuthenticated) {
+    if (isAuthenticated && !hasSubmitted.current) {
       logout()
     }
   }, [isAuthenticated, logout])

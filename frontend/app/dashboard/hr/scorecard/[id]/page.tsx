@@ -76,7 +76,7 @@ export default function CandidateScorecardPage() {
     if (appLoading) return <div className="p-12 text-center text-muted-foreground animate-pulse">Loading Scorecard...</div>
     if (!application) return <div className="p-12 text-center text-destructive">Candidate not found</div>
 
-    const getRecommendationColor = (rec: string) => {
+    const getRecommendationColor = (rec?: string) => {
         switch (rec?.toLowerCase()) {
             case 'strong hire': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
             case 'hire': return 'text-primary bg-primary/10 border-primary/20'

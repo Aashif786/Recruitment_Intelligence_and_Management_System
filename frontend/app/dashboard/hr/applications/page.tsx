@@ -312,7 +312,7 @@ export default function HRApplicationsPage() {
                 </svg>
                 <input
                     type="text"
-                    placeholder="Search name, email, ID, or job details..."
+                    placeholder="Search name, ID, or job details..."
                     className="w-full pl-12 pr-4 h-11 bg-background border-2 border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-base placeholder:text-muted-foreground text-foreground"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}

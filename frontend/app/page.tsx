@@ -328,23 +328,26 @@ export default function Home() {
             box-shadow: 12px 12px 40px rgba(59,130,246,0.15);
           }
           .glass-feature-card {
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.45s ease, border-color 0.45s ease;
+            background: rgba(255, 255, 255, 0.35);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.45s ease, border-color 0.45s ease, background 0.45s ease;
             transform-origin: center center;
             transform-style: preserve-3d;
             perspective: 1000px;
             will-change: transform;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.10), inset 0 1px 0 rgba(255,255,255,0.5);
           }
           .dark .glass-feature-card {
-            background: rgba(15, 37, 71, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 37, 71, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.12);
           }
           .glass-feature-card:hover {
             transform: perspective(1000px) rotateY(6deg) rotateX(-5deg) translateY(-10px) scale(1.02);
-            box-shadow: 20px 20px 50px rgba(59, 130, 246, 0.15);
-            border-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.50);
+            box-shadow: 20px 20px 50px rgba(59, 130, 246, 0.18), inset 0 1px 0 rgba(255,255,255,0.7);
+            border-color: rgba(255, 255, 255, 0.85);
           }
           .glass-feature-card.tilt-up:hover {
             transform: perspective(1000px) rotateX(8deg) rotateY(0deg) translateY(-10px) scale(1.02);
@@ -608,7 +611,7 @@ export default function Home() {
                 >
                   Hire with the same precision
                 </span>
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-primary">
+                <span className="block text-primary">
                   you use to build products.
                 </span>
               </h1>
@@ -955,7 +958,15 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-stretch">
             {/* Candidate Card */}
             <div className="group relative">
-              <div className="absolute inset-0 rounded-3xl bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800" />
+              <div
+                className="absolute inset-0 rounded-3xl border border-white/50"
+                style={{
+                  background: "rgba(255,255,255,0.35)",
+                  backdropFilter: "blur(18px)",
+                  WebkitBackdropFilter: "blur(18px)",
+                  boxShadow: "0 8px 32px rgba(59,130,246,0.10), inset 0 1px 0 rgba(255,255,255,0.5)",
+                }}
+              />
               <div className="relative rounded-3xl p-8 lg:p-10">
                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-25 transition-opacity">
                   <Users className="h-32 w-32 text-primary" />
@@ -982,7 +993,15 @@ export default function Home() {
 
             {/* HR Card */}
             <div className="group relative">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary to-primary/80 shadow-[0_30px_90px_rgba(15,23,42,0.6)]" />
+              <div
+                className="absolute inset-0 rounded-3xl border border-primary/30"
+                style={{
+                  background: "rgba(66, 99, 168, 0.40)",
+                  backdropFilter: "blur(18px)",
+                  WebkitBackdropFilter: "blur(18px)",
+                  boxShadow: "0 30px 90px rgba(15,23,42,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",
+                }}
+              />
               <div className="relative rounded-3xl p-8 lg:p-10 text-primary-foreground">
                 <h3 className="text-2xl lg:text-3xl font-semibold mb-6">
                   For hiring teams shipping fast, not guessing

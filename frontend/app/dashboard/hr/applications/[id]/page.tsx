@@ -90,17 +90,20 @@ export default function HRApplicationDetailPage() {
     const applicationId = params.id as string
     const { data: application, error: appError, isLoading: appLoading, mutate: mutateApp } = useSWR<any>(`/api/applications/${applicationId}`, (url: string) => fetcher<any>(url))
 
-    const { data: interviewReport, isLoading: reportLoading, mutate: mutateReport } = useSWR(
+    const { data: interviewReport, error: reportError, isLoading: reportLoading, mutate: mutateReport } = useSWR(
         (application?.interview?.status === 'completed' || 
          application?.interview?.status === 'terminated' || 
          application?.status === 'ai_interview_completed') 
-        ? `/api/interviews/${application.interview.id}/report` : null,
-        (url: string) => fetcher<any>(url)
+        ? `/api/interviews/${application?.interview?.id}/report` : null,
+        (url: string) => fetcher<any>(url),
+        {
+            fallbackData: application?.interview?.report
+        }
     )
 
     const isLoading = appLoading || (
         (application?.interview?.status === 'completed' || application?.interview?.status === 'terminated') && 
-        reportLoading && !interviewReport
+        reportLoading && !interviewReport && !reportError
     )
     
     const [actionLoading, setActionLoading] = useState<string | null>(null)

@@ -92,6 +92,9 @@ export default function InterviewPage() {
     const hiddenSinceRef = useRef<number | null>(null)
     const mediaRecorderRef = useRef<any>(null)
     const audioChunksRef = useRef<any[]>([])
+    const recordingStartTimeRef = useRef<number>(0)
+    const silentStopRef = useRef<boolean>(false)
+    const isListeningRef = useRef<boolean>(false)
 
     // Overall Video Recording Refs
     const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -108,7 +111,7 @@ export default function InterviewPage() {
     const questionsPrepAttemptsRef = useRef(0)
     const evalPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const loadedIndexRef = useRef(0)
-    const speechRecognitionRef = useRef<any>(null)
+    const lastMonitoringEventRef = useRef<{ timestamp: number; type: string }>({ timestamp: 0, type: 'normal' })
 
     // Derived Sections
     const aptitudeQuestions = useMemo(() => questions.filter(q => q.question_type === 'aptitude'), [questions])
@@ -122,6 +125,7 @@ export default function InterviewPage() {
     // Keep refs in sync with state so event handlers always see fresh values
     useEffect(() => { warningsRef.current = warnings }, [warnings])
     useEffect(() => { interviewStatusRef.current = interviewStatus }, [interviewStatus])
+    useEffect(() => { isListeningRef.current = isListening }, [isListening])
 
     // Token Persistence
     useEffect(() => {
@@ -178,25 +182,11 @@ export default function InterviewPage() {
         }
     }, [])
 
-    const startMediaRecordingFallback = async () => {
+    const startRecording = async () => {
         try {
-            let stream = streamRef.current
-            
-            // Check if stream is active and has audio tracks
-            if (stream && (!stream.active || stream.getAudioTracks().length === 0)) {
-                stream = null
-            }
-
-            if (!stream) {
-                stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            }
-
-            const audioTracks = stream.getAudioTracks().map(t => {
-                const clone = t.clone();
-                clone.enabled = true;
-                return clone;
-            });
-            const audioStream = new MediaStream(audioTracks);
+            // Always request a fresh microphone stream specifically for the voice answer,
+            // avoiding conflicts with any active overall/proctoring recording streams.
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
             // Try to use a standard mime type, but fallback
             let options: any = { mimeType: 'audio/webm;codecs=opus' }
@@ -210,11 +200,13 @@ export default function InterviewPage() {
                 options = { mimeType: '' } 
             }
             
-            console.log(`Using MediaRecorder options (fallback):`, options)
+            console.log(`Using MediaRecorder options:`, options)
 
-            const mediaRecorder = new MediaRecorder(audioStream, options)
+            const mediaRecorder = new MediaRecorder(stream, options)
             mediaRecorderRef.current = mediaRecorder
             audioChunksRef.current = []
+            recordingStartTimeRef.current = Date.now()
+            silentStopRef.current = false
 
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0) {
@@ -223,100 +215,54 @@ export default function InterviewPage() {
             }
 
             mediaRecorder.onstop = async () => {
+                // If this was a silent auto-stop (e.g. triggered by a react effect re-run),
+                // discard without showing any error or attempting transcription.
+                if (silentStopRef.current) {
+                    silentStopRef.current = false
+                    stream.getTracks().forEach(track => track.stop())
+                    return
+                }
+
                 const chunks = audioChunksRef.current
                 const mimeType = mediaRecorder.mimeType || 'audio/webm'
                 const audioBlob = new Blob(chunks, { type: mimeType })
                 
-                if (audioBlob.size > 100) { 
+                if (audioBlob.size > 500) { 
                     await handleTranscribe(audioBlob)
                 } else {
                     toast.error("Audio recording was too short or silent. Please try again.")
                 }
 
                 // Properly dispose of audio tracks
-                audioStream.getTracks().forEach(track => track.stop());
+                stream.getTracks().forEach(track => track.stop());
             }
 
-            mediaRecorder.start(500)
+            // Use a small timeslice (100ms) so data is buffered quickly
+            mediaRecorder.start(100)
             setIsListening(true)
         } catch (err) {
-            console.error("Mic access failed in fallback", err)
+            console.error("Mic access failed", err)
             toast.error("Could not access microphone. Please check permissions.")
         }
     }
 
-    const startRecording = async () => {
-        const baseAnswerText = answerRef.current || '';
-        try {
-            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-            if (SpeechRecognition) {
-                console.log("Using browser-native SpeechRecognition")
-                const recognition = new SpeechRecognition()
-                recognition.continuous = true
-                recognition.interimResults = true
-                recognition.lang = 'en-US'
-
-                recognition.onresult = (event: any) => {
-                    let finalTranscript = ''
-                    let interimTranscript = ''
-                    
-                    for (let i = 0; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript + ' '
-                        } else {
-                            interimTranscript += event.results[i][0].transcript
-                        }
-                    }
-                    
-                    const combined = (finalTranscript + interimTranscript).trim()
-                    if (combined) {
-                        const newAnswer = baseAnswerText ? `${baseAnswerText} ${combined}` : combined;
-                        setAnswer(newAnswer)
-                        answerRef.current = newAnswer
-                    }
-                }
-
-                recognition.onerror = (err: any) => {
-                    console.error("SpeechRecognition error, falling back to MediaRecorder", err)
-                    recognition.onend = null; // Prevent recursion on fallback
-                    try {
-                        recognition.stop()
-                    } catch {}
-                    speechRecognitionRef.current = null
-                    void startMediaRecordingFallback()
-                }
-
-                recognition.onend = () => {
-                    setIsListening(false)
-                    speechRecognitionRef.current = null
-                }
-
-                speechRecognitionRef.current = recognition
-                recognition.start()
-                setIsListening(true)
+    const stopRecording = (force = false) => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            const elapsedMs = Date.now() - recordingStartTimeRef.current
+            // If the recording has been active for less than 1.5 seconds and it's not
+            // a user-initiated stop, silently discard without showing any error.
+            if (!force && elapsedMs < 1500) {
+                silentStopRef.current = true
+                try { mediaRecorderRef.current.stop() } catch { }
+                setIsListening(false)
+                isListeningRef.current = false
                 return
-            } else {
-                console.log("Native SpeechRecognition not supported, falling back to MediaRecorder")
-                await startMediaRecordingFallback()
             }
-        } catch (err) {
-            console.error("Native SpeechRecognition init failed, falling back to MediaRecorder", err)
-            await startMediaRecordingFallback()
-        }
-    }
-
-    const stopRecording = () => {
-        if (speechRecognitionRef.current) {
-            try {
-                speechRecognitionRef.current.stop()
-            } catch (err) {
-                console.error("Error stopping SpeechRecognition:", err)
-            }
-            speechRecognitionRef.current = null
-            setIsListening(false)
-        } else if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            // Flush any buffered audio data before stopping
+            try { mediaRecorderRef.current.requestData() } catch { }
             mediaRecorderRef.current.stop()
             setIsListening(false)
+            isListeningRef.current = false
         }
     }
 
@@ -436,9 +382,11 @@ export default function InterviewPage() {
                         setIsFaceDetected(faceDetected);
 
                         // 2. Multiple Face Detection
-                        setIsMultipleFacesDetected(predictions.length > 1);
+                        const multipleFaces = predictions.length > 1;
+                        setIsMultipleFacesDetected(multipleFaces);
 
                         // 3. Focus/Eyeball Detection (Heuristic)
+                        let isFocusing = true;
                         if (faceDetected) {
                             const face = predictions[0];
                             const landmarks = face.landmarks;
@@ -452,13 +400,47 @@ export default function InterviewPage() {
                                 const eyeDist = Math.abs(leftEye[0] - rightEye[0]);
                                 const noseOffset = Math.abs(nose[0] - eyesCenterX);
 
-                                const isFocusing = noseOffset < (eyeDist * 0.45);
+                                isFocusing = noseOffset < (eyeDist * 0.45);
                                 setIsFocusingOnMonitor(isFocusing);
                             } else {
+                                isFocusing = false;
                                 setIsFocusingOnMonitor(false);
                             }
                         } else {
+                            isFocusing = false;
                             setIsFocusingOnMonitor(true);
+                        }
+
+                        // Silently track event to backend
+                        let eventType = 'normal';
+                        if (!faceDetected) eventType = 'no_face';
+                        else if (multipleFaces) eventType = 'multiple_faces';
+                        else if (!isFocusing) eventType = 'focus_lost';
+
+                        const now = Date.now();
+                        const last = lastMonitoringEventRef.current;
+                        const isDifferent = eventType !== last.type;
+                        const throttleTime = eventType === 'normal' ? 30000 : 4000;
+
+                        if (isDifferent || (now - last.timestamp >= throttleTime)) {
+                            lastMonitoringEventRef.current = { timestamp: now, type: eventType };
+                            if (videoRef.current && videoRef.current.videoWidth > 0) {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = 640;
+                                canvas.height = Math.round((640 / videoRef.current.videoWidth) * videoRef.current.videoHeight);
+                                const ctx = canvas.getContext('2d');
+                                if (ctx) {
+                                    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+                                    const base64Frame = canvas.toDataURL('image/jpeg', 0.7);
+                                    
+                                    APIClient.post(`/api/interviews/${interviewId}/monitoring-events`, {
+                                        event_type: eventType,
+                                        confidence_score: 0.95,
+                                        frame_snapshot: base64Frame,
+                                        video_reference: `offset_${Math.round(videoRef.current.currentTime || 0)}s`
+                                    }).catch(() => {});
+                                }
+                            }
                         }
                     } catch (e) {
                         console.error("Detection error", e);
@@ -547,8 +529,8 @@ export default function InterviewPage() {
             const currentQ = questions[currentIndex]
             setVisitedIds(prev => new Set(prev).add(currentQ.id))
 
-            // Stop listening when moving between questions
-            if (isListening) {
+            // Stop listening when moving between questions (use ref to avoid triggering on isListening changes)
+            if (isListeningRef.current) {
                 stopRecording()
             }
 
@@ -560,7 +542,9 @@ export default function InterviewPage() {
             setLastSection(currentQ.question_type)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentIndex, questions, isListening])
+    }, [currentIndex, questions]) // ⚠️ intentionally NOT including isListening — adding it caused the effect
+                                  // to re-fire every time startRecording() set isListening=true, which
+                                  // immediately called stopRecording() and produced a false "too short" error.
 
     const handleViolation = useCallback(async (type: string) => {
         if (interviewStatusRef.current !== 'active') return
@@ -1058,6 +1042,8 @@ export default function InterviewPage() {
                     setAnswer('')
                     answerRef.current = ''
                 }
+            } else {
+                setConfirmEndInterview({ unansweredCount: questions.filter((q, idx) => idx !== currentIndex && !q.is_answered).length, isForced: false })
             }
         } catch (err: any) {
             console.error("Submit failed", err)
@@ -1120,11 +1106,8 @@ export default function InterviewPage() {
         if (isActive) {
             return 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30 scale-110 z-10'
         }
-        if (q.is_answered && q.evaluation_pending) {
-            return 'bg-amber-400 border-amber-600 text-white shadow-sm ring-2 ring-amber-200'
-        }
         if (q.is_answered) {
-            return 'bg-green-50 border-green-600 text-white shadow-sm'
+            return 'bg-green-500 border-green-600 text-white shadow-sm'
         }
         if (visitedIds.has(q.id)) {
             return 'bg-red-500 border-red-600 text-white shadow-sm'
@@ -1490,15 +1473,7 @@ export default function InterviewPage() {
                     </div>
                 )}
 
-                {/* Eye Focus Warning */}
-                {!isFocusingOnMonitor && interviewStatus === 'active' && isFaceDetected && !isMultipleFacesDetected && (
-                    <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[400] pointer-events-none">
-                        <div className="bg-amber-100 border-2 border-amber-400 text-amber-800 px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3 animate-in slide-in-from-top-4 duration-300">
-                            <Target className="w-5 h-5 animate-pulse" />
-                            <span className="font-bold text-sm">Please focus on the monitor</span>
-                        </div>
-                    </div>
-                )}
+
 
                 {/* Fixed Camera Preview or Voice/Audio Only Fallback */}
                 {isCameraActive ? (
@@ -1581,6 +1556,15 @@ export default function InterviewPage() {
                     </div>
 
                     <div className="flex items-center gap-4">
+                        {/* Locked Skill Badge */}
+                        {interviewData?.locked_skill && (
+                            <div className="bg-purple-50 border-2 border-purple-100 px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm select-none">
+                                <Lock className="w-3.5 h-3.5 text-purple-500" />
+                                <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest leading-none">Focus Skill</span>
+                                <span className="text-xs font-black text-purple-700 uppercase tracking-tight">{interviewData.locked_skill}</span>
+                            </div>
+                        )}
+
                         {/* Proctoring Status Indicator */}
                         {interviewStatus === 'active' && (
                             <div className="bg-white border-2 border-slate-100 px-4 py-2 rounded-2xl flex items-center gap-2.5 shadow-sm select-none">
@@ -1697,7 +1681,7 @@ export default function InterviewPage() {
                                             className={`font-bold transition-all duration-300 ${isListening ? 'text-red-500 hover:text-red-600' : 'text-slate-400 hover:text-blue-600'}`}
                                             onClick={() => {
                                                 if (isListening) {
-                                                    stopRecording()
+                                                    stopRecording(true) // force=true: user explicitly clicked stop
                                                 } else {
                                                     startRecording()
                                                 }
