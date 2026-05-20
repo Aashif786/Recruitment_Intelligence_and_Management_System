@@ -176,7 +176,17 @@ export default function InterviewPage() {
             const audioTrack = stream.getAudioTracks()[0];
 
             const isVideoActive = videoTrack && videoTrack.readyState === 'live' && videoTrack.enabled;
-            const isAudioActive = audioTrack && audioTrack.readyState === 'live' && audioTrack.enabled;
+            
+            // If we are actively recording a voice answer, we use a separate stream.
+            // We should be healthy if either the proctoring stream OR the active recording stream is live.
+            let isAudioActive = audioTrack && audioTrack.readyState === 'live' && audioTrack.enabled;
+            
+            if (!isAudioActive && isListeningRef.current && mediaRecorderRef.current?.stream) {
+                const recordingAudioTrack = mediaRecorderRef.current.stream.getAudioTracks()[0];
+                if (recordingAudioTrack && recordingAudioTrack.readyState === 'live' && recordingAudioTrack.enabled) {
+                    isAudioActive = true;
+                }
+            }
 
             setIsCameraActive(!!isVideoActive);
             setIsMicActive(!!isAudioActive);
@@ -817,11 +827,15 @@ export default function InterviewPage() {
                 navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: true })
                     .then(stream => {
                         streamRef.current = stream;
-                        setIsCameraActive(true);
+                        const hasVideo = stream.getVideoTracks().length > 0;
+                        const hasAudio = stream.getAudioTracks().length > 0;
+                        setIsCameraActive(hasVideo);
+                        setIsMicActive(hasAudio);
                     })
                     .catch(err => {
                         console.warn("Pre-request camera failed:", err);
                         setIsCameraActive(false);
+                        setIsMicActive(false);
                     });
             }
         } else if (interviewStatus === 'active') {
@@ -1317,10 +1331,6 @@ export default function InterviewPage() {
                         {(!isCameraActive || !isMicActive) && (
                             <p className="text-center text-xs text-amber-600 font-bold animate-pulse">
                                 Please enable Camera & Mic to proceed
-                            </p>
-                        )}
-                    </div>
-                                Proceeding without camera — voice &amp; tab monitoring still active
                             </p>
                         )}
                     </div>
