@@ -110,7 +110,7 @@ export default function DashboardLayout({
         }
       }}
     >
-      <SidebarProvider className="relative overflow-hidden">
+      <SidebarProvider className="relative overflow-hidden h-full">
         {/* subtle inner background for dashboard content */}
         <div className="pointer-events-none absolute inset-0 z-0 opacity-80">
           <div className="absolute inset-0 bg-background/95" />
