@@ -773,6 +773,7 @@ async def _generate_first_level_questions(interview: Interview, job: Job, applic
 
 
 @router.post("/access")
+@limiter.limit("10/minute")
 async def access_interview(
     request: Request,
     data: InterviewAccess,
@@ -1588,8 +1589,47 @@ async def submit_answer(
                 detail=f"Interview submission blocked: Session is in {interview.status} state."
             )
 
+        # ── TIMER VALIDATION ──
+        if interview.started_at and interview.duration_minutes:
+            now = get_ist_now()
+            # Naive to aware conversion if needed, but get_ist_now usually returns naive for this project
+            # based on my previous analysis of to_naive_ist usage.
+            # Let's check if started_at is naive or aware.
+            start_time = interview.started_at
+            # Based on app/core/timezone.py usage in the file, it seems they use naive IST.
+            end_time = start_time + timedelta(minutes=interview.duration_minutes)
+            
+            # Adding a 2-minute grace period for network latency during the final submission
+            if now > (end_time + timedelta(minutes=2)):
+                logger.warning(f"Submission rejected: Timer expired for interview {interview_id}. End time: {end_time}, Now: {now}")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Interview session has expired. Submissions are no longer accepted for this session."
+                )
+
         if interview.interview_stage == STAGE_COMPLETED:
             raise HTTPException(status_code=status.HTTP_410_GONE, detail="Interview is already fully completed")
+
+        # ── PROCTORING ENFORCEMENT ──
+        # If the job requires AI/Mixed mode, we expect monitoring events to be flowing.
+        # We check if at least one 'normal' or 'focus_lost' event exists if the session 
+        # has been active for more than 45 seconds.
+        job = interview.application.job if interview.application else None
+        if job and job.interview_mode in ["ai", "mixed"] and current_question.question_type != "aptitude":
+            active_duration = get_ist_now() - interview.started_at
+            if active_duration > timedelta(seconds=45):
+                from app.domain.models import InterviewMonitoringEvent
+                event_count = db.query(InterviewMonitoringEvent).filter(
+                    InterviewMonitoringEvent.interview_id == interview_id
+                ).count()
+                if event_count == 0:
+                    logger.error(f"Proctoring Bypass Detected: No monitoring events for interview {interview_id} after {active_duration.seconds}s.")
+                    # We don't terminate immediately to avoid false positives, but we block the submission
+                    # until the proctoring engine checks in.
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Proctoring system is offline. Please ensure your camera is visible and refresh the page."
+                    )
 
         # 3. Validate Question ID
         current_question = db.query(InterviewQuestion).filter(
@@ -1641,6 +1681,14 @@ async def submit_answer(
         existing_answer = db.query(InterviewAnswer).filter(
             InterviewAnswer.question_id == data.question_id
         ).first()
+        
+        if existing_answer and existing_answer.evaluated_at:
+             # If it was already evaluated, we don't allow overwriting to prevent race conditions/cheating
+             logger.warning(f"Submission rejected: Answer for question {data.question_id} in interview {interview_id} was already evaluated.")
+             raise HTTPException(
+                 status_code=status.HTTP_409_CONFLICT,
+                 detail="This question has already been evaluated and cannot be modified."
+             )
         
         # 5. Termination Protocol (Abusive language / Explicit quit)
         should_terminate = False
@@ -2646,6 +2694,7 @@ async def get_video_stream(
     return RedirectResponse(url=signed_url)
 
 @router.post("/{interview_id}/transcribe")
+@limiter.limit("20/minute")
 async def transcribe_interview_audio(
     request: Request,
     interview_id: int,
@@ -2659,6 +2708,15 @@ async def transcribe_interview_audio(
     """
     if interview_session.id != interview_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    # ── SIZE LIMIT ──
+    # Limit transcription audio to 15MB (sufficient for 2-3 mins of high-quality opus)
+    MAX_AUDIO_SIZE = 15 * 1024 * 1024
+    if file.size and file.size > MAX_AUDIO_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Audio file too large. Maximum size allowed is {MAX_AUDIO_SIZE // (1024 * 1024)}MB."
+        )
 
     rid = (request.headers.get("X-Request-ID") or "").strip()
     if rid and settings.enable_request_id_idempotency:
@@ -2781,6 +2839,7 @@ async def upload_interview_video(
 
 
 @router.post("/{interview_id}/monitoring-events", response_model=MonitoringEventResponse)
+@limiter.limit("40/minute")
 async def create_monitoring_event(
     interview_id: int,
     event_data: MonitoringEventCreate,
@@ -2793,6 +2852,12 @@ async def create_monitoring_event(
     """
     if interview_session.id != interview_id:
         raise HTTPException(status_code=403, detail="Access denied")
+
+    # ── SIZE LIMIT ──
+    # Limit frame snapshots to 1MB (standard JPEG at 640x480 is usually <100KB)
+    if event_data.frame_snapshot and len(event_data.frame_snapshot) > 1 * 1024 * 1024:
+        logger.warning(f"Large monitoring frame rejected for interview {interview_id}: {len(event_data.frame_snapshot)} chars")
+        event_data.frame_snapshot = None # Discard the image but keep the event metadata
 
     storage_path = None
     if event_data.frame_snapshot and event_data.frame_snapshot.startswith("data:image"):

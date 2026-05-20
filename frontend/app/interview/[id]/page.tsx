@@ -63,7 +63,13 @@ export default function InterviewPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [interviewStatus, setInterviewStatus] = useState('loading')
     const [interviewData, setInterviewData] = useState<InterviewData | null>(null)
-    const [warnings, setWarnings] = useState(0)
+    const [warnings, setWarnings] = useState<number>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem(`rims_strikes_${interviewId}`)
+            return saved ? parseInt(saved, 10) : 0
+        }
+        return 0
+    })
     const [showViolationModal, setShowViolationModal] = useState(false)
     const [violationModalType, setViolationModalType] = useState('')
     const [violationModalWarnings, setViolationModalWarnings] = useState(0)
@@ -135,6 +141,13 @@ export default function InterviewPage() {
             console.log("Interview token persisted from URL.")
         }
     }, [token])
+
+    // Proctoring Warnings Persistence
+    useEffect(() => {
+        if (typeof window !== 'undefined' && interviewId) {
+            localStorage.setItem(`rims_strikes_${interviewId}`, warnings.toString())
+        }
+    }, [warnings, interviewId])
 
     // VISIBILITY & ABANDONMENT TRACKING
     useEffect(() => {
