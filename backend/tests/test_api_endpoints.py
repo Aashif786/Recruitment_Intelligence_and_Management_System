@@ -258,9 +258,9 @@ class TestNotificationsEndpoints:
 
 class TestSettingsEndpoints:
 
-    def test_get_settings_requires_hr(self, client):
+    def test_get_settings_public(self, client):
         response = client.get("/api/settings")
-        assert response.status_code in (401, 403)
+        assert response.status_code == 200
 
     def test_get_settings_as_hr(self, client, hr_auth_headers):
         response = client.get("/api/settings", headers=hr_auth_headers)

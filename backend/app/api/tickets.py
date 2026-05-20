@@ -408,8 +408,8 @@ def resolve_ticket(
                 else:
                     ticket.interview.interview_stage = 'aptitude'
                     
-            # Move application out of terminal 'rejected' state if it was rejected due to this session
-            if app and app.status == 'rejected':
+            # Move application out of terminal/post-interview states if it was advanced incorrectly
+            if app and app.status in ('rejected', 'interview_completed', 'review_later', 'permanent_failure'):
                 if ticket.interview.interview_stage == 'first_level':
                     app.status = 'ai_interview'
                 else:
@@ -441,8 +441,8 @@ def resolve_ticket(
                     else:
                         ticket.interview.interview_stage = 'aptitude'
                         
-                # Move application out of terminal 'rejected' state if it was rejected due to this session
-                if app and app.status == 'rejected':
+                # Move application out of terminal/post-interview states if it was advanced incorrectly
+                if app and app.status in ('rejected', 'interview_completed', 'review_later', 'permanent_failure'):
                     if ticket.interview.interview_stage == 'first_level':
                         app.status = 'ai_interview'
                     else:
