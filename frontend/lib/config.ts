@@ -2,7 +2,7 @@
  * Client-side configuration for the Automated Recruitment System
  */
 
-// Centralized API Base URL with fallback to Render's default port (10000)
+// Centralized API Base URL with fallback to 127.0.0.1:10000 to avoid IPv6/localhost issues
 const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:10000';
 export const API_BASE_URL = rawApiBaseUrl.replace(/\/+$/, '');
 
