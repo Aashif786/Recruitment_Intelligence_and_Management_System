@@ -65,8 +65,13 @@ function LoginContent() {
       const session = getSessionData()
       let restoreUrl = '/dashboard/hr'
       
-      // Check if there's a saved page to restore to
-      if (session.lastVisitedPage && session.lastVisitedPage.startsWith('/dashboard')) {
+      // 1. Check if 'from' query param exists (from middleware)
+      const from = searchParams.get('from')
+      if (from && (from.startsWith('/dashboard') || from.startsWith('/company') || from.startsWith('/offer'))) {
+        restoreUrl = from
+      } 
+      // 2. Fallback to session last visited page
+      else if (session.lastVisitedPage && session.lastVisitedPage.startsWith('/dashboard')) {
         restoreUrl = session.lastVisitedPage
       }
       
