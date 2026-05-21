@@ -51,6 +51,8 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const [isLoading, setIsLoading] = useState(true);    // first load spinner
   const [isFinished, setIsFinished] = useState(false);
   const [isTerminated, setIsTerminated] = useState(false);
+  const [pollingError, setPollingError] = useState<string | null>(null);
+  const [pollTrigger, setPollTrigger] = useState(0);
   const [focusStrikes, setFocusStrikes] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem(`strikes_${sessionId}`);
@@ -101,6 +103,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const terminationSentRef = useRef(false);
 
   const handleStrike = useCallback((reason: string) => {
+    if (!isStarted) return; // ignore strikes before session officially starts
     if (Date.now() - sessionStartRef.current < 15000) return; // ignore first 15s
 
     setFocusStrikes(prev => {
@@ -108,6 +111,18 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(`strikes_${interviewId}`, next.toString());
       }
+
+      // Record strike as a monitoring event to create a server-side audit trail
+      const sanitizedReason = reason.replace(/\s+/g, '_').toLowerCase();
+      fetch(`${API_BASE_URL}/api/interviews/${interviewId}/monitoring-events`, {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({
+          event_type: `focus_lost_strike_${next}_${sanitizedReason}`,
+          confidence_score: 0.0,
+        }),
+      }).catch((err) => console.error('Failed to post strike monitoring event:', err));
+
       if (next < 4) {
         toast.error(`Warning ${next}/4: ${reason}`, {
           description: 'Multiple violations will result in immediate session termination.',
@@ -126,7 +141,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       }
       return next;
     });
-  }, [interviewId, token]);
+  }, [interviewId, token, isStarted]);
 
   // ─── VIDEO UPLOAD ──────────────────────────────────────────────────────────
   const uploadVideo = useCallback(async (blob: Blob) => {
@@ -194,10 +209,20 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   // Initial poll: wait for questions to be ready
   useEffect(() => {
     let cancelled = false;
+    let pollCount = 0;
+    const maxPolls = 60; // 60 * 2.5s = 150 seconds (2.5 minutes)
+
     const poll = async () => {
+      if (cancelled) return;
       try {
         const stage = await apiFetch(`/api/interviews/${interviewId}/stage`, token);
         if (stage.status === 'processing' || !stage.questions_ready) {
+          pollCount += 1;
+          if (pollCount >= maxPolls) {
+            setPollingError("We're experiencing delays preparing your interview questions. Please try again or contact support.");
+            setIsLoading(false);
+            return;
+          }
           if (!cancelled) setTimeout(poll, 2500);
           return;
         }
@@ -219,12 +244,24 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           setIsLoading(false);
         }
       } catch (e: any) {
+        pollCount += 1;
+        if (pollCount >= maxPolls) {
+          setPollingError("An error occurred while connecting to the interview server. Please check your connection and retry.");
+          setIsLoading(false);
+          return;
+        }
         if (!cancelled) setTimeout(poll, 3000);
       }
     };
     poll();
     return () => { cancelled = true; };
-  }, [interviewId, token, loadCurrentQuestion]);
+  }, [interviewId, token, loadCurrentQuestion, pollTrigger]);
+
+  const handleRetryPoll = () => {
+    setPollingError(null);
+    setIsLoading(true);
+    setPollTrigger(prev => prev + 1);
+  };
 
   // ─── SUBMIT ANSWER ─────────────────────────────────────────────────────────
   const handleSubmitAnswer = async (text: string) => {
@@ -272,6 +309,25 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       }
     } finally {
       setIsEvaluating(false);
+    }
+  };
+
+  // ─── END SESSION ──────────────────────────────────────────────────────────
+  const handleEndSession = async () => {
+    const confirmed = window.confirm("Are you sure you want to end this interview session? Your progress will be saved, but you won't be able to return to it.");
+    if (!confirmed) return;
+
+    try {
+      await apiFetch(`/api/interviews/${interviewId}/end`, token, {
+        method: 'POST',
+        body: JSON.stringify({ force: true, ended_early: true }),
+      });
+      setIsFinished(true);
+    } catch (err: any) {
+      toast.error('Failed to end interview session properly. Exiting to dashboard...');
+      setTimeout(() => {
+        window.location.href = '/calrims/';
+      }, 1500);
     }
   };
 
@@ -344,8 +400,6 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
   // ─── PROCTORING SETUP ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isStarted) return;
-
     async function setup() {
       try {
         if (activeStreamRef.current) {
@@ -387,36 +441,66 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           };
         }
 
-        // Initialize session video recorder
-        if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
-          try { videoRecorderRef.current.stop(); } catch (e) { console.error(e); }
-        }
-
-        const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
-        let selectedType = '';
-        for (const t of types) { if (MediaRecorder.isTypeSupported(t)) { selectedType = t; break; } }
-        const vRecorder = new MediaRecorder(stream, selectedType ? { mimeType: selectedType } : undefined);
-        videoRecorderRef.current = vRecorder;
-        videoChunksRef.current = [];
-        vRecorder.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
-        vRecorder.onstop = () => {
-          const blob = new Blob(videoChunksRef.current, { type: selectedType || 'video/webm' });
-          uploadVideo(blob);
-        };
-        vRecorder.start(10000); // chunk every 10s just in case
-
-        if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
-        faceCheckIntervalRef.current = setInterval(async () => {
-          if (!sessionVideoRef.current || !detectorRef.current) return;
-          try {
-            const predictions = await detectorRef.current.estimateFaces(sessionVideoRef.current, false);
-            setIsFaceDetected(predictions.length > 0);
-            if (predictions.length === 0) handleStrike('Candidate not in frame');
-            if (predictions.length > 1) handleStrike('Multiple people detected');
-          } catch (err) {
-            console.error('Face check error:', err);
+        // Only start recording and active proctoring if interview has officially started
+        if (isStarted) {
+          // Initialize session video recorder
+          if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
+            try { videoRecorderRef.current.stop(); } catch (e) { console.error(e); }
           }
-        }, 3000);
+
+          const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+          let selectedType = '';
+          for (const t of types) { if (MediaRecorder.isTypeSupported(t)) { selectedType = t; break; } }
+          const vRecorder = new MediaRecorder(stream, selectedType ? { mimeType: selectedType } : undefined);
+          videoRecorderRef.current = vRecorder;
+          videoChunksRef.current = [];
+          vRecorder.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
+          vRecorder.onstop = () => {
+            const blob = new Blob(videoChunksRef.current, { type: selectedType || 'video/webm' });
+            uploadVideo(blob);
+          };
+          vRecorder.start(10000); // chunk every 10s just in case
+
+          let checkCount = 0;
+          if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
+          faceCheckIntervalRef.current = setInterval(async () => {
+            const video = sessionVideoRef.current;
+            if (!video || !detectorRef.current) return;
+            if (video.readyState < 2 || video.videoWidth === 0) {
+              console.log('Webcam video not fully loaded, skipping proctoring frame check.');
+              return;
+            }
+            try {
+              const predictions = await detectorRef.current.estimateFaces(video, false);
+              const faceFound = predictions.length > 0;
+              setIsFaceDetected(faceFound);
+
+              if (predictions.length === 0) {
+                handleStrike('Candidate not in frame');
+              } else if (predictions.length > 1) {
+                handleStrike('Multiple people detected');
+              }
+
+              // Periodically (every 5 checks = 15 seconds) send a proctoring heartbeat event
+              checkCount++;
+              if (checkCount >= 5) {
+                checkCount = 0;
+                const statusType = predictions.length === 1 ? 'normal' : (predictions.length === 0 ? 'face_not_detected' : 'multiple_people');
+                const confidence = predictions.length === 1 ? 1.0 : 0.0;
+                fetch(`${API_BASE_URL}/api/interviews/${interviewId}/monitoring-events`, {
+                  method: 'POST',
+                  headers: authHeaders(token),
+                  body: JSON.stringify({
+                    event_type: statusType,
+                    confidence_score: confidence,
+                  }),
+                }).catch((err) => console.error('Failed to send periodic monitoring heartbeat:', err));
+              }
+            } catch (err) {
+              console.error('Face check error:', err);
+            }
+          }, 3000);
+        }
       } catch (e) {
         console.error('Video setup failed', e);
         // Ensure cleanup on failure
@@ -448,17 +532,23 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
     navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
 
-    const handleVisibility = () => {
-      if (document.hidden) handleStrike('Tab switched');
-    };
-    const handleBlur = () => handleStrike('Window focus lost');
-    
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('blur', handleBlur);
+    // Only bind window/visibility alerts if started
+    let handleVisibility: (() => void) | null = null;
+    let handleBlur: (() => void) | null = null;
+
+    if (isStarted) {
+      handleVisibility = () => {
+        if (document.hidden) handleStrike('Tab switched');
+      };
+      handleBlur = () => handleStrike('Window focus lost');
+      
+      document.addEventListener('visibilitychange', handleVisibility);
+      window.addEventListener('blur', handleBlur);
+    }
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('blur', handleBlur);
+      if (handleVisibility) document.removeEventListener('visibilitychange', handleVisibility);
+      if (handleBlur) window.removeEventListener('blur', handleBlur);
       navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
       if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
       if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
@@ -479,6 +569,40 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           <CardTitle className="text-3xl font-black text-destructive mb-4">Session Terminated</CardTitle>
           <p className="text-slate-600 font-medium mb-8">This interview has been deactivated due to security violations.</p>
           <Button variant="outline" className="w-full h-14 rounded-2xl font-bold" onClick={() => window.location.href = '/calrims/'}>Return to Safety</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (pollingError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-6 animate-in zoom-in duration-500">
+        <Card className="max-w-md w-full bg-white shadow-2xl border-destructive/20 rounded-3xl overflow-hidden">
+          <div className="h-2 bg-destructive w-full" />
+          <CardHeader className="text-center p-8 pb-4">
+            <ShieldAlert className="mx-auto w-16 h-16 text-destructive mb-4 animate-bounce" />
+            <CardTitle className="text-2xl font-black text-slate-800 tracking-tight">Initialization Delay</CardTitle>
+          </CardHeader>
+          <CardContent className="px-8 pb-8 space-y-6 text-center">
+            <p className="text-slate-600 font-medium text-sm leading-relaxed">
+              {pollingError}
+            </p>
+            <div className="flex flex-col gap-3 pt-2">
+              <Button
+                className="w-full h-14 rounded-2xl font-black text-base shadow-lg shadow-primary/20"
+                onClick={handleRetryPoll}
+              >
+                Retry Initialization
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full h-14 rounded-2xl font-bold text-slate-500 hover:text-slate-700"
+                onClick={() => window.location.href = '/calrims/'}
+              >
+                Go Back to Dashboard
+              </Button>
+            </div>
+          </CardContent>
         </Card>
       </div>
     );
@@ -505,6 +629,26 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             <p className="text-xl text-slate-500 font-medium mt-4 italic">"True intelligence is the ability to adapt to change."</p>
           </CardHeader>
           <CardContent className="px-12 space-y-8">
+            {/* Live Camera Preview */}
+            <div className="flex flex-col items-center justify-center">
+              <div className="w-full max-w-md aspect-video bg-slate-900 rounded-2xl border border-slate-100 shadow-inner overflow-hidden relative">
+                <video
+                  ref={sessionVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl text-white">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/90">Camera Preview</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-white/70">Verify framing before entering</span>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
                 <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs mb-3">Session Secure</h3>
@@ -518,7 +662,10 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             <div className="flex flex-col items-center gap-4 pt-4">
               <Button
                 className="w-full h-16 rounded-2xl font-black text-xl shadow-xl shadow-primary/20"
-                onClick={() => setIsStarted(true)}
+                onClick={() => {
+                  sessionStartRef.current = Date.now();
+                  setIsStarted(true);
+                }}
               >
                 Enter Interview Board
               </Button>
@@ -591,7 +738,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => window.location.href = '/calrims/'}
+                  onClick={handleEndSession}
                   className="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-red-500"
                 >
                   End Session

@@ -7,6 +7,14 @@ from slowapi.util import get_remote_address
 
 def get_real_remote_address(request):
     """Fallback if simple remote address is blocked or missing."""
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        parts = [p.strip() for p in x_forwarded_for.split(",")]
+        if parts and parts[0]:
+            return parts[0]
+    x_real_ip = request.headers.get("x-real-ip")
+    if x_real_ip:
+        return x_real_ip.strip()
     return get_remote_address(request) or "127.0.0.1"
 
 # Global rate limiter instance — keyed by client IP

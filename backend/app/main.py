@@ -75,6 +75,15 @@ settings.validate_config()
 
 Base.metadata.create_all(bind=engine)
 
+# Migration safety: Ensure message_id exists in attachment_resumes
+try:
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        conn.execute(text("ALTER TABLE attachment_resumes ADD COLUMN IF NOT EXISTS message_id VARCHAR(255) UNIQUE"))
+        conn.commit()
+except Exception as e:
+    logger.warning(f"Database migration check failed (attachment_resumes.message_id): {e}")
+
 from app.migrations import run_startup_migrations, validate_required_columns
 if os.environ.get("WORKER_ID", "0") == "0":
     if os.environ.get("RIMS_STARTUP_MIGRATIONS_DONE", "0") != "1":
@@ -155,6 +164,9 @@ def cors_aware_rate_limit_handler(request: FastAPIRequest, exc: RateLimitExceede
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, cors_aware_rate_limit_handler)
 
+
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 from app.core.middleware import PerformanceLoggingMiddleware, SecurityHeadersMiddleware
 app.add_middleware(SecurityHeadersMiddleware)
@@ -348,16 +360,26 @@ async def imap_polling_loop():
     while True:
         try:
             db = SessionLocal()
-            # Fetch automatically using settings
-            imap_email = settings.imap_email or 'caldiminternship@gmail.com'
-            imap_password = settings.imap_password or 'jaesbucnsfnlediv'
+            
+            # Fetch global settings from DB
+            from app.domain.models import GlobalSettings
+            settings_records = db.query(GlobalSettings).all()
+            settings_dict = {s.key: s.value for s in settings_records}
+            
+            auto_sync_enabled = settings_dict.get("auto_sync_enabled", "false").lower() == "true"
+            
+            if auto_sync_enabled:
+                # Fetch automatically using settings
+                imap_email = settings_dict.get("imap_email") or settings.imap_email or 'caldiminternship@gmail.com'
+                imap_password = settings_dict.get("imap_password") or settings.imap_password or 'jaesbucnsfnlediv'
 
-            if settings.env == "production" and imap_email == 'caldiminternship@gmail.com':
-                logger.warning("SECURITY WARNING: Using default hardcoded IMAP credentials in production. Configure IMAP_EMAIL and IMAP_PASSWORD.")
+                if settings.env == "production" and imap_email == 'caldiminternship@gmail.com':
+                    logger.warning("SECURITY WARNING: Using default hardcoded IMAP credentials in production. Configure IMAP_EMAIL and IMAP_PASSWORD.")
 
-            fetch_resume_attachments(db, imap_email, imap_password)
-            from app.services.email_ingestion_service import run_batch_resume_processing
-            await run_batch_resume_processing(db)
+                fetch_resume_attachments(db, imap_email, imap_password)
+                from app.services.email_ingestion_service import run_batch_resume_processing
+                await run_batch_resume_processing(db)
+            
             db.close()
         except Exception as e:
             logger.error(f"IMAP Polling Error: {e}")

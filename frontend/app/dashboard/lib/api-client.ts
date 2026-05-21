@@ -55,7 +55,7 @@ export class APIClient {
     if (typeof window !== 'undefined' && !(endpoint && this.isPublicEndpoint(endpoint))) {
       const isInterviewRoute = window.location.pathname.includes('/interview')
       if (isInterviewRoute) {
-        const interviewToken = localStorage.getItem('interview_token')
+        const interviewToken = sessionStorage.getItem('interview_token')
         if (interviewToken) {
           headers['Authorization'] = `Bearer ${interviewToken}`
         }

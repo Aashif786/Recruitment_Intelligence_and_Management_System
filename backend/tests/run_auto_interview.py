@@ -22,6 +22,8 @@ except Exception:
 def _load_env():
     # .env lives next to this script (rims/backend/.env)
     dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+    if not os.path.exists(dotenv_path):
+        dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
     load_dotenv(dotenv_path=dotenv_path)
 
 
@@ -255,8 +257,8 @@ def main():
     print("\n[2] Submitting application...")
     candidate_email = f"autotest_{int(time.time())}@testcandidate.com"
     candidate_name = "Alex Rivera"
-    # Endpoint requires digits-only, length 10-15.
-    candidate_phone = "15550123456"
+    # Endpoint requires digits-only, length 10-15. Make it dynamic.
+    candidate_phone = f"1555{int(time.time()) % 10000000:07d}"
 
     resume_text = (
         "Alex Rivera - Senior Software Engineer\n"
@@ -264,13 +266,20 @@ def main():
         "Led migration of monolith to microservices at a FinTech startup (2M daily txns).\n"
         "Strong in AWS (ECS, Lambda, RDS), Docker, Kubernetes, and CI/CD pipelines.\n"
         "Open source contributor. B.Sc. Computer Science, UT Austin.\n"
+        f"Unique Run Reference ID: {time.time()}\n"
     )
 
     # Minimal PNG header + padding is sufficient for the backend (it only saves bytes).
     photo_bytes = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 256)
 
-    # Upload as txt/plain so the background task falls back to local decode.
-    resume_bytes = resume_text.encode("utf-8")
+    # Generate a real .docx file containing the resume text using python-docx
+    import docx
+    doc = docx.Document()
+    for line in resume_text.split("\n"):
+        doc.add_paragraph(line)
+    resume_stream = BytesIO()
+    doc.save(resume_stream)
+    resume_bytes = resume_stream.getvalue()
 
     apply_url = f"{BASE_URL}/api/applications/apply"
     apply_data = {
@@ -280,7 +289,7 @@ def main():
         "candidate_phone": candidate_phone,
     }
     apply_files = {
-        "resume_file": ("resume.txt", resume_bytes, "text/plain"),
+        "resume_file": ("resume.docx", resume_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
         "photo_file": ("photo.png", photo_bytes, "image/png"),
     }
 
@@ -294,6 +303,28 @@ def main():
     if not app_id:
         raise RuntimeError(f"Could not resolve application id from response: {app_data}")
     print(f"  Application ID: {app_id} | Candidate: {candidate_email}")
+
+    # --- Step 2.5: Wait for resume screening background task ---
+    print("\n[2.5] Waiting for resume screening background task...")
+    for attempt in range(60):
+        conn = _get_conn(db_params)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT resume_status, failure_reason FROM applications WHERE id = %s",
+            (app_id,)
+        )
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if row:
+            res_status, fail_reason = row
+            if res_status in ("parsed", "failed"):
+                print(f"  [OK] Resume screening complete: resume_status={res_status}, failure_reason={fail_reason}")
+                if res_status == "failed":
+                    raise RuntimeError(f"Resume parsing failed: {fail_reason}")
+                break
+        print(f"  Waiting... attempt {attempt+1}/60")
+        time.sleep(5)
 
     # --- Step 3: Trigger interview creation via HR API ---
     print("\n[3] Triggering interview creation...")
@@ -467,8 +498,6 @@ def main():
         return behavioral_template
 
     answered = 0
-    # Backend rate limit: "10/minute" on submit-answer.
-    # Add a conservative delay so we don't exceed the quota even with small network jitter.
     submit_delay_seconds = float(os.getenv("SUBMIT_DELAY_SECONDS", "7"))
     for i, q in enumerate(questions, start=1):
         q_text = q.get("question_text") or ""
@@ -477,6 +506,18 @@ def main():
 
         print(f"  Q{i}/{len(questions)} (type={q_type}): {q_text[:60]}...")
         answer_text = build_answer(q)
+
+        # Send a mock monitoring event to keep proctoring alive
+        try:
+            session.post(
+                f"{BASE_URL}/api/interviews/{interview_id}/monitoring-events",
+                json={"event_type": "normal", "confidence_score": 1.0},
+                headers=interview_headers,
+                timeout=10,
+            )
+        except Exception as me_err:
+            print(f"    [WARN] Failed to send mock monitoring event: {me_err}")
+
         submit_res = session.post(
             f"{BASE_URL}/api/interviews/{interview_id}/submit-answer",
             json={"question_id": q_id, "answer_text": answer_text},
@@ -557,16 +598,28 @@ def main():
         print(f"\n[WARN] stage fetch failed: {stage_res.status_code} {stage_res.text}")
 
     # HR-only report
-    print("\n[11] Fetching final HR report...")
-    report_res = _api_get(
-        session,
-        f"{BASE_URL}/api/interviews/{interview_id}/report",
-        headers=hr_headers,
-        timeout=120,
-    )
-    print(f"  Status: {report_res.status_code}")
-    if report_res.status_code != 200:
-        raise RuntimeError(f"Report fetch failed: {report_res.status_code} {report_res.text}")
+    print("\n[11] Fetching final HR report (polling until available)...")
+    report = None
+    report_res = None
+    for attempt in range(12):
+        report_res = _api_get(
+            session,
+            f"{BASE_URL}/api/interviews/{interview_id}/report",
+            headers=hr_headers,
+            timeout=120,
+        )
+        print(f"  Attempt {attempt+1}: Status={report_res.status_code}")
+        if report_res.status_code == 200:
+            report = report_res.json()
+            break
+        elif report_res.status_code == 404:
+            print("    Report not yet ready, waiting...")
+        else:
+            print(f"    Unexpected response: {report_res.text}")
+        time.sleep(5)
+
+    if not report:
+        raise RuntimeError(f"Report fetch failed: {report_res.status_code} {report_res.text if report_res else 'No response'}")
 
     report = report_res.json()
     # Avoid printing encrypted blobs; report is expected to be decrypted by the backend types.

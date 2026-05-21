@@ -1271,21 +1271,23 @@ class EmailIngestRequest(BaseModel):
 from app.domain.models import AttachmentResume
 
 @router.post("/ingest-emails")
-async def ingest_email_resumes(req: EmailIngestRequest, db: Session = Depends(get_db)):
+async def ingest_email_resumes(req: EmailIngestRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Trigger manual email ingestion via IMAP and map/analyze them immediately
     """
+    # Phase 1: Rapid Fetch (Synchronous but optimized)
     result = fetch_resume_attachments(db, req.imap_user, req.imap_pass)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
     
-    # Process the batch immediately so it reflects in the dashboard
-    batch_result = await run_batch_resume_processing(db)
+    # Phase 2: Background Processing (Asynchronous)
+    # We return the count of new resumes found immediately, and process AI mapping in background.
+    background_tasks.add_task(run_batch_resume_processing, db)
     
     return {
-        "message": "Ingestion complete and resumes processed", 
+        "message": "Ingestion complete. Processing applications in background.", 
         "saved_count": result.get("count"),
-        "mapped_count": batch_result.get("count", 0)
+        "processing_triggered": True
     }
 
 @router.get("/ingested-emails")
@@ -1312,7 +1314,7 @@ def get_ingested_emails(
             )
         )
     total = query.count()
-    items = query.order_by(AttachmentResume.received_at.desc()).offset(skip).limit(limit).all()
+    items = query.order_by(AttachmentResume.id.desc()).offset(skip).limit(limit).all()
     
     results = []
     for item in items:

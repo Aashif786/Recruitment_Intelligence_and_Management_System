@@ -107,6 +107,12 @@ async def background_generate_questions(interview_id: int, job_id_db: int, appli
     except Exception as e:
         logger.error(f"Failed background generation for {ai_job_id}: {e}")
         fail_job(ai_job_id, str(e))
+        try:
+            from app.domain.models import GlobalSettings
+            db.query(GlobalSettings).filter(GlobalSettings.key == f"lock_gen_{interview_id}").delete()
+            db.commit()
+        except Exception as lock_err:
+            logger.warning(f"Failed to clear generation lock on failure for interview {interview_id}: {lock_err}")
     finally:
         db.close()
 
@@ -816,9 +822,10 @@ async def access_interview(
         
         if not interviews:
             logger.warning(f"Access attempt failed: No interview found for email {email_clean}")
+            pwd_context.verify(data.access_key, "$2b$12$XzQyJkG9aBcDeFgHiJkLmOpQrStUvWxYz0123456789abcdefghij")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No interview session found for this email address. Please check your invitation link."
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or access key. Please check your invitation email."
             )
             
         matched_interview = None
@@ -831,7 +838,7 @@ async def access_interview(
             logger.warning(f"Access attempt failed: Invalid access key for email {email_clean}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, 
-                detail="Invalid access key provided. Please check your invitation email."
+                detail="Invalid email or access key. Please check your invitation email."
             )
         
         # 2. Atomic Startup Phase: Re-fetch with row-level lock to prevent race conditions
@@ -879,8 +886,11 @@ async def access_interview(
             if used_at:
                 used_at = to_naive_ist(used_at)
                 session_age = current_time - used_at
+            elif interview.started_at:
+                started_at = to_naive_ist(interview.started_at)
+                session_age = current_time - started_at
             else:
-                session_age = timedelta(0) # Assume just started if null
+                session_age = timedelta(hours=5) # Terminal age to block expired re-entry
             
             # Allow re-entry ONLY if session is in_progress and started within last 4 hours
             # OR if status is terminal (completed, terminated, cancelled, expired) so they can enter the dynamic page to see the final state.
@@ -962,13 +972,20 @@ async def access_interview(
         if expected_count == 0:
             expected_count = 1
 
-        # Generate 4-hour lifecycle JWT token
+        # Generate dynamic lifecycle JWT token based on interview duration
+        duration_mins = 60
+        if job and hasattr(job, "duration_minutes") and job.duration_minutes:
+            duration_mins = job.duration_minutes
+        elif hasattr(interview, "duration_minutes") and interview.duration_minutes:
+            duration_mins = interview.duration_minutes
+            
+        token_expiry_delta = max(timedelta(hours=4), timedelta(minutes=duration_mins + 30))
         token = create_access_token(
             data={"sub": str(interview.id), "role": "interview"},
-            expires_delta=timedelta(hours=4)
+            expires_delta=token_expiry_delta
         )
         
-        is_ready = existing_count >= expected_count
+        is_ready = existing_count >= expected_count if existing_count > 0 else False
         
         # Readiness Fail-safe: If expected count is high but we have 0 questions, 
         # force re-generation even if is_ready might be True (e.g. expected_count was 0)
@@ -994,12 +1011,27 @@ async def access_interview(
                 ai_job_id = f"gen_q_{interview.id}"
                 response_data["job_id"] = ai_job_id
                 # Ensure the task is added to the shared queue safely
-                if ai_job_id not in ai_jobs or ai_jobs[ai_job_id]["status"] == "failed":
-                    create_job(ai_job_id)
-                    background_tasks.add_task(
-                        background_generate_questions, 
-                        interview.id, job_id, app_id, ai_job_id
-                    )
+                # Use DB-level distributed lock with GlobalSettings to prevent cross-worker duplicate execution
+                from app.domain.models import GlobalSettings
+                lock_key = f"lock_gen_{interview.id}"
+                existing_lock = db.query(GlobalSettings).filter(GlobalSettings.key == lock_key).first()
+                
+                if existing_lock:
+                    logger.info(f"Duplicate question generation avoided via existing DB lock for interview {interview.id}")
+                else:
+                    try:
+                        with db.begin_nested():
+                            lock_setting = GlobalSettings(key=lock_key, value="processing")
+                            db.add(lock_setting)
+                        
+                        if ai_job_id not in ai_jobs or ai_jobs[ai_job_id]["status"] == "failed":
+                            create_job(ai_job_id)
+                            background_tasks.add_task(
+                                background_generate_questions, 
+                                interview.id, job_id, app_id, ai_job_id
+                            )
+                    except IntegrityError:
+                        logger.info(f"Duplicate question generation avoided via concurrent DB lock insertion for interview {interview.id}")
             else:
                 # Trigger direct fallback for incomplete application records
                 background_tasks.add_task(_generate_fallback_questions_direct, interview.id)
@@ -1064,6 +1096,11 @@ async def generate_test_token(
     interview.is_used = False
     _set_interview_status(interview, "not_started")
     interview.used_at = None
+
+    # Cascade delete previous test answers, questions, and monitoring events for pristine test isolation
+    db.query(InterviewAnswer).filter(InterviewAnswer.interview_id == interview_id).delete(synchronize_session=False)
+    db.query(InterviewQuestion).filter(InterviewQuestion.interview_id == interview_id).delete(synchronize_session=False)
+    db.query(InterviewMonitoringEvent).filter(InterviewMonitoringEvent.interview_id == interview_id).delete(synchronize_session=False)
 
     db.commit()
 
@@ -1407,103 +1444,126 @@ async def evaluate_answer_task(
     
     # 1. PRE-EVALUATION: The AI call can take 10-20 seconds.
     # Use background tasks for question generation to avoid blocking the main thread.
+    is_decryption_failure = False
+    if answer_text:
+        ans_stripped = answer_text.strip()
+        if ans_stripped.startswith("[UNREADABLE]") or ans_stripped.startswith("[DECRYPTION_ERROR]"):
+            is_decryption_failure = True
+
     ai_used = False
     fallback_used = False
     confidence_score = 0.5
     evaluation = None
     last_ai_error = None  # type: ignore[assignment]
-    for attempt in range(1, 4):
-        try:
-            evaluation = await evaluate_detailed_answer(
-                question_text,
-                answer_text,
-                question_type=question_type or "technical",
-            )
-            break
-        except Exception as e:
-            last_ai_error = e
-            logger.warning(
-                "ai_evaluate_retry",
-                extra={
-                    "answer_id": answer_id,
-                    "interview_id": interview_id,
-                    "attempt": attempt,
-                    "error_preview": str(e)[:240],
-                },
-            )
-            if attempt < 3:
-                await asyncio.sleep(0.35 * attempt)
 
-    if evaluation is not None:
-        ai_used = True
+    if is_decryption_failure:
+        fallback_used = True
+        answer_score = 0.0
+        technical_score = 0.0
+        completeness_score = 0.0
+        clarity_score = 0.0
+        depth_score = 0.0
+        practicality_score = 0.0
+        confidence_score = 0.0
+        answer_evaluation_json = json.dumps(
+            {
+                "decryption_failure": True,
+                "error": "Decryption failure occurred due to key rotation or corrupted data stream."
+            }
+        )
+    else:
+        for attempt in range(1, 4):
+            try:
+                evaluation = await evaluate_detailed_answer(
+                    question_text,
+                    answer_text,
+                    question_type=question_type or "technical",
+                )
+                break
+            except Exception as e:
+                last_ai_error = e
+                logger.warning(
+                    "ai_evaluate_retry",
+                    extra={
+                        "answer_id": answer_id,
+                        "interview_id": interview_id,
+                        "attempt": attempt,
+                        "error_preview": str(e)[:240],
+                    },
+                )
+                if attempt < 3:
+                    await asyncio.sleep(0.35 * attempt)
 
-        # Map scores from AI response to model fields with safe defaults
-        if question_type == "behavioral":
-            technical_score = evaluation.get("relevance", evaluation.get("technical_accuracy", 0))
-            completeness_score = evaluation.get("action_impact", evaluation.get("completeness", 0))
-            clarity_score = evaluation.get("clarity", 0)
-            depth_score = evaluation.get("depth", 0)
-            practicality_score = evaluation.get("practicality", 0)
+        if evaluation is not None:
+            ai_used = True
+
+            # Map scores from AI response to model fields with safe defaults
+            if question_type == "behavioral":
+                technical_score = evaluation.get("relevance", evaluation.get("technical_accuracy", 0))
+                completeness_score = evaluation.get("action_impact", evaluation.get("completeness", 0))
+                clarity_score = evaluation.get("clarity", 0)
+                depth_score = evaluation.get("depth", 0)
+                practicality_score = evaluation.get("practicality", 0)
+            else:
+                technical_score = evaluation.get("technical_accuracy", evaluation.get("relevance", 0))
+                completeness_score = evaluation.get("completeness", evaluation.get("action_impact", 0))
+                clarity_score = evaluation.get("clarity", 0)
+                depth_score = evaluation.get("depth", 0)
+                practicality_score = evaluation.get("practicality", 0)
+
+            answer_score = evaluation.get("overall", 0)
+            # Default to high confidence for AI results, low for fallbacks
+            confidence_score = float(evaluation.get("confidence_score", 0.85))
+            answer_evaluation_json = json.dumps(evaluation)
         else:
-            technical_score = evaluation.get("technical_accuracy", evaluation.get("relevance", 0))
-            completeness_score = evaluation.get("completeness", evaluation.get("action_impact", 0))
-            clarity_score = evaluation.get("clarity", 0)
-            depth_score = evaluation.get("depth", 0)
-            practicality_score = evaluation.get("practicality", 0)
+            err = last_ai_error or Exception("unknown")
+            logger.error(
+                "Background AI evaluation failed after retries: %s",
+                err,
+                extra={"answer_id": answer_id, "interview_id": interview_id},
+            )
+            heuristic_score = fallback_score_answer(answer_text, question_text)
+            fallback_used = True
+            answer_score = heuristic_score
+            technical_score = heuristic_score
+            completeness_score = heuristic_score
+            clarity_score = heuristic_score
+            depth_score = heuristic_score
+            practicality_score = heuristic_score
+            confidence_score = 0.35
+            answer_evaluation_json = json.dumps(
+                {
+                    "fallback_scored": True,
+                    "heuristic_score": heuristic_score,
+                    "error": f"Evaluation failed after retries: {str(err)}",
+                }
+            )
 
-        answer_score = evaluation.get("overall", 0)
-        # Default to high confidence for AI results, low for fallbacks
-        confidence_score = float(evaluation.get("confidence_score", 0.85))
-        answer_evaluation_json = json.dumps(evaluation)
-    else:
-        err = last_ai_error or Exception("unknown")
-        logger.error(
-            "Background AI evaluation failed after retries: %s",
-            err,
-            extra={"answer_id": answer_id, "interview_id": interview_id},
-        )
-        heuristic_score = fallback_score_answer(answer_text, question_text)
-        fallback_used = True
-        answer_score = heuristic_score
-        technical_score = heuristic_score
-        completeness_score = heuristic_score
-        clarity_score = heuristic_score
-        depth_score = heuristic_score
-        practicality_score = heuristic_score
-        confidence_score = 0.35
-        answer_evaluation_json = json.dumps(
-            {
-                "fallback_scored": True,
-                "heuristic_score": heuristic_score,
-                "error": f"Evaluation failed after retries: {str(err)}",
-            }
-        )
-
-    # If AI failed to return a score object, evaluation is None (handled above).
-    # If it returned a JSON but didn't include 'overall' score, it might be None.
-    if answer_score is None:
-        heuristic_score = fallback_score_answer(answer_text, question_text)
-        fallback_used = True
-        answer_score = heuristic_score
-        technical_score = heuristic_score
-        completeness_score = heuristic_score
-        clarity_score = heuristic_score
-        depth_score = heuristic_score
-        practicality_score = heuristic_score
-        confidence_score = 0.4
-        answer_evaluation_json = json.dumps(
-            {
-                "fallback_scored": True,
-                "heuristic_score": heuristic_score,
-                "error": "AI evaluation returned no overall score; applied heuristic fallback",
-            }
-        )
-    else:
-        try:
-            numeric_answer_score = float(answer_score)
-            answer_score = max(0.0, min(10.0, numeric_answer_score))
-        except Exception:
-            answer_score = 0.0
+        # If AI failed to return a score object, evaluation is None (handled above).
+        # If it returned a JSON but didn't include 'overall' score, it might be None.
+        if answer_score is None:
+            heuristic_score = fallback_score_answer(answer_text, question_text)
+            fallback_used = True
+            answer_score = heuristic_score
+            technical_score = heuristic_score
+            completeness_score = heuristic_score
+            clarity_score = heuristic_score
+            depth_score = heuristic_score
+            practicality_score = heuristic_score
+            confidence_score = 0.4
+            answer_evaluation_json = json.dumps(
+                {
+                    "fallback_scored": True,
+                    "heuristic_score": heuristic_score,
+                    "error": "AI evaluation returned no overall score; applied heuristic fallback",
+                }
+            )
+        else:
+            try:
+                numeric_answer_score = float(answer_score)
+                answer_score = max(0.0, min(10.0, numeric_answer_score))
+            except Exception:
+                answer_score = 0.0
 
     # 2. SAVE RESULTS: Use a short-lived transaction specifically for the update.
     db: Session = SessionLocal()
@@ -1524,7 +1584,12 @@ async def evaluate_answer_task(
         answer.clarity_score = float(clarity_score)
         answer.depth_score = float(depth_score)
         answer.practicality_score = float(practicality_score)
-        answer.reasoning = {"explanation": evaluation.get("reasoning") if evaluation else "Heuristic fallback evaluation due to AI parsing error."}
+        if is_decryption_failure:
+            answer.reasoning = {
+                "explanation": "Decryption failure occurred due to key rotation or corrupted data stream. Skipping AI evaluation to prevent unfair candidate penalty."
+            }
+        else:
+            answer.reasoning = {"explanation": evaluation.get("reasoning") if evaluation else "Heuristic fallback evaluation due to AI parsing error."}
         answer.answer_evaluation = answer_evaluation_json
         answer.ai_used = bool(ai_used)
         answer.fallback_used = bool(fallback_used)
@@ -1564,7 +1629,10 @@ async def submit_answer(
         key=f"{interview_id}:{data.question_id}",
         ttl_seconds=120,
     ):
-        existing = db.query(InterviewAnswer).filter(InterviewAnswer.question_id == data.question_id).first()
+        existing = db.query(InterviewAnswer).filter(
+            InterviewAnswer.question_id == data.question_id,
+            InterviewAnswer.interview_id == interview_id
+        ).first()
         if existing:
             return {"success": True, "answer_id": existing.id, "idempotent_replay": True}
         raise HTTPException(status_code=409, detail="Duplicate submit request detected. Please retry.")
@@ -1595,7 +1663,7 @@ async def submit_answer(
             # Naive to aware conversion if needed, but get_ist_now usually returns naive for this project
             # based on my previous analysis of to_naive_ist usage.
             # Let's check if started_at is naive or aware.
-            start_time = interview.started_at
+            start_time = to_naive_ist(interview.started_at)
             # Based on app/core/timezone.py usage in the file, it seems they use naive IST.
             end_time = start_time + timedelta(minutes=interview.duration_minutes)
             
@@ -1610,13 +1678,29 @@ async def submit_answer(
         if interview.interview_stage == STAGE_COMPLETED:
             raise HTTPException(status_code=status.HTTP_410_GONE, detail="Interview is already fully completed")
 
+        # 3. Validate Question ID (Moved before proctoring check to avoid NameError)
+        current_question = db.query(InterviewQuestion).filter(
+            InterviewQuestion.id == data.question_id,
+            InterviewQuestion.interview_id == interview_id
+        ).first()
+        
+        if not current_question:
+            logger.warning(
+                "validation_failed",
+                extra={"service_module": "interviews", "field": "question_id", "reason": "not_found_in_session", "input_preview": str(data.question_id)},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Question not found in this session."
+            )
+
         # ── PROCTORING ENFORCEMENT ──
         # If the job requires AI/Mixed mode, we expect monitoring events to be flowing.
         # We check if at least one 'normal' or 'focus_lost' event exists if the session 
         # has been active for more than 45 seconds.
         job = interview.application.job if interview.application else None
         if job and job.interview_mode in ["ai", "mixed"] and current_question.question_type != "aptitude":
-            active_duration = get_ist_now() - interview.started_at
+            active_duration = get_ist_now() - to_naive_ist(interview.started_at)
             if active_duration > timedelta(seconds=45):
                 from app.domain.models import InterviewMonitoringEvent
                 from sqlalchemy import exists
@@ -1632,22 +1716,6 @@ async def submit_answer(
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail="Proctoring system is offline. Please ensure your camera is visible and refresh the page."
                     )
-
-        # 3. Validate Question ID
-        current_question = db.query(InterviewQuestion).filter(
-            InterviewQuestion.id == data.question_id,
-            InterviewQuestion.interview_id == interview_id
-        ).first()
-        
-        if not current_question:
-            logger.warning(
-                "validation_failed",
-                extra={"module": "interviews", "field": "question_id", "reason": "not_found_in_session", "input_preview": str(data.question_id)},
-            )
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Question not found in this session."
-            )
             
         # 3.5. Granular Validation of Answer Text
         answer_len = len(data.answer_text or "")
@@ -1667,21 +1735,11 @@ async def submit_answer(
                     detail="Your answer is too short. Please provide a more detailed response."
                 )
         
-        # Record monitoring event for answer submission
-        try:
-            monitoring_event = InterviewMonitoringEvent(
-                interview_id=interview_id,
-                event_type="answer_submitted",
-                confidence_score=1.0,
-                timestamp=get_ist_now()
-            )
-            db.add(monitoring_event)
-        except Exception as e:
-            logger.warning(f"Failed to record monitoring event for interview {interview_id}: {e}")
 
         # 4. Check if answer exists (we will update it instead of rejecting)
         existing_answer = db.query(InterviewAnswer).filter(
-            InterviewAnswer.question_id == data.question_id
+            InterviewAnswer.question_id == data.question_id,
+            InterviewAnswer.interview_id == interview_id
         ).first()
         
         if existing_answer and existing_answer.evaluated_at:
@@ -1854,13 +1912,28 @@ async def submit_answer(
                 answer.evaluated_at = get_ist_now()
                 answer.answer_evaluation = json.dumps({"auto_graded": True, "is_correct": is_correct})
 
+            # Record monitoring event for answer submission
+            try:
+                monitoring_event = InterviewMonitoringEvent(
+                    interview_id=interview_id,
+                    event_type="answer_submitted",
+                    confidence_score=1.0,
+                    timestamp=get_ist_now()
+                )
+                db.add(monitoring_event)
+            except Exception as e:
+                logger.warning(f"Failed to record monitoring event for interview {interview_id}: {e}")
+
             if not existing_answer:
                 db.add(answer)
             db.commit()
             db.refresh(answer)
         except IntegrityError:
             db.rollback()
-            existing = db.query(InterviewAnswer).filter(InterviewAnswer.question_id == current_question.id).first()
+            existing = db.query(InterviewAnswer).filter(
+                InterviewAnswer.question_id == current_question.id,
+                InterviewAnswer.interview_id == interview_id
+            ).first()
             if existing:
                 return {"success": True, "answer_id": existing.id, "idempotent_replay": True}
             raise HTTPException(status_code=409, detail="Answer already exists for this question.")
@@ -1909,6 +1982,9 @@ async def complete_aptitude(
     
     if not interview:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview not found")
+        
+    if interview.interview_stage == STAGE_COMPLETED:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Interview is already fully completed")
         
     if interview.status != "in_progress":
         raise HTTPException(
@@ -1962,6 +2038,11 @@ async def complete_aptitude(
     interview.aptitude_completed_at = get_ist_now()
     interview.aptitude_completed = True
 
+    if not interview.application or not interview.application.job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Job associated with this interview could not be found."
+        )
     job = interview.application.job
 
     # Check if first_level is enabled
@@ -2057,8 +2138,8 @@ async def complete_aptitude(
 @router.post("/{interview_id}/security-violation")
 async def report_security_violation(
     interview_id: int,
+    background_tasks: BackgroundTasks,
     data: dict = Body(...),
-    background_tasks: BackgroundTasks = None,
     interview_session: Interview = Depends(get_current_interview_any_status),
     db: Session = Depends(get_db),
 ):
@@ -2069,7 +2150,8 @@ async def report_security_violation(
     if interview_session.id != interview_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    reason = data.get("reason", "Proctoring violation")
+    # Normalise empty/whitespace reasons so the default is always recorded
+    reason = (data.get("reason") or "").strip() or "Proctoring violation"
     logger.warning(f"SECURITY_VIOLATION: Terminating interview {interview_id}. Reason: {reason}")
 
     interview = db.query(Interview).filter(
@@ -2172,7 +2254,7 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
     
     questions = (
         db.query(InterviewQuestion)
-        .join(InterviewQuestion.answers)
+        .outerjoin(InterviewQuestion.answers)
         .filter(
             InterviewQuestion.interview_id == interview_id,
             InterviewQuestion.question_type != "aptitude"
@@ -2193,22 +2275,28 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
         
         if latest_answer:
             score = latest_answer.answer_score if latest_answer.answer_score is not None else 0.0
+            ans_text = latest_answer.answer_text
+            eval_raw = latest_answer.answer_evaluation
+        else:
+            score = 0.0
+            ans_text = "[No Answer Provided]"
+            eval_raw = json.dumps({"auto_graded": False, "reason": "skipped", "score": 0.0})
             
-            # Robust classification based on question_type
-            if (question.question_type or "").lower() == 'behavioral':
-                behavioral_scores.append(score)
-            else:
-                technical_scores.append(score)
+        # Robust classification based on question_type
+        if (question.question_type or "").lower() == 'behavioral':
+            behavioral_scores.append(score)
+        else:
+            technical_scores.append(score)
 
-            all_scores.append(score)
-                
-            qa_pairs.append({
-                "question": question.question_text,
-                "answer": latest_answer.answer_text,
-                "score": score,
-                "evaluation_raw": latest_answer.answer_evaluation,
-                "question_type": question.question_type
-            })
+        all_scores.append(score)
+            
+        qa_pairs.append({
+            "question": question.question_text,
+            "answer": ans_text,
+            "score": score,
+            "evaluation_raw": eval_raw,
+            "question_type": question.question_type
+        })
     
     technical_avg = sum(technical_scores) / len(technical_scores) if technical_scores else 0.0
     behavioral_avg = sum(behavioral_scores) / len(behavioral_scores) if behavioral_scores else 0.0
@@ -2232,7 +2320,7 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
     fallback_used_count = 0
     confidence_values = []
     for question in questions:
-        ans = db.query(InterviewAnswer).filter(InterviewAnswer.question_id == question.id).order_by(InterviewAnswer.id.desc()).first()
+        ans = sorted(question.answers, key=lambda x: x.id)[-1] if question.answers else None
         if not ans:
             continue
         if getattr(ans, "ai_used", False):
@@ -2394,7 +2482,16 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
             )
             db.add(report)
         
-        db.commit()
+        try:
+            db.commit()
+        except Exception as commit_err:
+            db.rollback()
+            existing_report = db.query(InterviewReport).filter(InterviewReport.interview_id == interview_id).first()
+            if existing_report:
+                logger.info(f"Concurrent report creation resolved: returning existing report for {interview_id}.")
+                report = existing_report
+            else:
+                raise commit_err
 
         # Notification
         try:
@@ -2487,10 +2584,16 @@ async def end_interview(
     is_forced = isinstance(data, dict) and data.get("force") is True
     ended_early = isinstance(data, dict) and data.get("ended_early") is True
     if interview.status != "terminated" and not is_forced:
-        questions = db.query(InterviewQuestion).filter(
-            InterviewQuestion.interview_id == interview_id,
-            InterviewQuestion.question_type != "aptitude"
-        ).all()
+        if interview.interview_stage == STAGE_APTITUDE:
+            questions = db.query(InterviewQuestion).filter(
+                InterviewQuestion.interview_id == interview_id,
+                InterviewQuestion.question_type == "aptitude"
+            ).all()
+        else:
+            questions = db.query(InterviewQuestion).filter(
+                InterviewQuestion.interview_id == interview_id,
+                InterviewQuestion.question_type != "aptitude"
+            ).all()
         question_ids = [q.id for q in questions]
         # Count answers by joining through question_id to avoid NULL interview_id issues
         answered_count = db.query(InterviewAnswer).filter(
@@ -2699,8 +2802,7 @@ async def get_video_stream(
     
     video_path = interview.video_recording_path
     if not video_path:
-        # Fallback to verified demonstration video recording for review timeline testing
-        video_path = "266/interview_266_1779101881.webm"
+        raise HTTPException(status_code=404, detail="No video recording found for this interview")
 
     signed_url = _get_signed_url(_settings.supabase_bucket_videos, video_path)
     
@@ -2754,9 +2856,9 @@ async def transcribe_interview_audio(
     from datetime import datetime
 
     # Secure temporary file handling
-    suffix = os.path.splitext(file.filename)[1] if file.filename else ".webm"
-    temp_dir = tempfile.gettempdir()
-    tmp_path = os.path.join(temp_dir, f"transcribe_{interview_id}_{int(datetime.now().timestamp())}{suffix}")
+    suffix = os.path.splitext(file.filename)[1] if (file.filename and os.path.splitext(file.filename)[1]) else ".webm"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+        tmp_path = temp_file.name
     
     if not settings.groq_keys:
         logger.error(f"Transcription failed: GROQ_API_KEY is not set in environment variables.")
@@ -2968,81 +3070,4 @@ async def get_monitoring_events(
             video_reference=ev.video_reference
         ))
         
-    if not results:
-        from datetime import datetime, timedelta
-        base_time = get_ist_now() - timedelta(minutes=10)
-        
-        path_norm = "monitoring_frames/demo_266/normal.jpg"
-        path_focus = "monitoring_frames/demo_266/focus_away.jpg"
-        path_mult = "monitoring_frames/demo_266/multiple_people.jpg"
-        path_none = "monitoring_frames/demo_266/no_face.jpg"
-
-        url_norm = get_signed_url(settings.supabase_bucket_videos, path_norm)
-        url_focus = get_signed_url(settings.supabase_bucket_videos, path_focus)
-        url_mult = get_signed_url(settings.supabase_bucket_videos, path_mult)
-        url_none = get_signed_url(settings.supabase_bucket_videos, path_none)
-        
-        return [
-            MonitoringEventResponse(
-                id=1001,
-                interview_id=interview_id,
-                event_type="normal",
-                timestamp=base_time + timedelta(seconds=10),
-                confidence_score=0.98,
-                frame_image_path=path_norm,
-                frame_image_url=url_norm,
-                video_reference="offset_10s"
-            ),
-            MonitoringEventResponse(
-                id=1002,
-                interview_id=interview_id,
-                event_type="focus_lost",
-                timestamp=base_time + timedelta(seconds=45),
-                confidence_score=0.88,
-                frame_image_path=path_focus,
-                frame_image_url=url_focus,
-                video_reference="offset_45s"
-            ),
-            MonitoringEventResponse(
-                id=1003,
-                interview_id=interview_id,
-                event_type="normal",
-                timestamp=base_time + timedelta(seconds=90),
-                confidence_score=0.99,
-                frame_image_path=path_norm,
-                frame_image_url=url_norm,
-                video_reference="offset_90s"
-            ),
-            MonitoringEventResponse(
-                id=1004,
-                interview_id=interview_id,
-                event_type="multiple_faces",
-                timestamp=base_time + timedelta(seconds=135),
-                confidence_score=0.92,
-                frame_image_path=path_mult,
-                frame_image_url=url_mult,
-                video_reference="offset_135s"
-            ),
-            MonitoringEventResponse(
-                id=1005,
-                interview_id=interview_id,
-                event_type="no_face",
-                timestamp=base_time + timedelta(seconds=210),
-                confidence_score=0.95,
-                frame_image_path=path_none,
-                frame_image_url=url_none,
-                video_reference="offset_210s"
-            ),
-            MonitoringEventResponse(
-                id=1006,
-                interview_id=interview_id,
-                event_type="normal",
-                timestamp=base_time + timedelta(seconds=300),
-                confidence_score=0.97,
-                frame_image_path=path_norm,
-                frame_image_url=url_norm,
-                video_reference="offset_300s"
-            )
-        ]
-
     return results
