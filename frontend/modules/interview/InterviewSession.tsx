@@ -560,10 +560,10 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           checkCount = 0;
           const statusType = predictions.length === 1 ? 'normal' : (predictions.length === 0 ? 'face_not_detected' : 'multiple_people');
           const confidence = predictions.length === 1 ? 1.0 : 0.0;
-          fetch(\`\${API_BASE_URL}/api/interviews/\${interviewId}/monitoring-events\`, {
+          fetch(`${API_BASE_URL}/api/interviews/${interviewId}/monitoring-events`, {
             method: 'POST',
             headers: {
-              'Authorization': \`Bearer \${token}\`,
+              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -792,7 +792,6 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                   End Session
                 </Button>
               </div>
-            </div>
             </div>
             
             {(() => {
