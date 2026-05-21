@@ -119,6 +119,7 @@ export default function InterviewPage() {
     const evalPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const loadedIndexRef = useRef(0)
     const lastMonitoringEventRef = useRef<{ timestamp: number; type: string }>({ timestamp: 0, type: 'normal' })
+    const hardwareDisconnectedRef = useRef({ camera: 0, mic: 0 })
 
     // Derived Sections
     const aptitudeQuestions = useMemo(() => questions.filter(q => q.question_type === 'aptitude'), [questions])
@@ -179,7 +180,7 @@ export default function InterviewPage() {
 
     // Continuous Device Monitoring
     useEffect(() => {
-        if (interviewStatus !== 'active') return;
+        if (interviewStatus !== 'active' && interviewStatus !== 'in_progress' && interviewStatus !== 'aptitude') return;
 
         const monitorInterval = setInterval(() => {
             const stream = streamRef.current;
@@ -191,7 +192,6 @@ export default function InterviewPage() {
             const isVideoActive = videoTrack && videoTrack.readyState === 'live' && videoTrack.enabled;
             
             // If we are actively recording a voice answer, we use a separate stream.
-            // We should be healthy if either the proctoring stream OR the active recording stream is live.
             let isAudioActive = audioTrack && audioTrack.readyState === 'live' && audioTrack.enabled;
             
             if (!isAudioActive && isListeningRef.current && mediaRecorderRef.current?.stream) {
@@ -201,18 +201,39 @@ export default function InterviewPage() {
                 }
             }
 
-            setIsCameraActive(!!isVideoActive);
-            setIsMicActive(!!isAudioActive);
-
             if (!isVideoActive || !isAudioActive) {
-                const missing = [];
-                if (!isVideoActive) missing.push("Camera");
-                if (!isAudioActive) missing.push("Microphone");
-                
-                toast.error(`Hardware Disconnected: ${missing.join(" and ")} access lost. Please reconnect to continue.`, {
-                    id: 'hardware-disconnect',
-                    duration: 5000
-                });
+                // Increment counters for transient failures (grace period)
+                if (!isVideoActive) hardwareDisconnectedRef.current.camera += 1;
+                else hardwareDisconnectedRef.current.camera = 0;
+
+                if (!isAudioActive) hardwareDisconnectedRef.current.mic += 1;
+                else hardwareDisconnectedRef.current.mic = 0;
+
+                // Only trigger "Disconnected" state after 2 consecutive failures (approx 6-9 seconds)
+                if (hardwareDisconnectedRef.current.camera >= 2 || hardwareDisconnectedRef.current.mic >= 2) {
+                    setIsCameraActive(isVideoActive);
+                    setIsMicActive(isAudioActive);
+
+                    const missing = [];
+                    if (hardwareDisconnectedRef.current.camera >= 2) missing.push("Camera");
+                    if (hardwareDisconnectedRef.current.mic >= 2) missing.push("Microphone");
+                    
+                    toast.error(`Hardware Disconnected: ${missing.join(" and ")} access lost. Please reconnect to continue.`, {
+                        id: 'hardware-disconnect',
+                        duration: 5000
+                    });
+
+                    // Attempt auto-recovery if not already finishing
+                    if (!finishingInterviewRef.current) {
+                        console.log("Hardware lost. Attempting re-acquisition...");
+                        initOverallRecording().catch(() => {});
+                    }
+                }
+            } else {
+                // Reset counters if everything is fine
+                hardwareDisconnectedRef.current = { camera: 0, mic: 0 };
+                setIsCameraActive(true);
+                setIsMicActive(true);
             }
         }, 3000);
 
@@ -348,7 +369,16 @@ export default function InterviewPage() {
         } catch (err: any) {
             console.error("Transcription failed", err)
             const detail = err.message || "Please check your microphone and internet connection.";
-            toast.error(`Voice transcription failed: ${detail}. You can still type your answer manually.`)
+            const isTerminatedError = detail.toLowerCase().includes('terminated') || 
+                                     detail.toLowerCase().includes('proctoring violation');
+
+            if (isTerminatedError) {
+                toast.error("Voice service is unavailable as the session has been terminated.");
+                setInterviewStatus('completed');
+                setShowIssueDialog(true);
+            } else {
+                toast.error(`Voice transcription failed: ${detail}. You can still type your answer manually.`)
+            }
         } finally {
             setIsTranscribing(false)
             transcribeInFlightRef.current = false
@@ -820,16 +850,23 @@ export default function InterviewPage() {
     }, [interviewStatus, handleViolation]);
 
     useEffect(() => {
+        let isMounted = true;
         if (isCameraActive && streamRef.current && videoRef.current) {
             const video = videoRef.current;
             if (video.srcObject !== streamRef.current) {
                 video.srcObject = streamRef.current;
             }
-            // Explicitly trigger play to handle browsers that block autoplay without a direct user action
-            video.play().catch(err => {
-                console.warn("Video play failed or was interrupted:", err);
-            });
+            // Explicitly trigger play to handle browsers that block autoplay
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => {
+                    if (isMounted) {
+                        console.warn("Video play failed or was interrupted:", err);
+                    }
+                });
+            }
         }
+        return () => { isMounted = false; };
     }, [isCameraActive, isLoading, interviewStatus])
 
     useEffect(() => {
@@ -1637,7 +1674,8 @@ export default function InterviewPage() {
                                 videoRef.current = el;
                                 if (el && streamRef.current && el.srcObject !== streamRef.current) {
                                     el.srcObject = streamRef.current;
-                                    el.play().catch(() => {});
+                                    const p = el.play();
+                                    if (p !== undefined) p.catch(() => {});
                                 }
                             }}
                             autoPlay

@@ -310,9 +310,17 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             formData.append('file', blob, 'recording.webm');
             const res = await APIClient.postMultipart<{ text: string }>(`/api/interviews/${interviewId}/transcribe`, formData, `tr-${Date.now()}`, 15000);
             if (res.text && transcriptionCallbackRef.current) transcriptionCallbackRef.current(res.text);
-          } catch (e) {
+          } catch (e: any) {
              console.error('Transcription failed', e);
-             toast.error('Voice transcription failed. You can type your response.');
+             const isTerminatedError = e.message?.toLowerCase().includes('terminated') || 
+                                     e.message?.toLowerCase().includes('proctoring violation');
+             
+             if (isTerminatedError) {
+               toast.error('Voice service is unavailable as the session has been terminated.');
+               setIsTerminated(true);
+             } else {
+               toast.error('Voice transcription failed. You can type your response.');
+             }
           } finally { setIsTranscribing(false); }
         }
       };
