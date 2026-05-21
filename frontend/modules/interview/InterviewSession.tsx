@@ -361,19 +361,26 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
   // ─── NAVIGATION ───────────────────────────────────────────────────────────
   const jumpToQuestion = useCallback(async (num: number) => {
-    if (num < 1 || num > totalQuestions) return;
+    if (!allQuestions.find(q => q.question_number === num)) return;
     if (isEvaluating) { toast.warning('Please wait for evaluation to complete.'); return; }
     setIsLoading(true);
     await loadCurrentQuestion(num);
     setIsLoading(false);
   }, [totalQuestions, isEvaluating, loadCurrentQuestion]);
 
-  const handleNext = () => currentQuestionNumber < totalQuestions && jumpToQuestion(currentQuestionNumber + 1);
-  const handlePrev = () => currentQuestionNumber > 1 && jumpToQuestion(currentQuestionNumber - 1);
+  const handleNext = () => {
+    const nextQ = [...allQuestions].sort((a,b) => a.question_number - b.question_number).find(q => q.question_number > currentQuestionNumber);
+    if (nextQ) jumpToQuestion(nextQ.question_number);
+  };
+  const handlePrev = () => {
+    const prevQ = [...allQuestions].sort((a,b) => b.question_number - a.question_number).find(q => q.question_number < currentQuestionNumber);
+    if (prevQ) jumpToQuestion(prevQ.question_number);
+  };
 
   // ─── TRANSCRIPTION ─────────────────────────────────────────────────────────
   const startRecording = (callback?: (text: string) => void) => {
     if (callback) transcriptionCallbackRef.current = callback;
+    setIsListening(true);
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
       let selectedType = '';
@@ -431,21 +438,13 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   };
 
   // ─── PROCTORING SETUP ──────────────────────────────────────────────────────
-  useEffect(() => {
-    async function setup() {
-      try {
-        if (activeStreamRef.current) {
-          try {
-            activeStreamRef.current.getTracks().forEach(t => t.stop());
-          } catch (err) {
-            console.error('Failed to stop active tracks:', err);
-          }
-          activeStreamRef.current = null;
-        }
-        if (sessionVideoRef.current) {
-          sessionVideoRef.current.srcObject = null;
-        }
+  const cameraInitializedRef = useRef(false);
 
+  useEffect(() => {
+    async function initCamera() {
+      if (cameraInitializedRef.current) return;
+      
+      try {
         await tf.ready();
         if (!detectorRef.current) {
           detectorRef.current = await blazeface.load();
@@ -454,13 +453,13 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         activeStreamRef.current = stream;
         if (sessionVideoRef.current) sessionVideoRef.current.srcObject = stream;
+        cameraInitializedRef.current = true;
 
         const videoTrack = stream.getVideoTracks()[0];
         if (videoTrack) {
           videoTrack.onmute = () => handleStrike('Camera feed disabled/muted');
           videoTrack.onended = () => {
             handleStrike('Camera hardware disconnected');
-            handleDeviceChange();
           };
         }
 
@@ -469,128 +468,133 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           audioTrack.onmute = () => handleStrike('Microphone feed disabled/muted');
           audioTrack.onended = () => {
             handleStrike('Microphone hardware disconnected');
-            handleDeviceChange();
           };
-        }
-
-        // Only start recording and active proctoring if interview has officially started
-        if (isStarted) {
-          // Initialize session video recorder
-          if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
-            try { videoRecorderRef.current.stop(); } catch (e) { console.error(e); }
+          
+          try {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContext) {
+              const audioCtx = new AudioContext();
+              const analyser = audioCtx.createAnalyser();
+              const source = audioCtx.createMediaStreamSource(stream);
+              source.connect(analyser);
+              analyser.fftSize = 256;
+              const dataArray = new Uint8Array(analyser.frequencyBinCount);
+              
+              const updateVolume = () => {
+                if (cameraInitializedRef.current === false) return; // stopped
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+                const avg = sum / dataArray.length;
+                const volBar = document.getElementById('mic-volume-bar');
+                if (volBar) {
+                  volBar.style.width = Math.min(100, (avg / 64) * 100) + '%';
+                }
+                requestAnimationFrame(updateVolume);
+              };
+              updateVolume();
+            }
+          } catch(e) {
+            console.error('AudioContext setup failed', e);
           }
-
-          const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
-          let selectedType = '';
-          for (const t of types) { if (MediaRecorder.isTypeSupported(t)) { selectedType = t; break; } }
-          const vRecorder = new MediaRecorder(stream, selectedType ? { mimeType: selectedType } : undefined);
-          videoRecorderRef.current = vRecorder;
-          videoChunksRef.current = [];
-          vRecorder.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
-          vRecorder.onstop = () => {
-            const blob = new Blob(videoChunksRef.current, { type: selectedType || 'video/webm' });
-            uploadVideo(blob);
-          };
-          vRecorder.start(10000); // chunk every 10s just in case
-
-          let checkCount = 0;
-          if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
-          faceCheckIntervalRef.current = setInterval(async () => {
-            const video = sessionVideoRef.current;
-            if (!video || !detectorRef.current) return;
-            if (video.readyState < 2 || video.videoWidth === 0) {
-              console.log('Webcam video not fully loaded, skipping proctoring frame check.');
-              return;
-            }
-            try {
-              const predictions = await detectorRef.current.estimateFaces(video, false);
-              const faceFound = predictions.length > 0;
-              setIsFaceDetected(faceFound);
-
-              if (predictions.length === 0) {
-                handleStrike('Candidate not in frame');
-              } else if (predictions.length > 1) {
-                handleStrike('Multiple people detected');
-              }
-
-              // Periodically (every 5 checks = 15 seconds) send a proctoring heartbeat event
-              checkCount++;
-              if (checkCount >= 5) {
-                checkCount = 0;
-                const statusType = predictions.length === 1 ? 'normal' : (predictions.length === 0 ? 'face_not_detected' : 'multiple_people');
-                const confidence = predictions.length === 1 ? 1.0 : 0.0;
-                fetch(`${API_BASE_URL}/api/interviews/${interviewId}/monitoring-events`, {
-                  method: 'POST',
-                  headers: authHeaders(token),
-                  body: JSON.stringify({
-                    event_type: statusType,
-                    confidence_score: confidence,
-                  }),
-                }).catch((err) => console.error('Failed to send periodic monitoring heartbeat:', err));
-              }
-            } catch (err) {
-              console.error('Face check error:', err);
-            }
-          }, 3000);
         }
       } catch (e) {
         console.error('Video setup failed', e);
-        // Ensure cleanup on failure
-        if (activeStreamRef.current) {
-          try {
-            activeStreamRef.current.getTracks().forEach(t => t.stop());
-          } catch (stopErr) {
-            console.error('Failed to stop tracks in catch:', stopErr);
-          }
-          activeStreamRef.current = null;
-        }
-        if (sessionVideoRef.current) {
-          sessionVideoRef.current.srcObject = null;
-        }
       }
     }
-
-    async function handleDeviceChange() {
-      console.log('Media devices configuration changed');
-      const hasActiveVideo = activeStreamRef.current && activeStreamRef.current.getVideoTracks().some(t => t.readyState === 'live');
-      const hasActiveAudio = activeStreamRef.current && activeStreamRef.current.getAudioTracks().some(t => t.readyState === 'live');
-      if (!hasActiveVideo || !hasActiveAudio) {
-        toast.info('Media device updated. Re-acquiring camera and mic...');
-        await setup();
-      }
-    }
-
-    setup();
-
-    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
-
-    // Only bind window/visibility alerts if started
-    let handleVisibility: (() => void) | null = null;
-    let handleBlur: (() => void) | null = null;
-
-    if (isStarted) {
-      handleVisibility = () => {
-        if (document.hidden) handleStrike('Tab switched');
-      };
-      handleBlur = () => handleStrike('Window focus lost');
-      
-      document.addEventListener('visibilitychange', handleVisibility);
-      window.addEventListener('blur', handleBlur);
-    }
+    
+    initCamera();
 
     return () => {
-      if (handleVisibility) document.removeEventListener('visibilitychange', handleVisibility);
-      if (handleBlur) window.removeEventListener('blur', handleBlur);
-      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
-      if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
-      if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
-        try { videoRecorderRef.current.stop(); } catch (e) {}
-      }
+      // We only stop tracks if the component completely unmounts (leaving the interview)
       if (activeStreamRef.current) {
         activeStreamRef.current.getTracks().forEach(t => t.stop());
       }
     };
-  }, [isStarted, handleStrike, uploadVideo]);
+  }, [handleStrike]); // Only run on mount, but depends on handleStrike
+
+  // Proctoring monitors & Video recorder (Runs when isStarted becomes true)
+  useEffect(() => {
+    if (!isStarted || !activeStreamRef.current) return;
+
+    let checkCount = 0;
+    const stream = activeStreamRef.current;
+
+    // Initialize session video recorder
+    if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
+      try { videoRecorderRef.current.stop(); } catch (e) { console.error(e); }
+    }
+
+    const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+    let selectedType = '';
+    for (const t of types) { if (MediaRecorder.isTypeSupported(t)) { selectedType = t; break; } }
+    const vRecorder = new MediaRecorder(stream, selectedType ? { mimeType: selectedType } : undefined);
+    videoRecorderRef.current = vRecorder;
+    videoChunksRef.current = [];
+    vRecorder.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
+    vRecorder.onstop = () => {
+      const blob = new Blob(videoChunksRef.current, { type: selectedType || 'video/webm' });
+      uploadVideo(blob);
+    };
+    vRecorder.start(10000); // chunk every 10s just in case
+
+    if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
+    faceCheckIntervalRef.current = setInterval(async () => {
+      const video = sessionVideoRef.current;
+      if (!video || !detectorRef.current) return;
+      if (video.readyState < 2 || video.videoWidth === 0) return;
+      
+      try {
+        const predictions = await detectorRef.current.estimateFaces(video, false);
+        const faceFound = predictions.length > 0;
+        setIsFaceDetected(faceFound);
+
+        if (predictions.length === 0) {
+          handleStrike('Candidate not in frame');
+        } else if (predictions.length > 1) {
+          handleStrike('Multiple people detected');
+        }
+
+        checkCount++;
+        if (checkCount >= 5) {
+          checkCount = 0;
+          const statusType = predictions.length === 1 ? 'normal' : (predictions.length === 0 ? 'face_not_detected' : 'multiple_people');
+          const confidence = predictions.length === 1 ? 1.0 : 0.0;
+          fetch(\`\${API_BASE_URL}/api/interviews/\${interviewId}/monitoring-events\`, {
+            method: 'POST',
+            headers: {
+              'Authorization': \`Bearer \${token}\`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              event_type: statusType,
+              confidence_score: confidence,
+            }),
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.error('Face check error:', err);
+      }
+    }, 3000);
+
+    const handleVisibility = () => {
+      if (document.hidden) handleStrike('Tab switched');
+    };
+    const handleBlur = () => handleStrike('Window focus lost');
+    
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
+      if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
+      if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
+        try { videoRecorderRef.current.stop(); } catch (e) {}
+      }
+    };
+  }, [isStarted, interviewId, token, handleStrike, uploadVideo]);
+
 
   // ─── RENDERS ───────────────────────────────────────────────────────────────
   if (isTerminated) {
@@ -677,6 +681,17 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                     <span className="text-[10px] font-black uppercase tracking-widest text-white/90">Camera Preview</span>
                   </div>
                   <span className="text-[9px] font-bold text-white/70">Verify framing before entering</span>
+                </div>
+              </div>
+
+              {/* Microphone Volume Indicator */}
+              <div className="w-full max-w-md mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-2">
+                <div className="flex justify-between items-center w-full">
+                   <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Microphone Test</span>
+                   <span className="text-[10px] font-bold text-slate-400">Speak to check levels</span>
+                </div>
+                <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                   <div id="mic-volume-bar" className="h-full bg-blue-500 transition-all duration-100 ease-out" style={{ width: '0%' }} />
                 </div>
               </div>
             </div>
@@ -778,17 +793,29 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                 </Button>
               </div>
             </div>
-
-            <QuestionPanel
-              question={currentQuestion}
-              isLoading={!currentQuestion || isEvaluating}
-              currentQuestionNumber={currentQuestionNumber}
-            />
+            </div>
+            
+            {(() => {
+               let relNum = currentQuestionNumber;
+               if (allQuestions && currentQuestion) {
+                 const sameType = allQuestions.filter(q => q.question_type === currentQuestion.question_type)
+                                              .sort((a, b) => a.question_number - b.question_number);
+                 const idx = sameType.findIndex(q => q.question_number === currentQuestionNumber);
+                 if (idx >= 0) relNum = idx + 1;
+               }
+               return (
+                 <QuestionPanel
+                   question={currentQuestion}
+                   isLoading={!currentQuestion || isEvaluating}
+                   currentQuestionNumber={relNum}
+                 />
+               );
+            })()}
 
             <AnswerInput
               onSubmit={handleSubmitAnswer}
-              onPrev={currentQuestionNumber > 1 ? handlePrev : undefined}
-              onNext={currentQuestionNumber < totalQuestions ? handleNext : undefined}
+              onPrev={([...allQuestions].sort((a,b) => a.question_number - b.question_number)[0]?.question_number < currentQuestionNumber) ? handlePrev : undefined}
+              onNext={([...allQuestions].sort((a,b) => b.question_number - a.question_number)[0]?.question_number > currentQuestionNumber) ? handleNext : undefined}
               disabled={!currentQuestion || isEvaluating}
               isEvaluating={isEvaluating}
               interviewId={interviewId}
