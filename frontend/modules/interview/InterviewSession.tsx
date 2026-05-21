@@ -63,6 +63,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const sessionStartRef = useRef(Date.now());
 
   // ── question state ──
+  const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [totalQuestions, setTotalQuestions] = useState(20);
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(1);
   const [currentQuestion, setCurrentQuestion] = useState<{
@@ -167,7 +168,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             id: q.id,
             question: q.question_text,
             difficulty: 'medium',
-            options: q.question_options ? JSON.parse(q.question_options) : undefined,
+            options: q.options ? JSON.parse(q.options) : (q.question_options ? JSON.parse(q.question_options) : undefined),
             answer_text: q.answer_text,
             question_type: q.question_type,
           });
@@ -177,6 +178,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           setCompletedQuestions(answered);
           setIncorrectQuestions(incorrect);
           setTotalQuestions(all.length);
+          setAllQuestions(all);
         }
       } else {
         // Get current unanswered question
@@ -186,7 +188,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           id: res.id,
           question: res.question_text,
           difficulty: 'medium',
-          options: res.question_options ? JSON.parse(res.question_options) : undefined,
+          options: res.options ? JSON.parse(res.options) : (res.question_options ? JSON.parse(res.question_options) : undefined),
           answer_text: null,
           question_type: res.question_type,
         });
@@ -239,6 +241,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           const incorrect = all.filter((x: any) => x.is_answered && x.answer_score !== null && x.answer_score < 5).map((x: any) => x.question_number);
           setCompletedQuestions(answered);
           setIncorrectQuestions(incorrect);
+          setAllQuestions(all);
           await loadCurrentQuestion();
           setIsReady(true);
           setIsLoading(false);
@@ -280,12 +283,36 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         return;
       }
 
-      setCompletedQuestions(prev => [...new Set([...prev, currentQuestionNumber])]);
+      const newlyCompleted = [...new Set([...completedQuestions, currentQuestionNumber])];
+      setCompletedQuestions(newlyCompleted);
       addMsg('Response recorded. Loading next question...');
 
-      // Poll for evaluation result (non-blocking — show next question immediately)
-      const nextNum = currentQuestionNumber + 1;
-      await loadCurrentQuestion(nextNum).catch(() => setIsFinished(true));
+      // Small visual delay so the question turns green in the UI before transitioning
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const aptitudeQuestions = allQuestions.filter(q => q.question_type === 'aptitude');
+      const allAptitudeCompleted = aptitudeQuestions.length > 0 && aptitudeQuestions.every(q => newlyCompleted.includes(q.question_number));
+
+      if (allAptitudeCompleted && currentQuestion.question_type === 'aptitude') {
+        // Complete the aptitude round
+        await apiFetch(`/api/interviews/${interviewId}/complete-aptitude`, token, { method: 'POST' }).catch(() => null);
+        
+        // Refresh question list to get the new technical questions
+        const updatedQuestions: any[] = await apiFetch(`/api/interviews/${interviewId}/questions`, token);
+        setAllQuestions(updatedQuestions);
+        setTotalQuestions(updatedQuestions.length);
+        
+        const firstTech = updatedQuestions.find(q => q.question_type !== 'aptitude');
+        if (firstTech) {
+           await loadCurrentQuestion(firstTech.question_number);
+        } else {
+           setIsFinished(true);
+        }
+      } else {
+        // Show next question
+        const nextNum = currentQuestionNumber + 1;
+        await loadCurrentQuestion(nextNum).catch(() => setIsFinished(true));
+      }
 
       // Background: poll for score after short delay
       setTimeout(async () => {
@@ -298,6 +325,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
               setIncorrectQuestions(prev => [...new Set([...prev, currentQuestionNumber])]);
             }
           }
+          setAllQuestions(all);
         } catch { /* ignore */ }
       }, 4000);
 
@@ -365,7 +393,11 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             const formData = new FormData();
             formData.append('file', blob, 'recording.webm');
             const res = await APIClient.postMultipart<{ text: string }>(`/api/interviews/${interviewId}/transcribe`, formData, `tr-${Date.now()}`, 15000);
-            if (res.text && transcriptionCallbackRef.current) transcriptionCallbackRef.current(res.text);
+            if (res.text) {
+              if (transcriptionCallbackRef.current) transcriptionCallbackRef.current(res.text);
+            } else {
+              toast.error("Transcription returned empty. Please speak clearly or check your mic.");
+            }
           } catch (e: any) {
              console.error('Transcription failed', e);
              const errorMsg = e.message || String(e);
@@ -712,6 +744,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             incorrectQuestions={incorrectQuestions}
             onSelectQuestion={jumpToQuestion}
             strikes={focusStrikes}
+            allQuestions={allQuestions}
           />
         </div>
 
