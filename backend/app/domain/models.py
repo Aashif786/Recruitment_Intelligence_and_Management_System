@@ -311,6 +311,9 @@ class Interview(Base):
 
 class InterviewQuestion(Base):
     __tablename__ = "interview_questions"
+    __table_args__ = (
+        UniqueConstraint('interview_id', 'question_number', name='uq_interview_question_number'),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     interview_id = Column(Integer, ForeignKey('interviews.id', ondelete="CASCADE"), nullable=False, index=True)
@@ -331,12 +334,12 @@ class InterviewQuestion(Base):
 class InterviewAnswer(Base):
     __tablename__ = "interview_answers"
     __table_args__ = (
-        UniqueConstraint('question_id', name='uq_answer_per_question'),
+        UniqueConstraint('interview_id', 'question_id', name='uq_answer_per_question'),
     )
 
     id = Column(Integer, primary_key=True, index=True)
     question_id = Column(Integer, ForeignKey('interview_questions.id', ondelete="CASCADE"), nullable=False, index=True)
-    interview_id = Column(Integer, ForeignKey('interviews.id', ondelete="CASCADE"), index=True, nullable=True)
+    interview_id = Column(Integer, ForeignKey('interviews.id', ondelete="CASCADE"), index=True, nullable=False)
     answer_text = Column(EncryptedText, nullable=False)
     answer_score = Column(Float)  # 1-10
     answer_evaluation = Column(EncryptedText)  # AI evaluation
@@ -663,6 +666,7 @@ class InterviewReportVersion(Base):
 class AttachmentResume(Base):
     __tablename__ = "attachment_resumes"
     id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(String(255), unique=True, index=True, nullable=True)
     sender_email = Column(String(255), index=True)
     subject = Column(String(500))
     file_name = Column(String(255))

@@ -33,7 +33,7 @@ function InterviewAccessForm() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Access failed')
       // Store interview JWT separately to avoid clobbering global HR/admin auth.
-      localStorage.setItem('interview_token', data.access_token)
+      sessionStorage.setItem('interview_token', data.access_token)
       router.push('/interview/' + data.interview_id)
     } catch (err: any) {
       setError(err.message)
@@ -48,6 +48,10 @@ function InterviewAccessForm() {
   useEffect(() => {
     if (e) setEmail(e)
     if (k) setAccessKey(k)
+    if (e || k) {
+      // Securely clear URL parameters from history to prevent plaintext key exposure in address bar
+      window.history.replaceState(null, '', window.location.pathname)
+    }
   }, [e, k])
 
   return (
@@ -58,6 +62,12 @@ function InterviewAccessForm() {
                 <CardDescription>Enter your email and access key to begin.</CardDescription>
             </CardHeader>
             <CardContent>
+                {(e || k) && (
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300 mb-4 flex items-start gap-2 animate-in fade-in duration-300">
+                    <span className="text-sm">⚠️</span>
+                    <span><strong>Security Notice:</strong> Please do not share this access link. It contains a unique key meant solely for your interview session.</span>
+                  </div>
+                )}
                 <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
                     {error && <p className="text-red-500 text-sm text-center">{error}</p>}
                     <div className="space-y-1">

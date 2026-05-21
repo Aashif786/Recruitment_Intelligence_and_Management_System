@@ -726,6 +726,24 @@ class MonitoringEventCreate(BaseModel):
     frame_snapshot: Optional[str] = None  # Base64 string
     video_reference: Optional[str] = None
 
+    @field_validator('event_type')
+    @classmethod
+    def validate_event_type(cls, v):
+        if not v or not v.strip():
+            raise ValueError("event_type cannot be empty.")
+        if len(v) > 50:
+            # Truncate silently to fit DB column rather than rejecting valid proctoring events
+            return v[:50]
+        return v
+
+    @field_validator('confidence_score')
+    @classmethod
+    def validate_confidence(cls, v):
+        if v is not None and not (0.0 <= v <= 1.0):
+            # Clamp to [0, 1] range — negative or >1 values are nonsensical for proctoring
+            return max(0.0, min(1.0, v))
+        return v
+
     @field_validator('frame_snapshot')
     @classmethod
     def validate_frame(cls, v):
@@ -876,6 +894,9 @@ class GlobalSettingsUpdate(BaseModel):
     hr_name: Optional[str] = None
     hr_phone: Optional[str] = None
     offer_letter_template: Optional[str] = None
+    imap_email: Optional[str] = None
+    imap_password: Optional[str] = None
+    auto_sync_enabled: Optional[bool] = None
 
 class GlobalSettingsResponse(BaseModel):
     company_logo_url: Optional[str] = ""
@@ -885,6 +906,9 @@ class GlobalSettingsResponse(BaseModel):
     hr_name: Optional[str] = ""
     hr_phone: Optional[str] = ""
     offer_letter_template: Optional[str] = ""
+    imap_email: Optional[str] = ""
+    imap_password: Optional[str] = ""
+    auto_sync_enabled: bool = False
 
 # ============================================================================
 # Candidate Offer Actions

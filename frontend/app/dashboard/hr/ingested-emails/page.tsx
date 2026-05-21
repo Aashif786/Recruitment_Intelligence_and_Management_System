@@ -49,7 +49,10 @@ import {
     FileText,
     ExternalLink,
     Settings,
+    Save,
+    Zap,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 
 interface IngestedEmail {
     id: number
@@ -82,11 +85,28 @@ export default function IngestedEmailsPage() {
     const [statusFilter, setStatusFilter] = useState('all') // all, mapped, unmapped
     const [isSyncing, setIsSyncing] = useState(false)
     const [isAssigning, setIsAssigning] = useState(false)
+    const [isSavingSettings, setIsSavingSettings] = useState(false)
     
     // IMAP Sync credentials (defaults to verified credentials)
     const [imapUser, setImapUser] = useState('caldiminternship@gmail.com')
     const [imapPass, setImapPass] = useState('jaesbucnsfnlediv')
+    const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
     const [showCredentials, setShowCredentials] = useState(false)
+
+    // Load current settings on mount
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const settings = await APIClient.get('/api/settings') as any
+                if (settings.imap_email) setImapUser(settings.imap_email)
+                if (settings.imap_password) setImapPass(settings.imap_password)
+                setAutoSyncEnabled(!!settings.auto_sync_enabled)
+            } catch (err) {
+                console.error('Failed to load settings:', err)
+            }
+        }
+        loadSettings()
+    }, [])
 
     // Assignment Modal State
     const [selectedResume, setSelectedResume] = useState<IngestedEmail | null>(null)
@@ -130,6 +150,33 @@ export default function IngestedEmailsPage() {
     const totalCount = data?.total ?? 0;
     const totalPages = data?.pages ?? 0;
 
+    // Save IMAP Settings
+    const handleSaveSettings = async () => {
+        if (!imapUser.trim() || !imapPass.trim()) {
+            toast.error('Please enter both IMAP Email and App Password')
+            return
+        }
+
+        setIsSavingSettings(true)
+        const toastId = toast.loading('Saving recruiter mailbox configuration...')
+
+        try {
+            await APIClient.post('/api/settings', {
+                imap_email: imapUser.trim(),
+                imap_password: imapPass.trim(),
+                auto_sync_enabled: autoSyncEnabled
+            })
+
+            toast.success('Configuration saved! Auto-sync will now run in the background.', { id: toastId })
+            setShowCredentials(false)
+        } catch (err: any) {
+            console.error('Save settings error:', err)
+            toast.error(err.response?.data?.detail || 'Failed to save settings.', { id: toastId })
+        } finally {
+            setIsSavingSettings(false)
+        }
+    }
+
     // Trigger Manual Email Ingestion via API
     const handleSync = async () => {
         if (!imapUser.trim() || !imapPass.trim()) {
@@ -138,7 +185,7 @@ export default function IngestedEmailsPage() {
         }
 
         setIsSyncing(true)
-        const toastId = toast.loading('Connecting to recruiter mailbox and fetching new job application emails...')
+        const toastId = toast.loading('Connecting to mailbox and fetching resumes...')
 
         try {
             const res = (await APIClient.post('/api/applications/ingest-emails', {
@@ -146,11 +193,21 @@ export default function IngestedEmailsPage() {
                 imap_pass: imapPass.trim()
             })) as any
 
-            toast.success(
-                `Sync Successful! Fetched ${res.saved_count} new resumes. Auto-mapped & analyzed ${res.mapped_count} applications.`,
-                { id: toastId, duration: 5000 }
-            )
+            if (res.saved_count > 0) {
+                toast.success(
+                    `Found ${res.saved_count} new resumes! AI mapping and analysis has started in the background.`,
+                    { id: toastId, duration: 6000 }
+                )
+            } else {
+                toast.success('Mailbox is up to date. No new resumes found.', { id: toastId })
+            }
+            
+            // Immediately mutate to show the new ingested records (fetch is fast)
             mutate()
+            
+            // Re-mutate after 10 seconds to show AI mapping results
+            setTimeout(() => mutate(), 10000)
+            setTimeout(() => mutate(), 30000)
         } catch (err: any) {
             console.error('Sync error:', err)
             toast.error(err.response?.data?.detail || err.message || 'Sync failed. Please verify your IMAP login details.', { id: toastId })
@@ -201,63 +258,106 @@ export default function IngestedEmailsPage() {
                 description="Review, manage, and manually assign job applications fetched automatically from your recruiter email channels."
                 icon={Mail}
             >
-                <div className="flex gap-3">
-                    <Button
-                        variant="outline"
-                        onClick={() => setShowCredentials(!showCredentials)}
-                        className="gap-2 border-border shadow-sm rounded-xl h-11"
-                    >
-                        <Settings className="h-4 w-4" />
-                        Configure Mailbox
-                    </Button>
-                    <Button
-                        onClick={handleSync}
-                        disabled={isSyncing}
-                        className="gap-2 bg-primary text-primary-foreground shadow-sm rounded-xl h-11 font-semibold active:scale-95 transition-all"
-                    >
-                        {isSyncing ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <RefreshCw className="h-4 w-4" />
-                        )}
-                        Sync Emails
-                    </Button>
+                <div className="flex items-center gap-4">
+                    {autoSyncEnabled && (
+                        <Badge variant="outline" className="h-9 px-4 rounded-xl bg-emerald-50 text-emerald-600 border-emerald-100 flex items-center gap-2 animate-pulse font-bold text-[10px] tracking-widest uppercase">
+                            <Zap className="h-3 w-3 fill-emerald-600" />
+                            Auto-Sync Active
+                        </Badge>
+                    )}
+                    <div className="flex gap-3">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowCredentials(!showCredentials)}
+                            className={`gap-2 border-border shadow-sm rounded-xl h-11 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
+                        >
+                            <Settings className="h-4 w-4" />
+                            Configure Mailbox
+                        </Button>
+                        <Button
+                            onClick={handleSync}
+                            disabled={isSyncing}
+                            className="gap-2 bg-primary text-primary-foreground shadow-sm rounded-xl h-11 font-semibold active:scale-95 transition-all"
+                        >
+                            {isSyncing ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-4 w-4" />
+                            )}
+                            Sync Emails
+                        </Button>
+                    </div>
                 </div>
             </PageHeader>
 
             {/* Credentials Card */}
             {showCredentials && (
-                <Card className="border border-border bg-card/50 shadow-sm rounded-2xl animate-in fade-in duration-300">
-                    <CardHeader>
-                        <CardTitle className="text-base font-bold flex items-center gap-2">
-                            <Settings className="h-4 w-4 text-primary" />
-                            Recruiter Mailbox Configuration (IMAP)
-                        </CardTitle>
-                        <CardDescription>
-                            Configure the Google Gmail IMAP settings used to automatically poll and ingest applications.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="imap_user" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">IMAP Email Address</Label>
-                            <Input
-                                id="imap_user"
-                                value={imapUser}
-                                onChange={e => setImapUser(e.target.value)}
-                                className="h-10 bg-background border-border rounded-xl"
-                                placeholder="example@gmail.com"
-                            />
+                <Card className="border-2 border-primary/10 bg-card shadow-xl rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
+                    <CardHeader className="border-b border-border/50 pb-6">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                                <CardTitle className="text-lg font-black flex items-center gap-2">
+                                    <Settings className="h-5 w-5 text-primary" />
+                                    Mailbox Configuration
+                                </CardTitle>
+                                <CardDescription>
+                                    Manage the Gmail IMAP settings used for background application polling.
+                                </CardDescription>
+                            </div>
+                            <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                                <div className="space-y-0.5 px-1">
+                                    <Label className="text-[10px] font-black uppercase tracking-tighter text-slate-500">Auto-Syncing</Label>
+                                    <p className="text-[9px] text-slate-400 font-medium">Runs every 1 minute</p>
+                                </div>
+                                <Switch 
+                                    checked={autoSyncEnabled} 
+                                    onCheckedChange={setAutoSyncEnabled}
+                                    className="data-[state=checked]:bg-emerald-500"
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="imap_pass" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Gmail App Password</Label>
-                            <Input
-                                id="imap_pass"
-                                type="password"
-                                value={imapPass}
-                                onChange={e => setImapPass(e.target.value)}
-                                className="h-10 bg-background border-border rounded-xl"
-                                placeholder="xxxx xxxx xxxx xxxx"
-                            />
+                    </CardHeader>
+                    <CardContent className="pt-8 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label htmlFor="imap_user" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">IMAP Email Address</Label>
+                                <Input
+                                    id="imap_user"
+                                    value={imapUser}
+                                    onChange={e => setImapUser(e.target.value)}
+                                    className="h-12 bg-background border-2 border-input rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium"
+                                    placeholder="example@gmail.com"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="imap_pass" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Gmail App Password</Label>
+                                <Input
+                                    id="imap_pass"
+                                    type="password"
+                                    value={imapPass}
+                                    onChange={e => setImapPass(e.target.value)}
+                                    className="h-12 bg-background border-2 border-input rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium"
+                                    placeholder="xxxx xxxx xxxx xxxx"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="pt-2 border-t border-border/50 flex justify-end gap-3">
+                             <Button
+                                variant="ghost"
+                                onClick={() => setShowCredentials(false)}
+                                className="h-12 px-6 rounded-xl font-bold text-slate-500"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSaveSettings}
+                                disabled={isSavingSettings}
+                                className="h-12 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 gap-2"
+                            >
+                                {isSavingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                Save Configuration
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>

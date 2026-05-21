@@ -13,7 +13,7 @@ export default function LiveInterviewPage() {
 
     useEffect(() => {
         const q = searchParams.get('token');
-        const fromStorage = typeof window !== 'undefined' ? localStorage.getItem('interview_token') : null;
+        const fromStorage = typeof window !== 'undefined' ? sessionStorage.getItem('interview_token') : null;
         setToken(q?.trim() || fromStorage?.trim() || '');
     }, [searchParams]);
 

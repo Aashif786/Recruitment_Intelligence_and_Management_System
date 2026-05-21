@@ -29,7 +29,10 @@ def get_settings(
         "hr_email": settings_dict.get("hr_email", ""),
         "hr_name": settings_dict.get("hr_name", ""),
         "hr_phone": settings_dict.get("hr_phone", ""),
-        "offer_letter_template": settings_dict.get("offer_letter_template", "")
+        "offer_letter_template": settings_dict.get("offer_letter_template", ""),
+        "imap_email": settings_dict.get("imap_email", ""),
+        "imap_password": settings_dict.get("imap_password", ""),
+        "auto_sync_enabled": settings_dict.get("auto_sync_enabled", "false").lower() == "true"
     }
 
 @router.post("", response_model=GlobalSettingsResponse)
@@ -46,11 +49,15 @@ def update_settings(
         if value is None:
             continue
             
+        str_value = str(value)
+        if isinstance(value, bool):
+            str_value = "true" if value else "false"
+            
         setting = db.query(GlobalSettings).filter(GlobalSettings.key == key).first()
         if setting:
-            setting.value = value
+            setting.value = str_value
         else:
-            setting = GlobalSettings(key=key, value=value)
+            setting = GlobalSettings(key=key, value=str_value)
             db.add(setting)
             
     db.commit()
