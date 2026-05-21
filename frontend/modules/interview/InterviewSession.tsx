@@ -525,18 +525,38 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       try { videoRecorderRef.current.stop(); } catch (e) { console.error(e); }
     }
 
-    const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
-    let selectedType = '';
-    for (const t of types) { if (MediaRecorder.isTypeSupported(t)) { selectedType = t; break; } }
-    const vRecorder = new MediaRecorder(stream, selectedType ? { mimeType: selectedType } : undefined);
-    videoRecorderRef.current = vRecorder;
-    videoChunksRef.current = [];
-    vRecorder.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
-    vRecorder.onstop = () => {
-      const blob = new Blob(videoChunksRef.current, { type: selectedType || 'video/webm' });
-      uploadVideo(blob);
-    };
-    vRecorder.start(10000); // chunk every 10s just in case
+    let vRecorder: MediaRecorder | null = null;
+    try {
+      const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+      let selectedType = '';
+      for (const t of types) { if (MediaRecorder.isTypeSupported(t)) { selectedType = t; break; } }
+      vRecorder = new MediaRecorder(stream, selectedType ? { mimeType: selectedType } : undefined);
+    } catch (e) {
+      console.warn("Failed to create MediaRecorder with types, trying default option:", e);
+      try {
+        vRecorder = new MediaRecorder(stream);
+      } catch (err) {
+        console.error("Failed to create default MediaRecorder:", err);
+      }
+    }
+
+    if (vRecorder) {
+      videoRecorderRef.current = vRecorder;
+      videoChunksRef.current = [];
+      vRecorder.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
+      vRecorder.onstop = () => {
+        const blob = new Blob(videoChunksRef.current, { type: vRecorder?.mimeType || 'video/webm' });
+        uploadVideo(blob);
+      };
+      try {
+        vRecorder.start(10000); // chunk every 10s just in case
+      } catch (startErr) {
+        console.error("Failed to start MediaRecorder:", startErr);
+        toast.error("Video recording could not be started, but your interview session is safe to continue.", {
+          description: "Webcam monitoring and proctoring remain fully active."
+        });
+      }
+    }
 
     if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
     faceCheckIntervalRef.current = setInterval(async () => {
