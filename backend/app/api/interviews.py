@@ -1619,10 +1619,12 @@ async def submit_answer(
             active_duration = get_ist_now() - interview.started_at
             if active_duration > timedelta(seconds=45):
                 from app.domain.models import InterviewMonitoringEvent
-                event_count = db.query(InterviewMonitoringEvent).filter(
+                from sqlalchemy import exists
+                has_events = db.query(exists().where(
                     InterviewMonitoringEvent.interview_id == interview_id
-                ).count()
-                if event_count == 0:
+                )).scalar()
+                
+                if not has_events:
                     logger.error(f"Proctoring Bypass Detected: No monitoring events for interview {interview_id} after {active_duration.seconds}s.")
                     # We don't terminate immediately to avoid false positives, but we block the submission
                     # until the proctoring engine checks in.
@@ -2165,10 +2167,20 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
             logger.error(f"Failed to auto-resolve pending tickets for interview {interview_id}: {e}")
     
     # 2. Calculate scores
-    questions = db.query(InterviewQuestion).filter(
-        InterviewQuestion.interview_id == interview_id,
-        InterviewQuestion.question_type != "aptitude"
-    ).all()
+    # Optimized: Fetch questions and latest answers in a single join to avoid N+1 queries
+    from sqlalchemy.orm import contains_eager
+    
+    questions = (
+        db.query(InterviewQuestion)
+        .join(InterviewQuestion.answers)
+        .filter(
+            InterviewQuestion.interview_id == interview_id,
+            InterviewQuestion.question_type != "aptitude"
+        )
+        .options(contains_eager(InterviewQuestion.answers))
+        .order_by(InterviewQuestion.question_number)
+        .all()
+    )
     
     technical_scores = []
     behavioral_scores = []
@@ -2176,14 +2188,14 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
     qa_pairs = []
     
     for question in questions:
-        answers = db.query(InterviewAnswer).filter(
-            InterviewAnswer.question_id == question.id
-        ).order_by(InterviewAnswer.id).all()
-        if answers:
-            latest_answer = answers[-1]
+        # Get the latest answer for this question
+        latest_answer = sorted(question.answers, key=lambda x: x.id)[-1] if question.answers else None
+        
+        if latest_answer:
             score = latest_answer.answer_score if latest_answer.answer_score is not None else 0.0
             
-            if question.question_type == 'behavioral' or question.question_number >= 16:
+            # Robust classification based on question_type
+            if (question.question_type or "").lower() == 'behavioral':
                 behavioral_scores.append(score)
             else:
                 technical_scores.append(score)
@@ -2204,16 +2216,18 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
     # Weighted rollup (Robust calculation)
     # If both categories exist: 70% technical, 30% behavioral
     # If only one exists: 100% of that category
+    calculated_overall_score = 0.0
     if technical_scores and behavioral_scores:
-        interview_score = round((technical_avg * 0.7 + behavioral_avg * 0.3), 2)
+        calculated_overall_score = round((technical_avg * 0.7 + behavioral_avg * 0.3), 2)
     elif technical_scores:
-        interview_score = round(technical_avg, 2)
+        calculated_overall_score = round(technical_avg, 2)
     elif behavioral_scores:
-        interview_score = round(behavioral_avg, 2)
-    else:
-        interview_score = 0.0
+        calculated_overall_score = round(behavioral_avg, 2)
+    
+    interview_score = calculated_overall_score
 
     behavioral_score = round(behavioral_avg, 2)
+    technical_score_val = round(technical_avg, 2)
     ai_used_count = 0
     fallback_used_count = 0
     confidence_values = []
@@ -2341,9 +2355,10 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
         if existing_report:
             report = existing_report
             report.overall_score = report_data["overall_score"]
-            report.technical_skills_score = report_data.get("technical_skills_score")  # None if AI did not return it
-            report.communication_score = report_data.get("communication_score")        # None if AI did not return it
-            report.problem_solving_score = report_data.get("problem_solving_score")    # None if AI did not return it
+            # Fallback to calculated scores if AI didn't provide them
+            report.technical_skills_score = report_data.get("technical_skills_score") or technical_score_val
+            report.communication_score = report_data.get("communication_score") or behavioral_score
+            report.problem_solving_score = report_data.get("problem_solving_score") or ((technical_score_val + behavioral_score) / 2)
             report.summary = str(report_data.get("summary", ""))
             report.detailed_feedback = detailed_feedback_val
             report.recommendation = rec_val
@@ -2358,9 +2373,10 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
                 candidate_email=interview.application.candidate_email if interview.application else "Email N/A",
                 applied_role=job.title if job else "N/A",
                 overall_score=report_data["overall_score"],
-                technical_skills_score=report_data.get("technical_skills_score"),  # None if AI did not return it
-                communication_score=report_data.get("communication_score"),        # None if AI did not return it
-                problem_solving_score=report_data.get("problem_solving_score"),    # None if AI did not return it
+                # Fallback to calculated scores if AI didn't provide them
+                technical_skills_score=report_data.get("technical_skills_score") or technical_score_val,
+                communication_score=report_data.get("communication_score") or behavioral_score,
+                problem_solving_score=report_data.get("problem_solving_score") or ((technical_score_val + behavioral_score) / 2),
                 strengths=str(report_data.get("strengths", "[]")),
                 weaknesses=str(report_data.get("weaknesses", "[]")),
                 summary=str(report_data.get("summary", "")),

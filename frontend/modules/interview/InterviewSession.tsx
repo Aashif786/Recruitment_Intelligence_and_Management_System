@@ -303,7 +303,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         // Stop the stream tracks instantly so the browser mic indicator turns off immediately, preventing device locking
         stream.getTracks().forEach(t => t.stop());
         
-        if (blob.size > 0) {
+        if (blob.size > 500) {
           setIsTranscribing(true);
           try {
             const formData = new FormData();
@@ -312,8 +312,9 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             if (res.text && transcriptionCallbackRef.current) transcriptionCallbackRef.current(res.text);
           } catch (e: any) {
              console.error('Transcription failed', e);
-             const isTerminatedError = e.message?.toLowerCase().includes('terminated') || 
-                                     e.message?.toLowerCase().includes('proctoring violation');
+             const errorMsg = e.message || String(e);
+             const isTerminatedError = errorMsg.toLowerCase().includes('terminated') || 
+                                     errorMsg.toLowerCase().includes('proctoring violation');
              
              if (isTerminatedError) {
                toast.error('Voice service is unavailable as the session has been terminated.');
@@ -322,6 +323,8 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                toast.error('Voice transcription failed. You can type your response.');
              }
           } finally { setIsTranscribing(false); }
+        } else if (blob.size > 0) {
+          toast.error("Audio recording was too short or silent. Please try again.");
         }
       };
       recorder.start();

@@ -180,43 +180,53 @@ export default function InterviewPage() {
 
     // Continuous Device Monitoring
     useEffect(() => {
-        if (interviewStatus !== 'active' && interviewStatus !== 'in_progress' && interviewStatus !== 'aptitude') return;
+        const activeStatuses = ['active', 'in_progress', 'aptitude', 'preparing'];
+        if (!activeStatuses.includes(interviewStatus)) return;
 
         const monitorInterval = setInterval(() => {
             const stream = streamRef.current;
-            if (!stream) return;
-
-            const videoTrack = stream.getVideoTracks()[0];
-            const audioTrack = stream.getAudioTracks()[0];
-
-            const isVideoActive = videoTrack && videoTrack.readyState === 'live' && videoTrack.enabled;
             
-            // If we are actively recording a voice answer, we use a separate stream.
-            let isAudioActive = audioTrack && audioTrack.readyState === 'live' && audioTrack.enabled;
-            
-            if (!isAudioActive && isListeningRef.current && mediaRecorderRef.current?.stream) {
-                const recordingAudioTrack = mediaRecorderRef.current.stream.getAudioTracks()[0];
-                if (recordingAudioTrack && recordingAudioTrack.readyState === 'live' && recordingAudioTrack.enabled) {
-                    isAudioActive = true;
+            if (!stream) {
+                // If we are in an active status but have no stream, that's a failure
+                if (interviewStatus !== 'preparing') {
+                    hardwareDisconnectedRef.current.camera += 1;
+                    hardwareDisconnectedRef.current.mic += 1;
                 }
-            }
+            } else {
+                const videoTrack = stream.getVideoTracks()[0];
+                const audioTrack = stream.getAudioTracks()[0];
 
-            if (!isVideoActive || !isAudioActive) {
-                // Increment counters for transient failures (grace period)
+                const isVideoActive = videoTrack && videoTrack.readyState === 'live' && videoTrack.enabled;
+                
+                // If we are actively recording a voice answer, we use a separate stream.
+                let isAudioActive = audioTrack && audioTrack.readyState === 'live' && audioTrack.enabled;
+                
+                if (!isAudioActive && isListeningRef.current && mediaRecorderRef.current?.stream) {
+                    const recordingAudioTrack = mediaRecorderRef.current.stream.getAudioTracks()[0];
+                    if (recordingAudioTrack && recordingAudioTrack.readyState === 'live' && recordingAudioTrack.enabled) {
+                        isAudioActive = true;
+                    }
+                }
+
                 if (!isVideoActive) hardwareDisconnectedRef.current.camera += 1;
                 else hardwareDisconnectedRef.current.camera = 0;
 
                 if (!isAudioActive) hardwareDisconnectedRef.current.mic += 1;
                 else hardwareDisconnectedRef.current.mic = 0;
+            }
 
-                // Only trigger "Disconnected" state after 2 consecutive failures (approx 6-9 seconds)
-                if (hardwareDisconnectedRef.current.camera >= 2 || hardwareDisconnectedRef.current.mic >= 2) {
-                    setIsCameraActive(isVideoActive);
-                    setIsMicActive(isAudioActive);
+            // Only trigger "Disconnected" state after 2 consecutive failures (approx 6-9 seconds)
+            if (hardwareDisconnectedRef.current.camera >= 2 || hardwareDisconnectedRef.current.mic >= 2) {
+                const isVideoActuallyActive = streamRef.current?.getVideoTracks()[0]?.readyState === 'live';
+                const isAudioActuallyActive = streamRef.current?.getAudioTracks()[0]?.readyState === 'live' || (isListeningRef.current && mediaRecorderRef.current?.stream?.getAudioTracks()[0]?.readyState === 'live');
 
+                setIsCameraActive(!!isVideoActuallyActive);
+                setIsMicActive(!!isAudioActuallyActive);
+
+                if (!isVideoActuallyActive || !isAudioActuallyActive) {
                     const missing = [];
-                    if (hardwareDisconnectedRef.current.camera >= 2) missing.push("Camera");
-                    if (hardwareDisconnectedRef.current.mic >= 2) missing.push("Microphone");
+                    if (!isVideoActuallyActive) missing.push("Camera");
+                    if (!isAudioActuallyActive) missing.push("Microphone");
                     
                     toast.error(`Hardware Disconnected: ${missing.join(" and ")} access lost. Please reconnect to continue.`, {
                         id: 'hardware-disconnect',
@@ -231,9 +241,10 @@ export default function InterviewPage() {
                 }
             } else {
                 // Reset counters if everything is fine
-                hardwareDisconnectedRef.current = { camera: 0, mic: 0 };
-                setIsCameraActive(true);
-                setIsMicActive(true);
+                if (streamRef.current) {
+                    setIsCameraActive(true);
+                    setIsMicActive(true);
+                }
             }
         }, 3000);
 
@@ -375,6 +386,7 @@ export default function InterviewPage() {
             if (isTerminatedError) {
                 toast.error("Voice service is unavailable as the session has been terminated.");
                 setInterviewStatus('completed');
+                interviewStatusRef.current = 'completed';
                 setShowIssueDialog(true);
             } else {
                 toast.error(`Voice transcription failed: ${detail}. You can still type your answer manually.`)
@@ -1615,7 +1627,7 @@ export default function InterviewPage() {
                 )}
 
                 {/* Hardware Disconnected Modal (Blocking) */}
-                {(!isCameraActive || !isMicActive) && interviewStatus === 'active' && (
+                {(!isCameraActive || !isMicActive) && ['active', 'in_progress', 'aptitude', 'preparing'].includes(interviewStatus) && (
                     <div className="fixed inset-0 z-[500] bg-slate-900/95 backdrop-blur-2xl flex items-center justify-center p-6 text-center">
                         <div className="max-w-md w-full bg-white rounded-[3rem] p-12 shadow-2xl border-4 border-amber-500 flex flex-col items-center">
                             <div className="w-24 h-24 bg-amber-50 rounded-full flex items-center justify-center mb-8 border-2 border-amber-100 animate-pulse">
@@ -1769,24 +1781,24 @@ export default function InterviewPage() {
                     </div>
                 </div>
                 {/* Question Area */}
-                <main className="flex-1 overflow-y-auto p-12">
-                    <div className="max-w-4xl mx-auto space-y-8">
+                <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12">
+                    <div className="max-w-4xl mx-auto space-y-6 lg:space-y-8">
 
                         {/* Question Card */}
-                        <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-200 p-12 relative overflow-hidden">
+                        <div className="bg-white rounded-3xl lg:rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-200 p-6 sm:p-10 lg:p-12 relative overflow-hidden">
                             <div className="absolute top-0 left-0 w-2 h-full bg-blue-600"></div>
 
-                            <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center justify-between mb-4 lg:mb-8">
                                 <div className="flex items-center gap-3">
                                     <div className="w-3 h-3 rounded-full bg-blue-600 animate-pulse"></div>
-                                    <span className="text-sm font-black text-blue-600 uppercase tracking-widest">Current Question</span>
+                                    <span className="text-xs lg:text-sm font-black text-blue-600 uppercase tracking-widest">Current Question</span>
                                 </div>
-                                <div className="bg-purple-100 text-purple-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] border border-purple-200">
+                                <div className="bg-purple-100 text-purple-700 px-3 py-1 lg:px-4 lg:py-1.5 rounded-full text-[8px] lg:text-[10px] font-black uppercase tracking-[0.15em] border border-purple-200">
                                     {currentQuestion?.question_type?.replace('_', ' ')} ROUND
                                 </div>
                             </div>
 
-                            <h2 className="text-4xl font-bold text-slate-900 leading-[1.2] mb-4">
+                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 leading-[1.2] mb-4">
                                 <span className="text-blue-600 mr-2">
                                     {
                                         isAptitude
@@ -1801,31 +1813,31 @@ export default function InterviewPage() {
 
                             {/* Decorative Icon */}
                             <div className="absolute -top-10 -right-10 opacity-[0.03] rotate-12 pointer-events-none">
-                                <Brain style={{ width: '300px', height: '300px' }} />
+                                <Brain style={{ width: '200px', height: '200px' }} className="lg:w-[300px] lg:h-[300px]" />
                             </div>
                         </div>
 
                         {/* Answer Options / Textarea */}
-                        <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-12">
-                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-8">Select One Option</h3>
+                        <div className="bg-white rounded-3xl lg:rounded-[2.5rem] shadow-xl border border-slate-200 p-6 sm:p-10 lg:p-12">
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 lg:mb-8">Your Response</h3>
 
                             {isAptitude && options.length > 0 ? (
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
                                     {options.map((opt: string, i: number) => (
                                         <button
                                             key={i}
                                             onClick={() => { setAnswer(i.toString()); answerRef.current = i.toString(); }}
-                                            className={`p-8 rounded-3xl border-2 text-left transition-all duration-300 group relative
+                                            className={`p-4 lg:p-8 rounded-2xl lg:rounded-3xl border-2 text-left transition-all duration-300 group relative
                                                 ${answer === i.toString() || answer === opt
                                                     ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/30 -translate-y-1'
                                                     : 'bg-white border-slate-100 text-slate-700 hover:border-blue-200 hover:bg-slate-50'}`}
                                         >
-                                            <div className="flex items-center gap-6">
-                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg border-2 transition-colors
+                                            <div className="flex items-center gap-4 lg:gap-6">
+                                                <div className={`w-8 h-8 lg:w-12 lg:h-12 rounded-lg lg:rounded-2xl flex items-center justify-center font-black text-sm lg:text-lg border-2 transition-colors
                                                     ${answer === i.toString() || answer === opt ? 'bg-white/20 border-white text-white' : 'bg-slate-50 border-slate-100 text-slate-400 group-hover:border-blue-200 group-hover:text-blue-600'}`}>
                                                     {String.fromCharCode(65 + i)}
                                                 </div>
-                                                <span className="text-lg font-bold">{opt}</span>
+                                                <span className="text-sm lg:text-lg font-bold">{opt}</span>
                                             </div>
                                         </button>
                                     ))}
@@ -1835,24 +1847,24 @@ export default function InterviewPage() {
                                     <textarea
                                         value={answer}
                                         onChange={(e) => { setAnswer(e.target.value); answerRef.current = e.target.value; }}
-                                        className="w-full h-48 bg-slate-50 border-2 border-slate-100 rounded-3xl p-8 text-lg font-medium text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none resize-none"
+                                        className="w-full h-32 lg:h-48 bg-slate-50 border-2 border-slate-100 rounded-2xl lg:rounded-3xl p-4 lg:p-8 text-sm lg:text-lg font-medium text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none resize-none"
                                         placeholder="Type your detailed response here..."
                                     />
-                                    <div className="flex justify-between items-center px-4">
+                                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 px-2">
                                         <div className="flex items-center gap-2">
                                             {(isSubmitting || isTranscribing) ? (
                                                 <>
                                                     <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-                                                    <span className="text-xs font-bold text-amber-500">{isTranscribing ? 'Converting voice...' : 'Submitting...'}</span>
+                                                    <span className="text-[10px] font-bold text-amber-500">{isTranscribing ? 'Converting voice...' : 'Submitting...'}</span>
                                                 </>
                                             ) : (
-                                                <span className="text-xs font-bold text-slate-300">{answer.length > 0 ? `${answer.length} characters` : 'Type or use voice'}</span>
+                                                <span className="text-[10px] font-bold text-slate-300">{answer.length > 0 ? `${answer.length} characters` : 'Type or use voice'}</span>
                                             )}
                                         </div>
                                         <Button
                                             variant="ghost"
                                             disabled={isTranscribing}
-                                            className={`font-bold transition-all duration-300 ${isListening ? 'text-red-500 hover:text-red-600' : 'text-slate-400 hover:text-blue-600'}`}
+                                            className={`font-bold text-xs transition-all duration-300 ${isListening ? 'text-red-500 hover:text-red-600' : 'text-slate-400 hover:text-blue-600'}`}
                                             onClick={() => {
                                                 if (isListening) {
                                                     stopRecording(true) // force=true: user explicitly clicked stop
@@ -1862,7 +1874,7 @@ export default function InterviewPage() {
                                             }}
                                         >
                                             {isTranscribing ? (
-                                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                                                             ) : isListening ? (
                                                 <div className="flex items-end gap-[2px] mr-2.5 h-3.5 select-none shrink-0">
                                                     <span className="w-0.5 bg-red-500 rounded-full animate-equalise-1 origin-bottom h-full inline-block"></span>
@@ -1871,20 +1883,20 @@ export default function InterviewPage() {
                                                     <span className="w-0.5 bg-red-500 rounded-full animate-equalise-4 origin-bottom h-full inline-block"></span>
                                                 </div>
                                             ) : (
-                                                <Mic className="w-5 h-5 mr-2" />
+                                                <Mic className="w-4 h-4 mr-2" />
                                             )}
-                                            {isTranscribing ? 'Converting to Text...' : (isListening ? 'Stop & Convert' : 'Use Voice (High Accuracy)')}
+                                            {isTranscribing ? 'Converting...' : (isListening ? 'Stop' : 'Use Voice')}
                                         </Button>
                                     </div>
                                 </div>
                             )}
 
                             {/* Footer Actions */}
-                            <div className="mt-12 pt-10 border-t border-slate-100 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
+                            <div className="mt-8 lg:mt-12 pt-6 lg:pt-10 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
                                     <Button
                                         variant="ghost"
-                                        className="h-12 px-6 rounded-2xl text-slate-400 font-bold hover:bg-slate-50 hover:text-slate-900"
+                                        className="h-10 lg:h-12 px-4 lg:px-6 rounded-xl lg:rounded-2xl text-slate-400 font-bold hover:bg-slate-50 hover:text-slate-900 text-xs lg:text-sm"
                                         onClick={() => {
                                             if (currentIndex > 0) {
                                                 setCurrentIndex(currentIndex - 1)
@@ -1892,12 +1904,12 @@ export default function InterviewPage() {
                                         }}
                                         disabled={currentIndex === 0}
                                     >
-                                        <ChevronLeft className="w-5 h-5 mr-2" />
+                                        <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5 mr-1 lg:mr-2" />
                                         Prev
                                     </Button>
                                     <Button
                                         variant="ghost"
-                                        className="h-12 px-6 rounded-2xl text-slate-900 font-bold hover:bg-slate-50"
+                                        className="h-10 lg:h-12 px-4 lg:px-6 rounded-xl lg:rounded-2xl text-slate-900 font-bold hover:bg-slate-50 text-xs lg:text-sm"
                                         onClick={() => {
                                             if (currentIndex < totalQuestions - 1) {
                                                 setCurrentIndex(currentIndex + 1)
@@ -1906,13 +1918,13 @@ export default function InterviewPage() {
                                         disabled={currentIndex === totalQuestions - 1 || isSubmitting}
                                     >
                                         Next
-                                        <ChevronRight className="w-5 h-5 ml-2" />
+                                        <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 ml-1 lg:ml-2" />
                                     </Button>
                                 </div>
 
-                                <p className="text-xs font-bold text-slate-400 italic">Navigate freely. Answers save automatically on submit.</p>
+                                <p className="text-[10px] font-bold text-slate-400 italic hidden lg:block">Navigate freely. Answers save automatically on submit.</p>
 
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 w-full sm:w-auto">
                                     <Button
                                         variant="outline"
                                         className="h-16 px-8 rounded-[1.25rem] border-2 border-red-100 text-red-600 font-bold hover:bg-red-50 hover:border-red-200 transition-all"
