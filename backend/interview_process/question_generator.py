@@ -385,15 +385,55 @@ class QuestionGenerator:
         }
 
     @staticmethod
-    def _hardcoded_aptitude_questions() -> List[dict]:
-        """Deterministic MCQs when Groq fails (avoids recursive self-calls)."""
-        return [
+    def _hardcoded_aptitude_questions(count: int = 10) -> List[dict]:
+        """Large pool of fallback MCQs — shuffled so repeated calls never return the same set."""
+        pool = [
+            # --- Arithmetic / Speed-Distance-Time ---
             {"question": "If a train travels 60 km/h for 2 hours, how far does it go?", "options": ["120 km", "100 km", "140 km", "80 km"], "answer": 0},
+            {"question": "A car covers 150 km in 3 hours. What is its average speed?", "options": ["50 km/h", "45 km/h", "55 km/h", "60 km/h"], "answer": 0},
+            {"question": "Train A travels at 80 km/h and Train B at 120 km/h towards each other from 500 km apart. When do they meet?", "options": ["2.5 hours", "3 hours", "4 hours", "2 hours"], "answer": 0},
+            # --- Classic Puzzles ---
             {"question": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost?", "options": ["$0.10", "$0.05", "$0.15", "$0.01"], "answer": 1},
-            {"question": "What is the next number in the sequence: 2, 4, 8, 16, ...?", "options": ["32", "24", "48", "64"], "answer": 0},
-            {"question": "If it takes 5 machines 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?", "options": ["5 minutes", "100 minutes", "20 minutes", "50 minutes"], "answer": 0},
-            {"question": "If you have a 3-liter jug and a 5-liter jug, how do you measure exactly 4 liters?", "options": ["Fill 5L, pour into 3L, empty 3L, pour remaining 2L into 3L, fill 5L, pour into 3L until full.", "Fill 3L, pour into 5L, fill 3L, pour into 5L until full.", "Fill 5L, pour into 3L.", "None of the above"], "answer": 0},
+            {"question": "You have a 3-liter jug and a 5-liter jug. How do you measure exactly 4 liters?", "options": ["Fill 5L, pour into 3L, empty 3L, pour rest into 3L, fill 5L again, top up 3L.", "Fill 3L twice into 5L.", "Fill 5L once.", "Not possible."], "answer": 0},
+            {"question": "A farmer has 17 sheep. All but 9 die. How many are left?", "options": ["9", "8", "17", "0"], "answer": 0},
+            # --- Machines / Rate ---
+            {"question": "If it takes 5 machines 5 minutes to make 5 widgets, how long would 100 machines take to make 100 widgets?", "options": ["5 minutes", "100 minutes", "20 minutes", "50 minutes"], "answer": 0},
+            {"question": "5 workers build a wall in 6 days. How many workers are needed to build it in 3 days?", "options": ["10", "8", "12", "15"], "answer": 0},
+            {"question": "A tap fills a tank in 4 hours. A drain empties it in 6 hours. How long to fill when both are open?", "options": ["12 hours", "10 hours", "8 hours", "6 hours"], "answer": 0},
+            # --- Number Sequences ---
+            {"question": "What is the next number: 2, 4, 8, 16, ...?", "options": ["32", "24", "48", "64"], "answer": 0},
+            {"question": "What is the next number: 1, 1, 2, 3, 5, 8, ...?", "options": ["13", "11", "15", "10"], "answer": 0},
+            {"question": "What comes next: 2, 6, 12, 20, 30, ...?", "options": ["42", "40", "36", "44"], "answer": 0},
+            {"question": "What comes next: 1, 4, 9, 16, 25, ...?", "options": ["36", "30", "35", "49"], "answer": 0},
+            # --- Percentages / Profit-Loss ---
+            {"question": "A shopkeeper buys goods for Rs.800 and sells for Rs.1000. What is the profit percentage?", "options": ["25%", "20%", "30%", "15%"], "answer": 0},
+            {"question": "A product price is reduced by 20% then increased by 20%. What is the net change?", "options": ["-4%", "0%", "+4%", "-8%"], "answer": 0},
+            {"question": "What is 15% of 240?", "options": ["36", "34", "38", "40"], "answer": 0},
+            # --- Age Problems ---
+            {"question": "A is twice as old as B. 10 years ago, A was 3 times as old as B. How old is B now?", "options": ["20", "15", "25", "30"], "answer": 0},
+            {"question": "The sum of ages of father and son is 50. 5 years ago, father was 7 times as old as son. How old is the son now?", "options": ["10", "8", "12", "15"], "answer": 0},
+            # --- Logical Reasoning ---
+            {"question": "If all Bloops are Razzies and all Razzies are Lazzies, are all Bloops Lazzies?", "options": ["Yes", "No", "Maybe", "Cannot determine"], "answer": 0},
+            {"question": "All roses are flowers. Some flowers fade quickly. Therefore some roses fade quickly — is this valid?", "options": ["Invalid", "Valid", "Partially valid", "Depends on context"], "answer": 0},
+            # --- Clocks / Angles ---
+            {"question": "What is the angle between the hour and minute hand at 3:15?", "options": ["7.5°", "0°", "15°", "5°"], "answer": 0},
+            {"question": "How many times do the minute and hour hand of a clock coincide in 12 hours?", "options": ["11", "12", "10", "22"], "answer": 0},
+            # --- Probability ---
+            {"question": "A bag has 3 red and 5 blue balls. What is the probability of picking a red ball?", "options": ["3/8", "5/8", "1/2", "3/5"], "answer": 0},
+            {"question": "Two dice are rolled. What is the probability of getting a sum of 7?", "options": ["1/6", "1/12", "7/36", "1/8"], "answer": 0},
+            # --- Direction / Coding ---
+            {"question": "A person walks 10 m North, turns right and walks 5 m, turns right again and walks 10 m. Where are they relative to start?", "options": ["5 m East", "5 m West", "10 m North", "Back at start"], "answer": 0},
+            {"question": "If APPLE is coded as BQQMF, what is the code for MANGO?", "options": ["NBOHP", "NANHP", "MBNGO", "NAPGO"], "answer": 0},
+            # --- Ratios / Averages ---
+            {"question": "The ratio of boys to girls in a class is 3:2. If there are 30 boys, how many girls are there?", "options": ["20", "15", "25", "18"], "answer": 0},
+            {"question": "The average of 5 numbers is 20. If one number is removed, the average becomes 18. What was the removed number?", "options": ["28", "30", "26", "32"], "answer": 0},
+            # --- Coin / Card ---
+            {"question": "A fair coin is tossed 3 times. What is the probability of getting exactly 2 heads?", "options": ["3/8", "1/4", "1/2", "1/8"], "answer": 0},
+            {"question": "How many ways can you arrange the letters of 'CAT'?", "options": ["6", "3", "9", "12"], "answer": 0},
         ]
+        import random as _rand
+        _rand.shuffle(pool)
+        return pool[:max(0, count)]
 
     async def generate_behavioral_questions_batch(self, count: int, behavioral_role: str = "general", job_title: str = "", job_description: str = "") -> List[str]:
         """Generate a batch of behavioral questions based on role level"""
@@ -456,34 +496,69 @@ class QuestionGenerator:
         except Exception:
             return [f"Tell me about a challenge you faced as a {behavioral_role}."] * count
 
+    # Topic buckets — picked randomly per call so every interview gets a fresh mix
+    _APTITUDE_TOPIC_BUCKETS = [
+        "speed, distance and time problems",
+        "number sequences and pattern recognition",
+        "profit, loss and percentage problems",
+        "probability and combinations",
+        "age-based word problems",
+        "clock and angle problems",
+        "ratio, proportion and averages",
+        "logical deduction and syllogisms",
+        "pipes, cisterns and work-rate problems",
+        "coding-decoding and direction-sense puzzles",
+    ]
+
     async def generate_aptitude_questions(self, count: int) -> List[dict]:
-        """Generate a batch of AI aptitude questions with MCQ options"""
+        """Generate a batch of AI aptitude questions with MCQ options.
+
+        A random selection of topic buckets is injected into every prompt call so
+        each interview receives genuinely different questions even for the same job.
+        """
         if not self.client:
-            return self._hardcoded_aptitude_questions()[: max(0, count)]
+            return self._hardcoded_aptitude_questions(count)
+
+        # Pick a fresh random mix of topics for this call
+        topics = random.sample(
+            self._APTITUDE_TOPIC_BUCKETS,
+            k=min(count, len(self._APTITUDE_TOPIC_BUCKETS)),
+        )
+        topics_text = ", ".join(topics)
 
         prompt = f"""
-        You are an assessment expert creating an aptitude test.
-        Generate exactly {count} logical reasoning, basic math, or analytical aptitude questions.
-        
-        Each question must be an object with:
-        - "question": The problem statement string.
-        - "options": A list of exactly 4 plausible option strings.
-        - "answer": The index (0-3) of the correct option.
-        
-        Return valid JSON array of objects.
+        You are an assessment expert creating a unique aptitude test.
+        Generate exactly {count} aptitude questions covering these topics (one or two questions per topic):
+        Topics: {topics_text}
+
+        Rules:
+        - Each question MUST be different from typical well-known puzzles (e.g. do NOT use the bat-and-ball or 5-machines-5-widgets questions).
+        - Use fresh numbers, novel scenarios, and varied difficulty.
+        - Each question must be an MCQ object with:
+            "question": string (the problem statement),
+            "options": list of exactly 4 plausible option strings,
+            "answer": integer index 0-3 of the correct option.
+
+        Return ONLY a valid JSON array of objects, nothing else.
         """
-        
-        fallback = self._hardcoded_aptitude_questions()[: max(0, count)]
+
+        fallback = self._hardcoded_aptitude_questions(count)
         try:
             import json
             import re
 
-            content = await self.ai_client.generate(prompt=prompt, system_instr="You are an assessment expert creating an aptitude test.", model=MODEL_NAME)
+            logger.info("Aptitude AI generation: requesting %d questions covering topics: %s", count, topics_text)
+            content = await self.ai_client.generate(
+                prompt=prompt,
+                system_instr="You are an assessment expert creating aptitude tests. Return only valid JSON.",
+                model=MODEL_NAME,
+            )
 
             if not content or content == "AI_DISABLED":
-                logger.warning("Aptitude generation unavailable (empty or AI_DISABLED); using hardcoded fallback.")
+                logger.warning("Aptitude generation unavailable (empty or AI_DISABLED); using fallback pool.")
                 return fallback
 
+            # Extract JSON array from the response
             match = re.search(r'\[.*\]', content, re.DOTALL)
             if match:
                 content = match.group(0)
@@ -491,9 +566,30 @@ class QuestionGenerator:
             try:
                 questions = json.loads(content)
                 if isinstance(questions, list) and questions:
-                    return questions[:count]
-            except Exception:
-                pass
+                    # Validate each entry has required keys; drop malformed ones
+                    valid = [
+                        q for q in questions
+                        if isinstance(q, dict)
+                        and "question" in q
+                        and "options" in q
+                        and "answer" in q
+                        and isinstance(q["options"], list)
+                        and len(q["options"]) == 4
+                    ]
+                    if len(valid) >= count:
+                        logger.info("Aptitude AI generation success: %d valid questions returned.", len(valid))
+                        return valid[:count]
+                    # Partial AI result — pad with shuffled fallback (no repeats from valid set)
+                    if valid:
+                        needed = count - len(valid)
+                        logger.warning(
+                            "Aptitude AI generation partial: got %d valid, need %d more from fallback pool.",
+                            len(valid), needed,
+                        )
+                        extra = [q for q in self._hardcoded_aptitude_questions(count) if q not in valid]
+                        return (valid + extra)[:count]
+            except Exception as parse_err:
+                logger.warning("Aptitude AI JSON parse failed: %s — using fallback pool.", parse_err)
 
             return fallback
 

@@ -193,9 +193,9 @@ async def _generate_aptitude_questions(interview: Interview, job: Job, db: Sessi
     if not aptitude_prompts and aptitude_mode == 'upload' and getattr(job, 'aptitude_questions_file', None):
         try:
             file_path = settings.base_dir / job.aptitude_questions_file
+            uploaded_questions = None
             if file_path.exists():
                 # Robust reading for potential encoding issues
-                uploaded_questions = None
                 for encoding in ['utf-8-sig', 'latin-1']:
                     try:
                         with open(file_path, 'r', encoding=encoding) as f:
@@ -210,21 +210,51 @@ async def _generate_aptitude_questions(interview: Interview, job: Job, db: Sessi
                     if raw_text:
                         logger.info(f"Non-JSON aptitude file detected. Extracting via AI...")
                         uploaded_questions = await extract_questions_from_text(raw_text)
-                
-                if uploaded_questions and isinstance(uploaded_questions, list) and len(uploaded_questions) > 0:
-                    # Shuffle and pick N
-                    random.shuffle(uploaded_questions)
-                    selected = uploaded_questions[:APTITUDE_QUESTION_COUNT]
-                    for item in selected:
-                        if isinstance(item, dict) and 'question' in item:
-                            # MCQ format: build question text with options
-                            options = item.get('options', [])
-                            q_text = item['question']
-                            if options:
-                                q_text += '\n' + '\n'.join([f"{chr(65+i)}) {opt}" for i, opt in enumerate(options)])
-                            aptitude_prompts.append(q_text)
-                        elif isinstance(item, str):
-                            aptitude_prompts.append(item)
+            else:
+                # Try downloading from Supabase Storage
+                from app.core.storage import download_file
+                logger.info(f"Local file {file_path} not found. Attempting to download from Supabase storage: {job.aptitude_questions_file}")
+                file_bytes = download_file(settings.supabase_bucket_resumes, job.aptitude_questions_file)
+                if file_bytes:
+                    for encoding in ['utf-8-sig', 'latin-1', 'utf-8']:
+                        try:
+                            uploaded_questions = json.loads(file_bytes.decode(encoding))
+                            break
+                        except Exception:
+                            continue
+                    
+                    if uploaded_questions is None:
+                        # Fallback: Save to temp file and parse text
+                        import tempfile
+                        suffix = os.path.splitext(job.aptitude_questions_file)[1]
+                        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_f:
+                            temp_f.write(file_bytes)
+                            temp_path = temp_f.name
+                        try:
+                            raw_text = parse_content_from_path(temp_path)
+                            if raw_text:
+                                logger.info(f"Non-JSON downloaded aptitude file detected. Extracting via AI...")
+                                uploaded_questions = await extract_questions_from_text(raw_text)
+                        finally:
+                            try:
+                                os.unlink(temp_path)
+                            except Exception:
+                                pass
+
+            if uploaded_questions and isinstance(uploaded_questions, list) and len(uploaded_questions) > 0:
+                # Shuffle and pick N
+                random.shuffle(uploaded_questions)
+                selected = uploaded_questions[:APTITUDE_QUESTION_COUNT]
+                for item in selected:
+                    if isinstance(item, dict) and 'question' in item:
+                        # MCQ format: build question text with options
+                        options = item.get('options', [])
+                        q_text = item['question']
+                        if options:
+                            q_text += '\n' + '\n'.join([f"{chr(65+i)}) {opt}" for i, opt in enumerate(options)])
+                        aptitude_prompts.append(q_text)
+                    elif isinstance(item, str):
+                        aptitude_prompts.append(item)
         except Exception as e:
             logger.error(f"Error loading uploaded aptitude questions: {e}")
 
