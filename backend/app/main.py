@@ -88,11 +88,11 @@ from app.migrations import run_startup_migrations, validate_required_columns
 if os.environ.get("WORKER_ID", "0") == "0":
     if os.environ.get("RIMS_STARTUP_MIGRATIONS_DONE", "0") != "1":
         os.environ["RIMS_STARTUP_MIGRATIONS_DONE"] = "1"
-        # try:
-        #     run_startup_migrations(engine)
-        #     validate_required_columns(engine)
-        # except RuntimeError as e:
-        #     sys.exit(1)
+        try:
+            run_startup_migrations(engine)
+            validate_required_columns(engine)
+        except RuntimeError as e:
+            sys.exit(1)
 
 from app.infrastructure.database import SessionLocal
 
@@ -135,7 +135,10 @@ app = FastAPI(
     title="HR Recruitment System API",
     description="AI-powered automated recruitment platform",
     version="1.0.0",
-    redirect_slashes=True
+    redirect_slashes=True,
+    docs_url="/docs" if settings.env != "production" else None,
+    redoc_url="/redoc" if settings.env != "production" else None,
+    openapi_url="/openapi.json" if settings.env != "production" else None,
 )
 app.router.route_class = StandardizedAPIRoute
 
@@ -166,7 +169,7 @@ app.add_exception_handler(RateLimitExceeded, cors_aware_rate_limit_handler)
 
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
 
 from app.core.middleware import PerformanceLoggingMiddleware, SecurityHeadersMiddleware
 app.add_middleware(SecurityHeadersMiddleware)
