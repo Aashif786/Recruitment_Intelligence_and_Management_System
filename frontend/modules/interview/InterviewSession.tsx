@@ -18,6 +18,7 @@ import {
   UserCheck, Eye, BrainCircuit, CheckCircle2, Trophy, LogOut
 } from 'lucide-react';
 import InterviewSidebar from './InterviewSidebar';
+import { FeedbackDialog } from '@/components/interview-support';
 
 interface InterviewSessionProps {
   sessionId: string;
@@ -39,6 +40,23 @@ async function apiFetch(path: string, token: string, opts: RequestInit = {}) {
     throw new Error(err.detail || 'Request failed');
   }
   return res.json();
+}
+
+function captureFrame(video: HTMLVideoElement | null): string | null {
+  if (!video || video.readyState < 2 || video.videoWidth === 0) return null;
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // 0.6 quality JPEG provides a beautifully detailed snapshot at a tiny footprint (<100KB)
+    return canvas.toDataURL('image/jpeg', 0.6);
+  } catch (err) {
+    console.error('Failed to capture frame snapshot:', err);
+    return null;
+  }
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
@@ -67,6 +85,8 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   // Shadow isStarted in a ref so handleStrike stays stable across isStarted changes
   const isStartedRef = useRef(false);
   useEffect(() => { isStartedRef.current = isStarted; }, [isStarted]);
+  const isFinishedRef = useRef(false);
+  useEffect(() => { isFinishedRef.current = isFinished; }, [isFinished]);
 
   // ── fullscreen state ──
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -130,6 +150,9 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         sessionStorage.setItem(`strikes_${interviewId}`, next.toString());
       }
 
+      // Capture the frame snapshot instantly when a violation happens
+      const snapshot = captureFrame(floatingVideoRef.current);
+
       // Record strike as a monitoring event to create a server-side audit trail
       const sanitizedReason = reason.replace(/\s+/g, '_').toLowerCase();
       fetch(`${API_BASE_URL}/api/interviews/${interviewId}/monitoring-events`, {
@@ -138,6 +161,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         body: JSON.stringify({
           event_type: `focus_lost_strike_${next}_${sanitizedReason}`,
           confidence_score: 0.0,
+          frame_snapshot: snapshot,
         }),
       }).catch((err) => console.error('Failed to post strike monitoring event:', err));
 
@@ -164,11 +188,20 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   // ─── VIDEO UPLOAD ──────────────────────────────────────────────────────────
   const uploadVideo = useCallback(async (blob: Blob) => {
     if (blob.size < 1000) return;
+    if (isFinishedRef.current) {
+      console.log('Skipping video upload because the interview is already completed.');
+      return;
+    }
     try {
       const formData = new FormData();
       formData.append('file', blob, 'interview_session.webm');
       await APIClient.postMultipart(`/api/interviews/${interviewId}/upload-video`, formData, `v-${Date.now()}`);
-    } catch (err) {
+    } catch (err: any) {
+      // If the interview is already completed, this error is expected and can be silently ignored.
+      if (err?.message?.includes('already been completed') || err?.message?.includes('403') || err?.message?.includes('Forbidden')) {
+        console.log('Video upload completed or skipped (interview already finished).');
+        return;
+      }
       console.error('Video upload failed:', err);
     }
   }, [interviewId]);
@@ -212,9 +245,12 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         setCurrentQuestionNumber(res.question_number);
       }
     } catch (err: any) {
-      if (err.message?.includes('410') || err.message?.toLowerCase().includes('complet')) {
-        setIsFinished(true);
+      // 410 = interview complete. Show the All Done modal, not a broken screen.
+      if (err.message?.includes('410') || err.message?.toLowerCase().includes('complet') || err.message?.includes('404') || err.message?.includes('not found')) {
+        setShowAllDoneModal(true);
       }
+      // For all other errors, rethrow so the caller's .catch() can handle it
+      else { throw err; }
     }
   }, [interviewId, token]);
 
@@ -346,9 +382,14 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           } catch { /* use existing data */ }
           setShowAllDoneModal(true);
         } else {
-          // Show next question
+          // Advance to next question; if none exists (404/410), show completion modal
           const nextNum = currentQuestionNumber + 1;
-          await loadCurrentQuestion(nextNum).catch(() => setShowAllDoneModal(true));
+          try {
+            await loadCurrentQuestion(nextNum);
+            // If loadCurrentQuestion resolved but question wasn't set, show modal
+          } catch {
+            setShowAllDoneModal(true);
+          }
         }
       }
 
@@ -368,8 +409,11 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       }, 4000);
 
     } catch (err: any) {
+      // 403 = proctoring enforcement; 410 = session done
       if (err.message?.includes('410') || err.message?.toLowerCase().includes('complet')) {
-        setIsFinished(true);
+        setShowAllDoneModal(true);
+      } else if (err.message?.includes('403') && err.message?.toLowerCase().includes('proctoring')) {
+        toast.error('Proctoring system issue detected. Please ensure your face is visible in the camera.', { duration: 6000 });
       } else {
         toast.error('Failed to submit answer. Please try again.');
       }
@@ -388,6 +432,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         body: JSON.stringify({ force: true, ended_early: false }),
       });
     } catch { /* ignore — show completion screen regardless */ }
+    setIsFinished(true);
     setShowFeedbackPanel(true);
   };
 
@@ -401,13 +446,11 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         method: 'POST',
         body: JSON.stringify({ force: true, ended_early: true }),
       });
-      setIsFinished(true);
     } catch (err: any) {
-      toast.error('Failed to end interview session properly. Exiting to dashboard...');
-      setTimeout(() => {
-        window.location.href = '/calrims/';
-      }, 1500);
+      console.error('Failed to end interview session backend call:', err);
     }
+    setIsFinished(true);
+    setShowFeedbackPanel(true);
   };
 
   const isQuestionLocked = useCallback((qNum: number) => {
@@ -798,9 +841,17 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
     if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
     faceCheckIntervalRef.current = setInterval(async () => {
-      const video = sessionVideoRef.current;
+      // Use floatingVideoRef — sessionVideoRef is unmounted once the session starts
+      const video = floatingVideoRef.current;
       if (!video || !detectorRef.current) return;
-      if (video.readyState < 2 || video.videoWidth === 0) return;
+      if (video.readyState < 2 || video.videoWidth === 0) {
+        // Ensure stream is still bound to the widget
+        if (activeStreamRef.current && video.srcObject !== activeStreamRef.current) {
+          video.srcObject = activeStreamRef.current;
+          console.log('[FaceCheck] Reattached stream to floating widget.');
+        }
+        return;
+      }
       
       try {
         const predictions = await detectorRef.current.estimateFaces(video, false);
@@ -818,6 +869,10 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           checkCount = 0;
           const statusType = predictions.length === 1 ? 'normal' : (predictions.length === 0 ? 'face_not_detected' : 'multiple_people');
           const confidence = predictions.length === 1 ? 1.0 : 0.0;
+          
+          // Capture secure frame snapshot periodically
+          const snapshot = captureFrame(video);
+
           fetch(`${API_BASE_URL}/api/interviews/${interviewId}/monitoring-events`, {
             method: 'POST',
             headers: {
@@ -827,6 +882,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             body: JSON.stringify({
               event_type: statusType,
               confidence_score: confidence,
+              frame_snapshot: snapshot,
             }),
           }).catch(() => {});
         }
@@ -990,7 +1046,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                 }`}
                 onClick={async () => {
                   if (!isDeviceTestSuccess) {
-                    const reason = "Failed or bypassed device hardware verification test.";
+                    const reason = "Invalid Interview session";
                     setTerminationReason(reason);
                     setIsTerminated(true);
                     try {
@@ -1034,21 +1090,31 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-6">
         <Card className="max-w-3xl w-full bg-white shadow-2xl border-primary/20 rounded-3xl overflow-hidden animate-in zoom-in duration-500">
-          <div className="h-2 bg-primary w-full" />
-          <CardHeader className="text-center p-12">
-            <ShieldCheck className="w-20 h-20 text-primary mx-auto mb-6" />
-            <CardTitle className="text-4xl font-black text-slate-900">Assessment Complete</CardTitle>
-            <p className="text-xl text-slate-500 font-medium mt-4">Your responses have been securely submitted and analyzed.</p>
+          <div className="h-2 bg-gradient-to-r from-primary via-green-500 to-emerald-400 w-full" />
+          <CardHeader className="text-center p-12 space-y-6">
+            <div className="relative flex items-center justify-center mx-auto w-24 h-24">
+              <div className="absolute inset-0 rounded-full bg-green-500/10 animate-ping" />
+              <div className="relative w-20 h-20 rounded-full bg-green-500/15 border-2 border-green-500/30 flex items-center justify-center">
+                <ShieldCheck className="w-10 h-10 text-green-500 animate-pulse" />
+              </div>
+            </div>
+            <CardTitle className="text-4xl font-black text-slate-900 tracking-tight">Interview Completed</CardTitle>
+            <p className="text-xl text-slate-500 font-medium leading-relaxed max-w-2xl mx-auto">
+              Thank you for completing your interview! Your responses and proctoring logs have been securely submitted to the hiring team.
+            </p>
+            <div className="pt-4">
+              <span className="text-sm font-black text-green-700 bg-green-50 border border-green-200/50 py-3.5 px-8 rounded-2xl inline-block shadow-sm">
+                You can now safely close this window. HR will contact you regarding next steps.
+              </span>
+            </div>
           </CardHeader>
-          <CardContent className="px-12 pb-12 text-center">
-            <Button
-              className="px-12 h-16 rounded-2xl font-black text-xl shadow-xl shadow-primary/20"
-              onClick={() => window.location.href = '/calrims/'}
-            >
-              Exit & View Status
-            </Button>
-          </CardContent>
         </Card>
+
+        <FeedbackDialog
+          open={showFeedbackPanel}
+          onOpenChange={setShowFeedbackPanel}
+          interviewId={interviewId}
+        />
       </div>
     );
   }
@@ -1212,89 +1278,33 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
       {/* ── ALL DONE MODAL ────────────────────────────────────────────────────── */}
       {showAllDoneModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="max-w-lg w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-400">
-            <div className="h-2 bg-gradient-to-r from-primary via-green-500 to-emerald-400 w-full" />
-            <div className="p-10 text-center">
-              <div className="w-20 h-20 rounded-full bg-green-500/10 border-2 border-green-500/20 flex items-center justify-center mx-auto mb-6">
-                <Trophy className="w-10 h-10 text-green-500" />
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-lg p-4 animate-in fade-in duration-300">
+          <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="h-1.5 bg-gradient-to-r from-primary via-green-500 to-emerald-400 w-full" />
+            <div className="p-10 text-center space-y-5">
+              {/* Icon */}
+              <div className="w-18 h-18 rounded-full bg-green-500/10 border-2 border-green-500/20 flex items-center justify-center mx-auto w-20 h-20">
+                <CheckCircle2 className="w-10 h-10 text-green-500" />
               </div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">All Questions Completed!</h2>
-              <p className="text-slate-500 font-medium text-base leading-relaxed mb-8">
-                You have answered all <span className="font-black text-slate-800">{allQuestions.length}</span> questions.
-                Click <strong>Submit Interview</strong> to finalise your responses and view your performance report.
-              </p>
-              <div className="flex flex-col gap-3">
-                <Button
-                  className="w-full h-14 rounded-2xl font-black text-base shadow-xl shadow-green-500/20 bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-3"
-                  onClick={handleFinalSubmit}
-                >
-                  <CheckCircle2 className="w-5 h-5" />
-                  Submit Interview & View Results
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full h-12 rounded-2xl font-bold text-slate-400 hover:text-slate-600 text-sm"
-                  onClick={() => setShowAllDoneModal(false)}
-                >
-                  Review My Answers First
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── FEEDBACK PANEL ────────────────────────────────────────────────────── */}
-      {showFeedbackPanel && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="max-w-lg w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-400">
-            <div className="h-2 bg-gradient-to-r from-primary via-green-500 to-emerald-400 w-full" />
-            <div className="p-12 text-center space-y-6">
-              {/* Animated success ring */}
-              <div className="relative flex items-center justify-center mx-auto w-24 h-24">
-                <div className="absolute inset-0 rounded-full bg-green-500/10 animate-ping" />
-                <div className="relative w-20 h-20 rounded-full bg-green-500/15 border-2 border-green-500/30 flex items-center justify-center">
-                  <ShieldCheck className="w-10 h-10 text-green-500" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Interview Complete!</h2>
-                <p className="text-slate-500 font-medium text-base leading-relaxed">
-                  Your responses have been <strong>securely recorded</strong> and submitted for AI evaluation.
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">All Questions Answered</h2>
+                <p className="text-slate-500 font-medium text-sm mt-2 leading-relaxed">
+                  You have completed all <span className="font-black text-slate-800">{allQuestions.length}</span> questions in this assessment.
                 </p>
               </div>
-
-              <div className="grid grid-cols-3 gap-3 pt-2">
-                <div className="p-4 bg-slate-50 rounded-2xl text-center">
-                  <div className="text-2xl font-black text-slate-800">{allQuestions.length}</div>
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Questions</div>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-2xl text-center">
-                  <div className="text-2xl font-black text-green-600">{completedQuestions.length}</div>
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Answered</div>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-2xl text-center">
-                  <div className="text-2xl font-black text-primary">AI</div>
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Reviewed</div>
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                Our AI evaluation engine is processing your responses. The hiring team will be notified with a detailed performance report. You can track your application status from the dashboard.
-              </p>
-
               <Button
-                className="w-full h-14 rounded-2xl font-black text-base shadow-xl shadow-primary/20"
-                onClick={() => window.location.href = '/calrims/'}
+                className="w-full h-14 rounded-2xl font-black text-base shadow-xl shadow-red-500/20 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2 transition-all duration-200"
+                onClick={handleFinalSubmit}
               >
-                Exit & Track Application Status
+                <LogOut className="w-5 h-5" />
+                End Interview
               </Button>
             </div>
           </div>
         </div>
       )}
+
+
     </div>
   );
 }

@@ -24,6 +24,18 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
+const parseNaiveDateTime = (timestampStr: string) => {
+  if (!timestampStr) return new Date();
+  if (timestampStr.includes('Z') || timestampStr.includes('+')) {
+    return new Date(timestampStr);
+  }
+  // Replace T with space and dashes with slashes to force local timezone parsing
+  const sanitized = timestampStr.replace('T', ' ').replace(/-/g, '/');
+  const dt = new Date(sanitized);
+  if (!isNaN(dt.getTime())) return dt;
+  return new Date(timestampStr);
+};
+
 interface MonitoringEvent {
   id: number
   interview_id: number
@@ -74,7 +86,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
       }
     }
     if (timestamp) {
-      const dt = new Date(timestamp)
+      const dt = parseNaiveDateTime(timestamp)
       return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     }
     return '00:00'
@@ -288,7 +300,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
       </ScrollArea>
 
       <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-        <DialogContent className="max-w-4xl rounded-3xl p-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl">
+        <DialogContent className="max-w-5xl rounded-3xl p-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl">
           <DialogHeader>
             <div className="flex items-center justify-between pr-8 mb-2">
               <div className="flex items-center gap-3">
@@ -303,55 +315,26 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
               </span>
             </div>
             <DialogDescription className="text-xs font-bold text-slate-500">
-              Captured at exact timestamp: {selectedEvent && new Date(selectedEvent.timestamp).toLocaleString()}
+              Captured at exact timestamp: {selectedEvent && parseNaiveDateTime(selectedEvent.timestamp).toLocaleString()}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="mt-4 space-y-4">
             <div className="flex flex-col gap-2">
               <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                 <Eye className="w-4 h-4 text-blue-600" /> Frame Snapshot
               </span>
-              <div className="rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 aspect-video shadow-lg bg-slate-900">
-                {selectedEvent?.frame_image_url && (
+              <div className="rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 aspect-video shadow-lg bg-slate-950 flex items-center justify-center max-h-[70vh] w-full">
+                {selectedEvent?.frame_image_url ? (
                   <img
                     src={selectedEvent.frame_image_url?.startsWith('http') ? selectedEvent.frame_image_url : `${API_BASE_URL}${selectedEvent.frame_image_url}`}
                     alt="Inspection Frame"
                     className="w-full h-full object-contain"
                   />
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Video className="w-4 h-4 text-blue-600" /> Video Segment Playback
-                </span>
-                {videoUrl && (
-                  <Badge variant="outline" className="text-[10px] font-bold border-blue-200 bg-blue-50 text-blue-700">
-                    Auto-Jump to {jumpSeconds}s
-                  </Badge>
-                )}
-              </span>
-              <div className="rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 aspect-video shadow-lg bg-slate-900 relative flex items-center justify-center">
-                {videoUrl ? (
-                  <video
-                    key={`${selectedEvent?.id}`}
-                    src={videoUrl?.startsWith('http') ? videoUrl : `${API_BASE_URL}${videoUrl}`}
-                    controls
-                    autoPlay
-                    className="w-full h-full object-cover"
-                    ref={(el) => {
-                      if (el && jumpSeconds > 0 && el.currentTime === 0) {
-                        el.currentTime = jumpSeconds > 3 ? jumpSeconds - 3 : jumpSeconds
-                      }
-                    }}
-                  />
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-slate-500 p-6 text-center">
-                    <CameraOff className="w-10 h-10 mb-2 opacity-50" />
-                    <p className="text-xs font-bold">No video recording linked for segment playback.</p>
+                  <div className="flex flex-col items-center justify-center text-slate-500 p-12 text-center w-full">
+                    <CameraOff className="w-16 h-16 mb-3 opacity-50 text-slate-400" />
+                    <p className="text-sm font-bold text-slate-400">No frame snapshot image available for this event.</p>
                   </div>
                 )}
               </div>
