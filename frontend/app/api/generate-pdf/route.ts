@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server"
 import puppeteer from "puppeteer"
 
 export async function POST(req: NextRequest) {
+  // Security check: Validate Authorization header matches JWT_SECRET or PDF_GENERATION_SECRET
+  const authHeader = req.headers.get("authorization")
+  const pdfSecret = process.env.PDF_GENERATION_SECRET || process.env.JWT_SECRET
+
+  if (pdfSecret) {
+    if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.substring(7) !== pdfSecret) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+  }
+
   let browser = null
   try {
     const { html } = await req.json()

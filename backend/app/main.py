@@ -79,8 +79,13 @@ Base.metadata.create_all(bind=engine)
 try:
     with engine.connect() as conn:
         from sqlalchemy import text
-        conn.execute(text("ALTER TABLE attachment_resumes ADD COLUMN IF NOT EXISTS message_id VARCHAR(255) UNIQUE"))
-        conn.commit()
+        from app.migrations import column_exists
+        if not column_exists(conn, "attachment_resumes", "message_id"):
+            if "postgresql" in str(engine.url):
+                conn.execute(text("ALTER TABLE attachment_resumes ADD COLUMN IF NOT EXISTS message_id VARCHAR(255) UNIQUE"))
+            else:
+                conn.execute(text("ALTER TABLE attachment_resumes ADD COLUMN message_id VARCHAR(255) UNIQUE"))
+            conn.commit()
 except Exception as e:
     logger.warning(f"Database migration check failed (attachment_resumes.message_id): {e}")
 
