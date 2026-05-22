@@ -243,7 +243,7 @@ export default function BatchAnalysisPage() {
               Bulk Processing Engine
             </CardTitle>
             <CardDescription>
-              Supported inputs: PDF/DOCX files, nested folders, or ZIP archives (max 25 per batch).
+              Supported inputs: PDF/DOCX files, nested folders, or ZIP archives (max 40 per batch).
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -47,7 +47,7 @@ interface BatchUploadModalProps {
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-const MAX_FILES = 25
+const MAX_FILES = 40
 
 const normalizePhone = (rawPhone: string, countryCode?: string | null): string => {
   if (!rawPhone || typeof rawPhone !== 'string') return 'N/A'
@@ -77,6 +77,14 @@ const normalizePhone = (rawPhone: string, countryCode?: string | null): string =
 
   // Any other standalone length without a '+'
   return '+' + digitsOnly
+}
+
+const toTitleCase = (str: string): string => {
+  if (!str) return ''
+  return str
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
 }
 
 export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModalProps) {
@@ -241,7 +249,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
       }
     }
 
-    // Rule 5: Total files cap (max 50) - BA_004, BA_017
+    // Rule 5: Total files cap (max 40) - BA_004, BA_017
     setFiles((prev) => {
       const combined = [...prev, ...newProcessedFiles]
       
@@ -252,7 +260,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
         })
       }
 
-      // Enforce max 50: Mark anything beyond 50 as skipped
+      // Enforce max 40: Mark anything beyond 40 as skipped
       return combined.map((f, idx) => {
         if (idx >= MAX_FILES && f.status === 'pending') {
           return { ...f, status: 'skipped', skippedReason: `${MAX_FILES} files limit exceeded` }
@@ -276,7 +284,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
   }
 
   const handleProcess = async () => {
-    if (!selectedJobId || files.length === 0) return
+    if (isProcessing || !selectedJobId || files.length === 0) return
 
     setIsProcessing(true)
     setShowSummary(false)
@@ -319,8 +327,10 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
           const formData = new FormData()
           formData.append('job_id', selectedJobId)
           
-          const baseName = currentItem.file.name.split('.')[0]
-          const cleanName = baseName.replace(/[-_]/g, ' ') || 'Unknown Candidate'
+          const lastDotIdx = currentItem.file.name.lastIndexOf('.')
+          const baseName = lastDotIdx !== -1 ? currentItem.file.name.substring(0, lastDotIdx) : currentItem.file.name
+          const rawCleanName = baseName.replace(/[-_]/g, ' ') || 'Unknown Candidate'
+          const cleanName = toTitleCase(rawCleanName)
           const timestamp = Date.now()
           const randomStr = Math.random().toString(36).substring(7)
           const uniqueEmail = `batch.${cleanName.replace(/[^a-zA-Z0-9]/g, '')}_${timestamp}_${randomStr}@batch.example.com`.toLowerCase()
@@ -364,16 +374,21 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
         // Live stats update
         setStats(prev => ({ ...prev, success: successCount, failed: failedCount, applicationIds: successfulAppIds }))
 
-        // Throttle: 13s gap = max ~4.5 uploads/min, safely under Supabase free-tier limit (5/min)
+        // Throttle: Respect rate limits. Default is 1000ms for high-speed production capability, or configure via env.
+        const uploadDelay = process.env.NEXT_PUBLIC_BATCH_UPLOAD_DELAY 
+          ? parseInt(process.env.NEXT_PUBLIC_BATCH_UPLOAD_DELAY, 10) 
+          : 1000
         if (queue.length > 0 && !isCancelling.current) {
-          await new Promise(resolve => setTimeout(resolve, 13000))
+          await new Promise(resolve => setTimeout(resolve, uploadDelay))
         }
       }
     }
 
-    // Launch Sequential Processing (1 worker with delay to respect backend/Supabase rate limits)
-    // Using a single worker prevents Supabase storage upload rate-limit errors (5/min on free tier)
-    const CONCURRENCY = 1
+    // Launch Sequential Processing (respect backend/Supabase rate limits)
+    // Concurrency defaults to 1 worker to ensure order and stability, but is configurable.
+    const CONCURRENCY = process.env.NEXT_PUBLIC_BATCH_UPLOAD_CONCURRENCY 
+      ? parseInt(process.env.NEXT_PUBLIC_BATCH_UPLOAD_CONCURRENCY, 10) 
+      : 1
     const workers = Array(Math.min(CONCURRENCY, queue.length)).fill(null).map((_, i) =>
       new Promise<void>(resolve => setTimeout(resolve, i * 300)).then(() => worker())
     )
