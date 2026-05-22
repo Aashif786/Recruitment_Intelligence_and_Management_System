@@ -15,7 +15,7 @@ import '@tensorflow/tfjs-backend-webgl';
 import * as blazeface from '@tensorflow-models/blazeface';
 import {
   Loader2, ShieldCheck, ShieldAlert,
-  UserCheck, Eye, BrainCircuit
+  UserCheck, Eye, BrainCircuit, CheckCircle2, Trophy, LogOut
 } from 'lucide-react';
 import InterviewSidebar from './InterviewSidebar';
 
@@ -51,6 +51,9 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const [isLoading, setIsLoading] = useState(true);    // first load spinner
   const [isFinished, setIsFinished] = useState(false);
   const [isTerminated, setIsTerminated] = useState(false);
+  const [isDeviceTestSuccess, setIsDeviceTestSuccess] = useState(false);
+  const [deviceTestError, setDeviceTestError] = useState<string | null>(null);
+  const [terminationReason, setTerminationReason] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
   const [pollTrigger, setPollTrigger] = useState(0);
   const [focusStrikes, setFocusStrikes] = useState<number>(() => {
@@ -61,6 +64,13 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     return 0;
   });
   const sessionStartRef = useRef(Date.now());
+  // Shadow isStarted in a ref so handleStrike stays stable across isStarted changes
+  const isStartedRef = useRef(false);
+  useEffect(() => { isStartedRef.current = isStarted; }, [isStarted]);
+
+  // ── fullscreen state ──
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFullscreenGate, setShowFullscreenGate] = useState(false);
 
   // ── question state ──
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
@@ -86,7 +96,8 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const [isFocusingOnMonitor, setIsFocusingOnMonitor] = useState(true);
   const detectorRef = useRef<any>(null);
   const faceCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const sessionVideoRef = useRef<HTMLVideoElement>(null);
+  const sessionVideoRef = useRef<HTMLVideoElement>(null);  // pre-start preview
+  const floatingVideoRef = useRef<HTMLVideoElement>(null); // in-session floating widget
 
   // ── audio ──
   const [isListening, setIsListening] = useState(false);
@@ -101,11 +112,16 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const activeStreamRef = useRef<MediaStream | null>(null);
   const isSubmittingRef = useRef(false);
 
+  // ── completion/feedback state ──
+  const [showAllDoneModal, setShowAllDoneModal] = useState(false);
+  const [showFeedbackPanel, setShowFeedbackPanel] = useState(false);
+  const [finalScores, setFinalScores] = useState<Array<{question_number: number; question_type: string; score: number | null}>>([]);
+
   // ─── SECURITY VIOLATION ────────────────────────────────────────────────────
   const terminationSentRef = useRef(false);
 
   const handleStrike = useCallback((reason: string) => {
-    if (!isStarted) return; // ignore strikes before session officially starts
+    if (!isStartedRef.current) return; // use ref — stable, no re-render dependency
     if (Date.now() - sessionStartRef.current < 15000) return; // ignore first 15s
 
     setFocusStrikes(prev => {
@@ -143,7 +159,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       }
       return next;
     });
-  }, [interviewId, token, isStarted]);
+  }, [interviewId, token]); // NO isStarted dependency — uses isStartedRef instead
 
   // ─── VIDEO UPLOAD ──────────────────────────────────────────────────────────
   const uploadVideo = useCallback(async (blob: Blob) => {
@@ -312,12 +328,28 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         if (firstTech) {
            await loadCurrentQuestion(firstTech.question_number);
         } else {
-           setIsFinished(true);
+           // All done — show completion modal instead of instantly navigating away
+           const scores = updatedQuestions.map(q => ({ question_number: q.question_number, question_type: q.question_type || 'general', score: q.answer_score ?? null }));
+           setFinalScores(scores);
+           setShowAllDoneModal(true);
         }
       } else {
-        // Show next question
-        const nextNum = currentQuestionNumber + 1;
-        await loadCurrentQuestion(nextNum).catch(() => setIsFinished(true));
+        // Check if ALL questions across all types are now completed
+        const allDone = allQuestions.length > 0 && allQuestions.every(q => newlyCompleted.includes(q.question_number));
+        if (allDone) {
+          // Fetch latest scores then show completion modal
+          try {
+            const freshAll: any[] = await apiFetch(`/api/interviews/${interviewId}/questions`, token);
+            setAllQuestions(freshAll);
+            const scores = freshAll.map(q => ({ question_number: q.question_number, question_type: q.question_type || 'general', score: q.answer_score ?? null }));
+            setFinalScores(scores);
+          } catch { /* use existing data */ }
+          setShowAllDoneModal(true);
+        } else {
+          // Show next question
+          const nextNum = currentQuestionNumber + 1;
+          await loadCurrentQuestion(nextNum).catch(() => setShowAllDoneModal(true));
+        }
       }
 
       // Background: poll for score after short delay
@@ -347,7 +379,25 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     }
   };
 
-  // ─── END SESSION ──────────────────────────────────────────────────────────
+  // ─── FINALISE SESSION (from all-done modal) ───────────────────────────────
+  const handleFinalSubmit = async () => {
+    setShowAllDoneModal(false);
+    try {
+      await apiFetch(`/api/interviews/${interviewId}/end`, token, {
+        method: 'POST',
+        body: JSON.stringify({ force: true, ended_early: false }),
+      });
+    } catch { /* ignore, show feedback anyway */ }
+    // Fetch final scores for feedback popup
+    try {
+      const freshAll: any[] = await apiFetch(`/api/interviews/${interviewId}/questions`, token);
+      const scores = freshAll.map(q => ({ question_number: q.question_number, question_type: q.question_type || 'general', score: q.answer_score ?? null }));
+      setFinalScores(scores);
+    } catch { /* use existing */ }
+    setShowFeedbackPanel(true);
+  };
+
+  // ─── END SESSION (early) ──────────────────────────────────────────────────
   const handleEndSession = async () => {
     const confirmed = window.confirm("Are you sure you want to end this interview session? Your progress will be saved, but you won't be able to return to it.");
     if (!confirmed) return;
@@ -510,6 +560,8 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         activeStreamRef.current = stream;
         if (sessionVideoRef.current) sessionVideoRef.current.srcObject = stream;
         cameraInitializedRef.current = true;
+        setIsDeviceTestSuccess(true);
+        setDeviceTestError(null);
 
         const videoTrack = stream.getVideoTracks()[0];
         if (videoTrack) {
@@ -554,30 +606,90 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             console.error('AudioContext setup failed', e);
           }
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error('Video setup failed', e);
+        setIsDeviceTestSuccess(false);
+        setDeviceTestError(e.message || String(e));
       }
     }
     
     initCamera();
 
+    // ── cleanup only runs on true component unmount, NOT on re-renders ──
+    const mountedStream = { ref: activeStreamRef };
     return () => {
-      // We only stop tracks if the component completely unmounts (leaving the interview)
-      if (activeStreamRef.current) {
-        activeStreamRef.current.getTracks().forEach(t => t.stop());
+      // Only stop tracks when the whole component unmounts (user leaves interview)
+      if (mountedStream.ref.current) {
+        mountedStream.ref.current.getTracks().forEach(t => t.stop());
+        console.log('[Camera] Stopped all tracks on component unmount.');
       }
     };
-  }, [handleStrike]); // Only run on mount, but depends on handleStrike
+  }, [handleStrike]); // handleStrike is now stable — doesn't change on isStarted
 
-  // Synchronize camera stream to video element when isStarted changes
+  // Synchronize camera stream to pre-start preview when loading completes
   useEffect(() => {
-    if (sessionVideoRef.current && activeStreamRef.current) {
+    if (!isStarted && sessionVideoRef.current && activeStreamRef.current) {
       if (sessionVideoRef.current.srcObject !== activeStreamRef.current) {
         sessionVideoRef.current.srcObject = activeStreamRef.current;
-        console.log("Attached active camera stream to current video element.");
+        console.log("[Preview] Bound camera stream to pre-start preview.");
+      }
+    }
+  }, [isStarted, isLoading]);
+
+  // Synchronize camera stream to floating widget when interview starts
+  useEffect(() => {
+    if (isStarted && floatingVideoRef.current && activeStreamRef.current) {
+      if (floatingVideoRef.current.srcObject !== activeStreamRef.current) {
+        floatingVideoRef.current.srcObject = activeStreamRef.current;
+        console.log("[Float] Bound camera stream to floating widget.");
       }
     }
   }, [isStarted]);
+
+  // Fullscreen tracking
+  useEffect(() => {
+    const onFSChange = () => {
+      const isFull = !!document.fullscreenElement;
+      setIsFullscreen(isFull);
+      // If session is running and user exits fullscreen, show the gate overlay
+      if (!isFull && isStartedRef.current) {
+        setShowFullscreenGate(true);
+      }
+    };
+    document.addEventListener('fullscreenchange', onFSChange);
+    return () => document.removeEventListener('fullscreenchange', onFSChange);
+  }, []);
+
+  const enterFullscreen = async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+      setShowFullscreenGate(false);
+    } catch (e) {
+      console.error('Fullscreen request failed:', e);
+    }
+  };
+
+  // Double-enforcement check to prevent bypass / direct deep links without device tests
+  useEffect(() => {
+    if (isStarted) {
+      if (!cameraInitializedRef.current || !activeStreamRef.current) {
+        console.error("Bypass detected: Interview started without active camera stream.");
+        const reason = "Bypassed device hardware verification test directly into live session.";
+        setTerminationReason(reason);
+        setIsTerminated(true);
+        
+        fetch(`${API_BASE_URL}/api/interviews/${interviewId}/fail-device-test`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ reason })
+        }).catch(err => console.error("Failed to report device bypass:", err));
+      }
+    }
+  }, [isStarted, interviewId, token]);
 
   // Proctoring monitors & Video recorder (Runs when isStarted becomes true)
   useEffect(() => {
@@ -592,36 +704,102 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     }
 
     let vRecorder: MediaRecorder | null = null;
-    try {
-      const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
-      let selectedType = '';
-      for (const t of types) { if (MediaRecorder.isTypeSupported(t)) { selectedType = t; break; } }
-      vRecorder = new MediaRecorder(stream, selectedType ? { mimeType: selectedType } : undefined);
-    } catch (e) {
-      console.warn("Failed to create MediaRecorder with types, trying default option:", e);
-      try {
-        vRecorder = new MediaRecorder(stream);
-      } catch (err) {
-        console.error("Failed to create default MediaRecorder:", err);
+    let recordingStarted = false;
+
+    // Helper to start MediaRecorder on a stream with a set of mimetypes
+    const tryStartRecorder = (mediaStream: MediaStream, mimeTypes: string[]): { recorder: MediaRecorder | null, started: boolean } => {
+      let recorderInstance: MediaRecorder | null = null;
+      let isStarted = false;
+      
+      // Try mimetypes in order of preference
+      for (const mime of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mime)) {
+          try {
+            recorderInstance = new MediaRecorder(mediaStream, { mimeType: mime });
+            videoChunksRef.current = [];
+            recorderInstance.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
+            recorderInstance.onstop = () => {
+              const blob = new Blob(videoChunksRef.current, { type: mime || 'video/webm' });
+              uploadVideo(blob);
+            };
+            recorderInstance.start(10000);
+            isStarted = true;
+            console.log(`Successfully started MediaRecorder with mimeType: ${mime}`);
+            break;
+          } catch (err) {
+            console.warn(`Failed to start MediaRecorder with mimeType: ${mime}, trying next...`, err);
+            recorderInstance = null;
+          }
+        }
+      }
+
+      // Fallback to default options if preferred mimetypes failed
+      if (!isStarted) {
+        try {
+          recorderInstance = new MediaRecorder(mediaStream);
+          videoChunksRef.current = [];
+          recorderInstance.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
+          recorderInstance.onstop = () => {
+            const blob = new Blob(videoChunksRef.current, { type: recorderInstance?.mimeType || 'video/webm' });
+            uploadVideo(blob);
+          };
+          recorderInstance.start(10000);
+          isStarted = true;
+          console.log("Successfully started MediaRecorder with default settings");
+        } catch (err) {
+          console.error("Failed to start MediaRecorder with default settings:", err);
+          recorderInstance = null;
+        }
+      }
+
+      return { recorder: recorderInstance, started: isStarted };
+    };
+
+    // Step 1: Try recording combined audio and video tracks
+    const comboMimeTypes = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm;codecs=h264,opus',
+      'video/webm',
+      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+      'video/mp4'
+    ];
+    
+    console.log("Attempting combined audio and video session recording...");
+    const attempt1 = tryStartRecorder(stream, comboMimeTypes);
+    
+    if (attempt1.started && attempt1.recorder) {
+      vRecorder = attempt1.recorder;
+      recordingStarted = true;
+    } else {
+      // Step 2: Fallback to video-only track recording to bypass hardware/codec/mimetype mismatches
+      console.warn("Combined recording failed to start. Falling back to video-only stream...");
+      const videoTracks = stream.getVideoTracks();
+      if (videoTracks.length > 0) {
+        const videoOnlyStream = new MediaStream(videoTracks);
+        const videoOnlyMimeTypes = [
+          'video/webm;codecs=vp9',
+          'video/webm;codecs=vp8',
+          'video/webm;codecs=h264',
+          'video/webm',
+          'video/mp4;codecs=avc1.42E01E',
+          'video/mp4'
+        ];
+        const attempt2 = tryStartRecorder(videoOnlyStream, videoOnlyMimeTypes);
+        if (attempt2.started && attempt2.recorder) {
+          vRecorder = attempt2.recorder;
+          recordingStarted = true;
+        }
       }
     }
 
-    if (vRecorder) {
+    if (vRecorder && recordingStarted) {
       videoRecorderRef.current = vRecorder;
-      videoChunksRef.current = [];
-      vRecorder.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
-      vRecorder.onstop = () => {
-        const blob = new Blob(videoChunksRef.current, { type: vRecorder?.mimeType || 'video/webm' });
-        uploadVideo(blob);
-      };
-      try {
-        vRecorder.start(10000); // chunk every 10s just in case
-      } catch (startErr) {
-        console.error("Failed to start MediaRecorder:", startErr);
-        toast.error("Video recording could not be started, but your interview session is safe to continue.", {
-          description: "Webcam monitoring and proctoring remain fully active."
-        });
-      }
+    } else {
+      console.error("All MediaRecorder attempts failed. Proctoring is active but video recording is offline.");
+      toast.error("Video recording could not be started, but your interview session is safe to continue.", {
+        description: "Webcam monitoring and proctoring remain fully active."
+      });
     }
 
     if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
@@ -685,12 +863,15 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   // ─── RENDERS ───────────────────────────────────────────────────────────────
   if (isTerminated) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md p-4">
-        <Card className="max-w-md w-full border-destructive shadow-2xl text-center p-8 rounded-3xl">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+        <Card className="max-w-md w-full border-destructive shadow-2xl text-center p-8 rounded-3xl animate-in zoom-in-95 duration-500">
           <ShieldAlert className="mx-auto w-16 h-16 text-destructive mb-6" />
           <CardTitle className="text-3xl font-black text-destructive mb-4">Session Terminated</CardTitle>
-          <p className="text-slate-600 font-medium mb-8">This interview has been deactivated due to security violations.</p>
-          <Button variant="outline" className="w-full h-14 rounded-2xl font-bold" onClick={() => window.location.href = '/calrims/'}>Return to Safety</Button>
+          <p className="text-slate-600 font-medium mb-4">
+            {terminationReason || "This interview has been deactivated due to security violations."}
+          </p>
+          <p className="text-xs text-red-500/70 font-mono mb-8 uppercase tracking-widest">Access Key Invalidated</p>
+          <Button variant="outline" className="w-full h-14 rounded-2xl font-bold shadow-lg" onClick={() => window.location.href = '/calrims/'}>Return to Safety</Button>
         </Card>
       </div>
     );
@@ -742,15 +923,15 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
   if (!isStarted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-6">
-        <Card className="max-w-3xl w-full bg-white shadow-2xl border-primary/20 rounded-3xl overflow-hidden animate-in zoom-in duration-500">
+      <div className="min-h-screen w-full overflow-y-auto py-12 flex items-center justify-center bg-[#f8fafc] px-6">
+        <Card className="max-w-3xl w-full bg-white shadow-2xl border-primary/20 rounded-3xl overflow-hidden animate-in zoom-in duration-500 my-auto">
           <div className="h-2 bg-primary w-full" />
-          <CardHeader className="text-center p-12 pb-6">
-            <BrainCircuit className="w-20 h-20 text-primary mx-auto mb-6" />
-            <CardTitle className="text-4xl font-black text-slate-900">Ready to Begin?</CardTitle>
-            <p className="text-xl text-slate-500 font-medium mt-4 italic">"True intelligence is the ability to adapt to change."</p>
+          <CardHeader className="text-center p-8 pb-4">
+            <BrainCircuit className="w-16 h-16 text-primary mx-auto mb-4" />
+            <CardTitle className="text-3xl font-black text-slate-900 tracking-tight">Ready to Begin?</CardTitle>
+            <p className="text-base text-slate-500 font-medium mt-2 italic">"True intelligence is the ability to adapt to change."</p>
           </CardHeader>
-          <CardContent className="px-12 space-y-8">
+          <CardContent className="px-8 space-y-6">
             {/* Live Camera Preview */}
             <div className="flex flex-col items-center justify-center">
               <div className="w-full max-w-md aspect-video bg-slate-900 rounded-2xl border border-slate-100 shadow-inner overflow-hidden relative">
@@ -792,10 +973,55 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">Video and audio will be recorded for HR review. Ensure a quiet, well-lit environment.</p>
               </div>
             </div>
-            <div className="flex flex-col items-center gap-4 pt-4">
+            <div className="flex flex-col items-center gap-4 pt-4 w-full">
+              {/* Premium Device Test Warning */}
+              {!isDeviceTestSuccess && (
+                <div className="w-full p-6 bg-red-500/10 border border-red-500/30 rounded-2xl flex gap-4 items-start text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <ShieldAlert className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-black text-red-500 uppercase tracking-wider text-xs mb-1">Hardware Authorization Required</h4>
+                    <p className="text-xs text-red-600/90 font-medium leading-relaxed">
+                      Camera and Microphone permissions are strictly mandatory to start the assessment. 
+                      {deviceTestError && <span className="block mt-1 font-mono text-[10px] text-red-500/70">Error: {deviceTestError}</span>}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <Button
-                className="w-full h-16 rounded-2xl font-black text-xl shadow-xl shadow-primary/20"
-                onClick={() => {
+                className={`w-full h-16 rounded-2xl font-black text-xl shadow-xl transition-all duration-300 ${
+                  !isDeviceTestSuccess 
+                    ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' 
+                    : 'shadow-primary/20'
+                }`}
+                onClick={async () => {
+                  if (!isDeviceTestSuccess) {
+                    const reason = "Failed or bypassed device hardware verification test.";
+                    setTerminationReason(reason);
+                    setIsTerminated(true);
+                    try {
+                      await fetch(`${API_BASE_URL}/api/interviews/${interviewId}/fail-device-test`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ reason })
+                      });
+                    } catch (err) {
+                      console.error("Failed to report device test failure:", err);
+                    }
+                    return;
+                  }
+                  // Request fullscreen before starting interview
+                  try {
+                    await document.documentElement.requestFullscreen();
+                    setIsFullscreen(true);
+                  } catch (e) {
+                    // Fullscreen failed — show gate instead of starting
+                    setShowFullscreenGate(true);
+                    return;
+                  }
                   sessionStartRef.current = Date.now();
                   setIsStarted(true);
                 }}
@@ -870,11 +1096,11 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                   <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Live Session</span>
                 </div>
                 <Button
-                  variant="ghost"
                   size="sm"
                   onClick={handleEndSession}
-                  className="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-red-500"
+                  className="text-xs font-black uppercase tracking-widest bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 hover:border-red-500 rounded-xl px-4 py-2 transition-all duration-200 flex items-center gap-2"
                 >
+                  <LogOut className="w-3.5 h-3.5" />
                   End Session
                 </Button>
               </div>
@@ -943,10 +1169,10 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         </main>
       </div>
 
-      {/* Floating Video Feed */}
+      {/* Floating Video Feed — uses its own ref, separate from the pre-start preview */}
       <div className="fixed bottom-8 right-8 w-64 aspect-video bg-slate-900 rounded-3xl border-4 border-white shadow-2xl overflow-hidden group z-50">
         <video
-          ref={sessionVideoRef}
+          ref={floatingVideoRef}
           autoPlay
           muted
           playsInline
@@ -964,6 +1190,116 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           </div>
         )}
       </div>
+
+      {/* ── FULLSCREEN GATE OVERLAY ──────────────────────────────────────────────── */}
+      {showFullscreenGate && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 w-full" />
+            <div className="p-10 text-center">
+              <div className="w-20 h-20 rounded-full bg-amber-500/10 border-2 border-amber-500/20 flex items-center justify-center mx-auto mb-6">
+                <ShieldAlert className="w-10 h-10 text-amber-500" />
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Fullscreen Required</h2>
+              <p className="text-slate-500 font-medium text-sm leading-relaxed mb-8">
+                This assessment must be taken in <strong>fullscreen mode</strong> to maintain exam integrity.
+                You cannot proceed until fullscreen is active.
+              </p>
+              <Button
+                className="w-full h-14 rounded-2xl font-black text-base shadow-xl shadow-amber-500/20 bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center gap-2"
+                onClick={enterFullscreen}
+              >
+                Re-enter Fullscreen to Continue
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ALL DONE MODAL ────────────────────────────────────────────────────── */}
+      {showAllDoneModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="max-w-lg w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-400">
+            <div className="h-2 bg-gradient-to-r from-primary via-green-500 to-emerald-400 w-full" />
+            <div className="p-10 text-center">
+              <div className="w-20 h-20 rounded-full bg-green-500/10 border-2 border-green-500/20 flex items-center justify-center mx-auto mb-6">
+                <Trophy className="w-10 h-10 text-green-500" />
+              </div>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">All Questions Completed!</h2>
+              <p className="text-slate-500 font-medium text-base leading-relaxed mb-8">
+                You have answered all <span className="font-black text-slate-800">{allQuestions.length}</span> questions.
+                Click <strong>Submit Interview</strong> to finalise your responses and view your performance report.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Button
+                  className="w-full h-14 rounded-2xl font-black text-base shadow-xl shadow-green-500/20 bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-3"
+                  onClick={handleFinalSubmit}
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  Submit Interview & View Results
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full h-12 rounded-2xl font-bold text-slate-400 hover:text-slate-600 text-sm"
+                  onClick={() => setShowAllDoneModal(false)}
+                >
+                  Review My Answers First
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── FEEDBACK PANEL ────────────────────────────────────────────────────── */}
+      {showFeedbackPanel && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-400 max-h-[90vh] flex flex-col">
+            <div className="h-2 bg-gradient-to-r from-primary via-blue-500 to-indigo-400 w-full" />
+            <div className="p-8 flex-shrink-0 text-center border-b border-slate-100">
+              <ShieldCheck className="w-14 h-14 text-primary mx-auto mb-4" />
+              <h2 className="text-2xl font-black text-slate-900">Interview Complete</h2>
+              <p className="text-slate-500 font-medium mt-2">Your responses have been securely submitted and analyzed.</p>
+            </div>
+            <div className="p-8 overflow-y-auto flex-1">
+              {finalScores.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Performance Breakdown</p>
+                  {finalScores.map((s) => (
+                    <div key={s.question_number} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                      <span className="text-xs font-bold text-slate-600">Q{s.question_number} <span className="text-slate-400 capitalize">({s.question_type})</span></span>
+                      <div className="flex items-center gap-2">
+                        {s.score === null ? (
+                          <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Evaluating...</span>
+                        ) : (
+                          <>
+                            <div className="flex gap-0.5">
+                              {[1,2,3,4,5,6,7,8,9,10].map(i => (
+                                <div key={i} className={`w-2 h-4 rounded-sm transition-all ${ i <= (s.score ?? 0) ? (s.score! >= 7 ? 'bg-green-500' : s.score! >= 4 ? 'bg-amber-400' : 'bg-red-400') : 'bg-slate-200'}`} />
+                              ))}
+                            </div>
+                            <span className={`text-xs font-black w-8 text-right ${ (s.score ?? 0) >= 7 ? 'text-green-600' : (s.score ?? 0) >= 4 ? 'text-amber-600' : 'text-red-600'}`}>{s.score}/10</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-slate-400 font-medium py-8">Scores are being calculated. Please check your dashboard shortly.</p>
+              )}
+            </div>
+            <div className="p-6 border-t border-slate-100 flex-shrink-0">
+              <Button
+                className="w-full h-14 rounded-2xl font-black text-base shadow-xl shadow-primary/20"
+                onClick={() => window.location.href = '/calrims/'}
+              >
+                Exit & View Full Status
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
