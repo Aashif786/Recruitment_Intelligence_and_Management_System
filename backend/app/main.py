@@ -20,26 +20,10 @@ if os.getenv("BACKEND_START_MODE") not in ["script", "docker"]:
     print("Use start.ps1 to run the backend")
     sys.exit(1)
 
-# ── Environment Version Guard ──────────────────────────────────────────────
-try:
-    import psycopg2
-    import PIL.Image
-except ImportError as e:
-    if "psycopg2._psycopg" in str(e) or "_imaging" in str(e):
-        print("\n" + "!"*80)
-        print("CRITICAL: Python Version Mismatch Detected in Environment!")
-        print(f"Error: {str(e)}")
-        print("\nYour virtual environment contains packages compiled for a different Python version.")
-        print("ACTION REQUIRED: Run '.\\start.ps1 repair' in the backend directory.")
-        print("!"*80 + "\n")
-        sys.exit(1)
-# ──────────────────────────────────────────────────────────────────────────────
-
 from fastapi import FastAPI, HTTPException, status, Request as FastAPIRequest
 from fastapi.routing import APIRoute
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Callable, Any
@@ -367,6 +351,11 @@ app.include_router(ops_email.router)
 app.include_router(hr_settings.router)
 app.include_router(onboarding.router)
 app.include_router(repository.router)
+
+# Dev-only: E2E test setup endpoints (never exposed in production)
+if settings.env != "production":
+    from app.api import e2e_setup
+    app.include_router(e2e_setup.router)
 
 
 @app.exception_handler(RequestValidationError)

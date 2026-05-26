@@ -204,9 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(errorMessage)
       }
 
-      console.log("[v0] OTP verified successfully")
     } catch (error) {
-      console.error("[v0] Verify error:", error)
       throw error
     } finally {
       setIsLoading(false)
@@ -220,16 +218,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("API_BASE_URL is not defined. Please check your environment configuration.");
       }
 
-      console.log("[v0] Logging in user:", { email, password: '***' })
-
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
         credentials: 'include'
       })
-
-      console.log("[v0] Login response status:", response.status)
 
       if (!response.ok) {
         let errorMessage = 'Login failed'
@@ -258,7 +252,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let data;
       try {
         data = await response.json()
-        console.log("[v0] Login success. HttpOnly Cookie secured.");
       } catch (e) {
         throw new Error("Failed to parse login response from the server.");
       }

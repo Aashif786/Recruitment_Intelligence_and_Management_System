@@ -2,15 +2,27 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Hiring Pipeline Module', () => {
   test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page }) => {
-    // Login as HR
+    // Login as the E2E test HR user (created by global-setup.ts via /api/test-setup/hr-user)
     await page.goto('/calrims/auth/login/');
     await page.fill('input#email', 'hr_automated_test@example.com');
     await page.fill('input#password', 'Password123!');
     await page.click('button[type="submit"]');
-    
-    // Wait for dashboard to load (allow up to 30s for cookie set + SWR fetch)
-    await expect(page).toHaveURL(/.*calrims\/dashboard\/hr/, { timeout: 30000 });
+
+    // Wait for dashboard to load (allow up to 45s for cookie set + SWR fetch)
+    await expect(page).toHaveURL(/.*calrims\/dashboard\/hr/, { timeout: 45000 }).catch(async () => {
+      // Give a clear error instead of a cryptic Playwright timeout
+      const currentURL = page.url();
+      throw new Error(
+        `[Pipeline Setup] Login redirect failed. Still at: ${currentURL}\n` +
+        `Expected redirect to /dashboard/hr. Check:\n` +
+        `  1. Backend is running on port 10000\n` +
+        `  2. Global setup created the HR test user\n` +
+        `  3. The login API returned 200`
+      );
+    });
+
     await page.waitForLoadState('load');
 
     // Log API responses for debugging

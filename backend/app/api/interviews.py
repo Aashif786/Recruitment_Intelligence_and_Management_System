@@ -62,7 +62,7 @@ from app.core.ephemeral_result_cache import cache_get as _idem_cache_get, cache_
 
 
 # --- Imported Refactored Services ---
-from app.services.interview_generation_service import _load_questions_from_repo_set, check_job_status, background_generate_questions, _set_interview_status, _determine_initial_stage, _enforce_stage, _question_count_for_stage, _generate_aptitude_questions, _generate_first_level_questions, _generate_fallback_questions_direct
+from app.services.interview_generation_service import STAGE_APTITUDE, STAGE_FIRST_LEVEL, STAGE_COMPLETED, _load_questions_from_repo_set, check_job_status, background_generate_questions, _set_interview_status, _determine_initial_stage, _enforce_stage, _question_count_for_stage, _generate_aptitude_questions, _generate_first_level_questions, _generate_fallback_questions_direct
 from app.services.interview_evaluation_service import evaluate_answer_task
 from app.services.interview_reporting_service import _finalize_interview_and_report, _finalize_interview_and_report_internal
 
