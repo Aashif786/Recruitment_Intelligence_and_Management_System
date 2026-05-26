@@ -57,10 +57,10 @@ test.describe('Expert Assessment - Interview Flow', () => {
     });
 
     // ------------------------------------------------------------------
-    // TEST 1: Pre-start screen loads correctly
+    // TEST 1: Pre-start screen loads, verifies, and transitions
     // ------------------------------------------------------------------
-    test('should load interview pre-start screen and verify security UI', async ({ page }) => {
-        test.setTimeout(90000);
+    test('should load interview pre-start screen, verify security UI, and transition after Enter click', async ({ page }) => {
+        test.setTimeout(120000);
         await page.goto(INTERVIEW_URL, { waitUntil: 'load' });
 
         // Accept any valid terminal UI state:
@@ -77,42 +77,18 @@ test.describe('Expert Assessment - Interview Flow', () => {
         const stateText = await anyValidState.first().textContent();
         console.log(`Interview page loaded — state: "${stateText?.trim()}".`);
 
-        // Only check for camera + button when we actually reached the pre-start screen
-        if (await page.getByText(/Ready to Begin\?/i).isVisible()) {
-            await expect(page.getByRole('button', { name: /Enter Interview Board/i })).toBeVisible();
-            await expect(page.locator('video')).toBeVisible({ timeout: 10000 });
-            console.log('Pre-start UI elements verified.');
-        } else {
-            console.log('Session is in a non-pre-start state — skipping camera/button assertions.');
-        }
-    });
-
-    // ------------------------------------------------------------------
-    // TEST 2: Clicking Enter Interview Board causes a state transition
-    //         (board, termination, or finished — all are valid; we only
-    //          assert the pre-start screen is no longer the active view)
-    // ------------------------------------------------------------------
-    test('should transition away from pre-start screen after Enter click', async ({ page }) => {
-        test.setTimeout(90000);
-        await page.goto(INTERVIEW_URL, { waitUntil: 'load' });
-
-        // Wait for any recognisable state — including the error card when the
-        // session is expired / not found in the current environment.
-        const anyValidState = page.getByText(
-            /Ready to Begin\?|Assessment Board|Initialization Delay|Session Terminated|Interview Completed/i
-        );
-        await expect(anyValidState).toBeVisible({ timeout: 60000 });
-
-        // If the session is in an error or terminal state, we cannot click the
-        // Enter button — but that is a perfectly valid outcome for this env.
         const isPreStart = await page.getByText(/Ready to Begin\?/i).isVisible();
         if (!isPreStart) {
-            const state = await anyValidState.first().textContent();
-            console.log(`Session not on pre-start (state: "${state?.trim()}") — transition test skipped gracefully.`);
+            console.log(`Session not on pre-start (state: "${stateText?.trim()}") — transition test skipped gracefully.`);
             return;
         }
 
-        // Wait for device test to complete (up to 10s), then click
+        // Verify pre-start elements
+        await expect(page.getByRole('button', { name: /Enter Interview Board/i })).toBeVisible();
+        await expect(page.locator('video')).toBeVisible({ timeout: 15000 });
+        console.log('Pre-start UI elements verified.');
+
+        // Wait for device test to complete (up to 5s), then click
         await page.waitForTimeout(5000);
         const btn = page.getByRole('button', { name: /Enter Interview Board/i });
         await expect(btn).toBeVisible();
