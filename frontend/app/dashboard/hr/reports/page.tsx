@@ -1217,7 +1217,15 @@ export default function ReportsPage() {
 
           {/* Compact Metrics Strip */}
           <div className="animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-100 rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+              <div className="rounded-md bg-muted/40 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Applied</p>
+                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalApplied}</p>
+              </div>
+              <div className="rounded-md bg-muted/40 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Attended</p>
+                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalAttended}</p>
+              </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
                 <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Reports</p>
                 <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.total}</p>
