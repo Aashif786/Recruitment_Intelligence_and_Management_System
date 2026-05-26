@@ -71,6 +71,10 @@ backend/smtp_*.txt
 backend/output.txt
 backend/*.log
 backend/sample_aptitude.xlsx
+backend/bandit_report.txt
+backend/locust_report.txt
+backend/pip_audit_report.txt
+frontend/knip_report.txt
 
 # Development utility scripts (not part of production codebase)
 backend/create_test_user.py
