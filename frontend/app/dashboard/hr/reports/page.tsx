@@ -274,7 +274,7 @@ export default function ReportsPage() {
     return `/api/analytics/reports?${q.toString()}`;
   }, []);
 
-  const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number }>(reportsApiUrl, fetcher)
+  const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number, metrics?: { selected: number, hold: number, rejected: number, terminated: number, incomplete: number, avg_score: number, avg_questions: number } }>(reportsApiUrl, fetcher)
   const { data: heatmapResponse } = useSWR<any>(heatmapApiUrl, fetcher)
 
   const rawReports = Array.isArray(reportsResponse)
@@ -419,6 +419,21 @@ export default function ReportsPage() {
   // Metrics
   const metrics = useMemo(() => {
     const total = reportsResponse?.total || reports.length;
+    
+    // Use server-provided metrics if available (accurate across all pages)
+    if (reportsResponse && 'metrics' in reportsResponse && reportsResponse.metrics) {
+        return {
+            total,
+            selected: reportsResponse.metrics.selected,
+            hold: reportsResponse.metrics.hold,
+            rejected: reportsResponse.metrics.rejected,
+            terminated: reportsResponse.metrics.terminated,
+            incomplete: reportsResponse.metrics.incomplete,
+            avgScore: reportsResponse.metrics.avg_score.toFixed(2),
+            avgQuestions: reportsResponse.metrics.avg_questions.toFixed(1)
+        };
+    }
+    
     let selectedCount = 0;
     let holdCount = 0;
     let rejectedCount = 0;
@@ -909,9 +924,10 @@ export default function ReportsPage() {
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent className="rounded-lg">
-                      <SelectItem value="Default">Default</SelectItem>
-                      <SelectItem value="Select">Selected</SelectItem>
-                      <SelectItem value="Reject">Rejected</SelectItem>
+                      <SelectItem value="Default">All Reports</SelectItem>
+                      <SelectItem value="Select">High Score (&gt;6)</SelectItem>
+                      <SelectItem value="Consider">Average Score (4-6)</SelectItem>
+                      <SelectItem value="Reject">Low Score (&lt;4)</SelectItem>
                       <SelectItem value="Terminated">Terminated</SelectItem>
                       <SelectItem value="Not Completed">Incomplete</SelectItem>
                     </SelectContent>
@@ -1229,7 +1245,7 @@ export default function ReportsPage() {
               )}
               {appliedFilters.status !== 'Default' && (
                 <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  Status: {getStatusLabel(appliedFilters.status)}
+                  Status: {appliedFilters.status === 'Select' ? 'High Score' : appliedFilters.status === 'Consider' ? 'Avg Score' : appliedFilters.status === 'Reject' ? 'Low Score' : getStatusLabel(appliedFilters.status)}
                   <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setStatusFilter('Default')} />
                 </Badge>
               )}
@@ -1308,18 +1324,26 @@ export default function ReportsPage() {
           )}
 
           {/* Status Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-emerald-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Selected</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">High Performers (&gt; 6)</p>
               <div className="text-emerald-500 font-bold text-2xl">{metrics.selected}</div>
             </div>
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-amber-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">On Hold</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Average Performers (4-6)</p>
               <div className="text-amber-500 font-bold text-2xl">{metrics.hold}</div>
             </div>
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-red-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Rejected</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Low Performers (&lt; 4)</p>
               <div className="text-red-500 font-bold text-2xl">{metrics.rejected}</div>
+            </div>
+            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-gray-500 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Terminated</p>
+              <div className="text-gray-500 font-bold text-2xl">{metrics.terminated}</div>
+            </div>
+            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-orange-500 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Incomplete</p>
+              <div className="text-orange-500 font-bold text-2xl">{metrics.incomplete}</div>
             </div>
           </div>
 

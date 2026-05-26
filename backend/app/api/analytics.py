@@ -131,15 +131,14 @@ def get_interview_reports(
         
         if status and str(status).lower() != "all":
             status_lower = status.lower()
+            eff_score = func.coalesce(InterviewReport.overall_score, Interview.overall_score, 0)
+            
             if status_lower == "select":
-                query = query.filter(or_(Interview.overall_score > 6, InterviewReport.overall_score > 6))
+                query = query.filter(eff_score > 6)
             elif status_lower == "consider":
-                query = query.filter(or_(
-                    and_(Interview.overall_score > 4, Interview.overall_score <= 6),
-                    and_(InterviewReport.overall_score > 4, InterviewReport.overall_score <= 6)
-                ))
+                query = query.filter(and_(eff_score > 4, eff_score <= 6))
             elif status_lower == "reject":
-                query = query.filter(or_(Interview.overall_score <= 4, InterviewReport.overall_score <= 4))
+                query = query.filter(eff_score <= 4)
             elif status_lower == "not completed":
                 query = query.filter(or_(Interview.id == None, Interview.status != "completed"))
             elif status_lower == "default":
@@ -212,6 +211,54 @@ def get_interview_reports(
 
         total = query.with_entities(func.count(Application.id.distinct())).scalar() or 0
         logger.info(f"[REPORTS] Query total: {total}")
+
+        # ── Compute aggregate metrics across ALL matching records (not just current page) ──
+        try:
+            effective_score = func.coalesce(InterviewReport.overall_score, Interview.overall_score, 0)
+            score_data = query.with_entities(
+                effective_score.label('score'),
+                InterviewReport.termination_reason.label('term_reason'),
+                Interview.status.label('iv_status'),
+            ).all()
+
+            m_selected = m_hold = m_rejected = m_terminated = m_incomplete = 0
+            m_total_score = 0.0
+
+            for row in score_data:
+                s = float(row.score or 0)
+                m_total_score += s
+                if row.term_reason:
+                    m_terminated += 1
+                elif row.iv_status != 'completed':
+                    m_incomplete += 1
+                elif s > 6:
+                    m_selected += 1
+                elif s > 4:
+                    m_hold += 1
+                else:
+                    m_rejected += 1
+
+            m_avg_score = round(m_total_score / len(score_data), 2) if score_data else 0.0
+
+            # Avg questions answered across all matching interviews
+            all_iv_ids = [r[0] for r in query.with_entities(Interview.id).all() if r[0] is not None]
+            if all_iv_ids and total > 0:
+                total_answered = db.query(func.count(InterviewAnswer.id)).join(
+                    InterviewQuestion, InterviewAnswer.question_id == InterviewQuestion.id
+                ).filter(
+                    InterviewQuestion.interview_id.in_(all_iv_ids),
+                    InterviewAnswer.answer_text.isnot(None),
+                    InterviewAnswer.answer_text != ''
+                ).scalar() or 0
+                m_avg_questions = round(total_answered / total, 1)
+            else:
+                m_avg_questions = 0.0
+        except Exception as e:
+            logger.warning(f"[REPORTS] Metrics aggregation failed, using zeros: {e}")
+            m_selected = m_hold = m_rejected = m_terminated = m_incomplete = 0
+            m_avg_score = 0.0
+            m_avg_questions = 0.0
+
         applications = query.options(
             contains_eager(Application.interview).contains_eager(Interview.report),
             contains_eager(Application.job),
@@ -449,7 +496,16 @@ def get_interview_reports(
             "total": total,
             "count": len(reports),
             "failed": failed_count,
-            "pages": (total + limit - 1) // limit if limit > 0 else 1
+            "pages": (total + limit - 1) // limit if limit > 0 else 1,
+            "metrics": {
+                "selected": m_selected,
+                "hold": m_hold,
+                "rejected": m_rejected,
+                "terminated": m_terminated,
+                "incomplete": m_incomplete,
+                "avg_score": m_avg_score,
+                "avg_questions": m_avg_questions,
+            }
         }
 
     except Exception as e:
@@ -461,7 +517,16 @@ def get_interview_reports(
             "total": 0,
             "count": 0,
             "failed": 0,
-            "pages": 0
+            "pages": 0,
+            "metrics": {
+                "selected": 0,
+                "hold": 0,
+                "rejected": 0,
+                "terminated": 0,
+                "incomplete": 0,
+                "avg_score": 0.0,
+                "avg_questions": 0.0,
+            }
         }
 
 
