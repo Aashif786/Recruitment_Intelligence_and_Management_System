@@ -212,6 +212,33 @@ def get_interview_reports(
         total = query.with_entities(func.count(Application.id.distinct())).scalar() or 0
         logger.info(f"[REPORTS] Query total: {total}")
 
+        # ── Compute global metrics for Applied and Attended ──
+        try:
+            base_app_query = db.query(Application)
+            if current_user.role.lower() != "super_admin":
+                base_app_query = base_app_query.filter(Application.hr_id == current_user.id)
+            if job_id and str(job_id).lower() != "all":
+                base_app_query = base_app_query.filter(Application.job_id == job_id)
+            if from_date:
+                try:
+                    sd = datetime.strptime(from_date, "%Y-%m-%d").replace(hour=0, minute=0, second=0)
+                    base_app_query = base_app_query.filter(Application.applied_at >= sd)
+                except ValueError:
+                    pass
+            if to_date:
+                try:
+                    ed = datetime.strptime(to_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+                    base_app_query = base_app_query.filter(Application.applied_at <= ed)
+                except ValueError:
+                    pass
+
+            m_total_applied = base_app_query.count()
+            m_total_attended = base_app_query.join(Interview, Application.id == Interview.application_id).filter(Interview.status != 'not_started').count()
+        except Exception as e:
+            logger.warning(f"[REPORTS] Global applied/attended metrics failed: {e}")
+            m_total_applied = 0
+            m_total_attended = 0
+
         # ── Compute aggregate metrics across ALL matching records (not just current page) ──
         try:
             effective_score = func.coalesce(InterviewReport.overall_score, Interview.overall_score, 0)
@@ -505,6 +532,8 @@ def get_interview_reports(
                 "incomplete": m_incomplete,
                 "avg_score": m_avg_score,
                 "avg_questions": m_avg_questions,
+                "total_applied": m_total_applied,
+                "total_attended": m_total_attended,
             }
         }
 
@@ -526,6 +555,8 @@ def get_interview_reports(
                 "incomplete": 0,
                 "avg_score": 0.0,
                 "avg_questions": 0.0,
+                "total_applied": 0,
+                "total_attended": 0,
             }
         }
 

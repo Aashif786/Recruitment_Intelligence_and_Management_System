@@ -274,7 +274,7 @@ export default function ReportsPage() {
     return `/api/analytics/reports?${q.toString()}`;
   }, []);
 
-  const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number, metrics?: { selected: number, hold: number, rejected: number, terminated: number, incomplete: number, avg_score: number, avg_questions: number } }>(reportsApiUrl, fetcher)
+  const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number, metrics?: { selected: number, hold: number, rejected: number, terminated: number, incomplete: number, avg_score: number, avg_questions: number, total_applied: number, total_attended: number } }>(reportsApiUrl, fetcher)
   const { data: heatmapResponse } = useSWR<any>(heatmapApiUrl, fetcher)
 
   const rawReports = Array.isArray(reportsResponse)
@@ -422,16 +422,19 @@ export default function ReportsPage() {
     
     // Use server-provided metrics if available (accurate across all pages)
     if (reportsResponse && 'metrics' in reportsResponse && reportsResponse.metrics) {
-        return {
-            total,
-            selected: reportsResponse.metrics.selected,
-            hold: reportsResponse.metrics.hold,
-            rejected: reportsResponse.metrics.rejected,
-            terminated: reportsResponse.metrics.terminated,
-            incomplete: reportsResponse.metrics.incomplete,
-            avgScore: reportsResponse.metrics.avg_score.toFixed(2),
-            avgQuestions: reportsResponse.metrics.avg_questions.toFixed(1)
-        };
+        const apiMetrics = reportsResponse.metrics;
+      return {
+        total: reportsResponse.total || 0,
+        selected: apiMetrics.selected || 0,
+        hold: apiMetrics.hold || 0,
+        rejected: apiMetrics.rejected || 0,
+        terminated: apiMetrics.terminated || 0,
+        incomplete: apiMetrics.incomplete || 0,
+        avgScore: apiMetrics.avg_score.toFixed(2) || '0.00',
+        avgQuestions: apiMetrics.avg_questions.toFixed(1) || '0.0',
+        totalApplied: apiMetrics.total_applied || 0,
+        totalAttended: apiMetrics.total_attended || 0,
+      };
     }
     
     let selectedCount = 0;
@@ -1539,7 +1542,7 @@ export default function ReportsPage() {
                         ].filter(d => d.value > 0)} />
                       </div>
 
-                      <div className="w-full lg:w-1/3 grid grid-cols-2 gap-4">
+                      <div className="w-full lg:w-1/2 grid grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
                           <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.avgScore}</div>
                           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Avg Score</div>
@@ -1557,6 +1560,14 @@ export default function ReportsPage() {
                             {metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%
                           </div>
                           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Success Rate</div>
+                        </div>
+                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
+                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.totalApplied}</div>
+                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Applied</div>
+                        </div>
+                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
+                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.totalAttended}</div>
+                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Attended</div>
                         </div>
                       </div>
                     </div>
