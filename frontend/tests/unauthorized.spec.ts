@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Security - Unauthorized Access', () => {
-    test('should redirect to login when accessing dashboard without session', async ({ page }) => {
-        // Ensure no session exists by navigating to login first and clearing storage
+    test('should redirect to login when accessing dashboard without session', async ({ page, context }) => {
+        // Ensure no session exists by navigating to login first and clearing storage/cookies
+        await context.clearCookies();
         await page.goto('/calrims/auth/login/');
         await page.evaluate(() => {
             localStorage.clear();

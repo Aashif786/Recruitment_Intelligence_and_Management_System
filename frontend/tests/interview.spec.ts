@@ -147,9 +147,21 @@ test.describe('Expert Assessment - Interview Flow', () => {
         await page.goto('/calrims/interview/access/', { waitUntil: 'load' });
         await expect(page.getByText('Interview Access')).toBeVisible({ timeout: 10000 });
 
-        await page.locator('input#email').fill('nonexistent@test.com');
-        await page.locator('input#key').fill('invalid_key_xyz');
-        await page.getByRole('button', { name: /Enter Interview/i }).click();
+        const emailInput = page.locator('input#email');
+        const keyInput = page.locator('input#key');
+        const submitBtn = page.getByRole('button', { name: /Enter Interview/i });
+
+        await expect(emailInput).toBeVisible({ timeout: 10000 });
+        await page.waitForTimeout(1000); // Wait for React hydration
+
+        await emailInput.click();
+        await emailInput.fill('nonexistent@test.com');
+        
+        await keyInput.click();
+        await keyInput.fill('invalid_key_xyz');
+
+        await expect(submitBtn).toBeEnabled({ timeout: 10000 });
+        await submitBtn.click();
 
         await expect(
             page.locator('.text-red-500')
