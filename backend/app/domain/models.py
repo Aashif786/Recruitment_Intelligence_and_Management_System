@@ -15,7 +15,10 @@ from app.core.timezone import get_ist_now
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
-        CheckConstraint("role IN ('super_admin', 'hr', 'pending_hr', 'candidate')", name='check_users_role'),
+        CheckConstraint(
+            "role IN ('super_admin', 'hr', 'recruiter', 'pending_hr', 'candidate')",
+            name='check_users_role',
+        ),
         CheckConstraint("approval_status IN ('pending', 'approved', 'rejected')", name='check_users_approval_status'),
     )
 

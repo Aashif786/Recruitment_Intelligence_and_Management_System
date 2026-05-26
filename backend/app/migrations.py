@@ -470,7 +470,11 @@ def validate_required_columns(engine: Engine):
                 missing.append(f"{table}.{col}")
     
     if missing:
-        error_msg = f"CRITICAL DATABASE ERROR: The following columns are missing from the database: {', '.join(missing)}. Please run 'python scripts/migrate.py' to fix the schema."
+        error_msg = (
+            f"CRITICAL DATABASE ERROR: The following columns are missing from the database: {', '.join(missing)}. "
+            "Apply the latest SQL from supabase/migrations/ in the Supabase SQL Editor "
+            "(see CLIENT_SETUP_GUIDE.md and setup/production_schema.sql for new projects)."
+        )
         logger.critical(error_msg)
         raise RuntimeError(error_msg)
     

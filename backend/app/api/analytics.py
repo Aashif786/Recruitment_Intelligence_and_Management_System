@@ -15,6 +15,14 @@ from app.core.storage import get_signed_url
 
 logger = logging.getLogger(__name__)
 
+
+def _hr_can_see_application(current_user: User):
+    """Match AnalyticsService: HR sees apps they own or jobs they posted."""
+    if current_user.role.lower() == "super_admin":
+        return None
+    return or_(Application.hr_id == current_user.id, Job.hr_id == current_user.id)
+
+
 router = APIRouter()
 from fastapi import Request
 from app.core.rate_limiter import limiter
@@ -62,10 +70,9 @@ def get_dashboard_analytics(
             "error": None
         }
     except Exception as e:
-        logger.error(f"[ANALYTICS][CRITICAL] {str(e)}")
-        # HARD FALLBACK (NO FAILURE EVER)
+        logger.error(f"[ANALYTICS][CRITICAL] {str(e)}", exc_info=True)
         return {
-            "success": True,
+            "success": False,
             "data": {
                 "total_applications": 0,
                 "total_interviews": 0,
@@ -73,7 +80,7 @@ def get_dashboard_analytics(
                 "success_rate": 0,
                 "average_score": 0
             },
-            "error": None
+            "error": "Failed to load dashboard analytics. Please retry.",
         }
 
 
@@ -121,9 +128,10 @@ def get_interview_reports(
             Application.status.in_(REPORTABLE_APPLICATION_STATUSES)
         ))
 
-        # Apply visibility isolation
-        if current_user.role.lower() != "super_admin":
-            query = query.filter(Application.hr_id == current_user.id)
+        # Apply visibility isolation (aligned with AnalyticsService dashboard)
+        hr_scope = _hr_can_see_application(current_user)
+        if hr_scope is not None:
+            query = query.filter(hr_scope)
         
         # Apply Filters
         if job_id and str(job_id).lower() != "all":
@@ -141,11 +149,19 @@ def get_interview_reports(
                 query = query.filter(eff_score <= 4)
             elif status_lower == "not completed":
                 query = query.filter(or_(Interview.id == None, Interview.status != "completed"))
+            elif status_lower == "terminated":
+                query = query.filter(or_(
+                    Interview.status == "terminated",
+                    and_(
+                        InterviewReport.termination_reason.isnot(None),
+                        InterviewReport.termination_reason != "",
+                    ),
+                ))
             elif status_lower == "default":
                 pass
             else:
-                # Direct application status match
-                query = query.filter(Application.status == status)
+                # Direct application status match (case-insensitive)
+                query = query.filter(func.lower(Application.status) == status_lower)
 
         if experience and experience != "All":
             from app.domain.models import ResumeExtraction
@@ -198,25 +214,20 @@ def get_interview_reports(
             except ValueError:
                 pass
 
+        effective_score_filter = func.coalesce(InterviewReport.overall_score, Interview.overall_score)
         if score_min is not None:
-            query = query.filter(or_(
-                Interview.overall_score >= score_min,
-                InterviewReport.overall_score >= score_min
-            ))
+            query = query.filter(effective_score_filter >= score_min)
         if score_max is not None:
-            query = query.filter(or_(
-                Interview.overall_score <= score_max,
-                InterviewReport.overall_score <= score_max
-            ))
+            query = query.filter(effective_score_filter <= score_max)
 
         total = query.with_entities(func.count(Application.id.distinct())).scalar() or 0
         logger.info(f"[REPORTS] Query total: {total}")
 
         # ── Compute global metrics for Applied and Attended ──
         try:
-            base_app_query = db.query(Application)
-            if current_user.role.lower() != "super_admin":
-                base_app_query = base_app_query.filter(Application.hr_id == current_user.id)
+            base_app_query = db.query(Application).outerjoin(Job, Application.job_id == Job.id)
+            if hr_scope is not None:
+                base_app_query = base_app_query.filter(hr_scope)
             if job_id and str(job_id).lower() != "all":
                 base_app_query = base_app_query.filter(Application.job_id == job_id)
             if from_date:
@@ -550,6 +561,7 @@ def get_interview_reports(
             "count": 0,
             "failed": 0,
             "pages": 0,
+            "error": "Failed to load reports. Please try again.",
             "metrics": {
                 "selected": 0,
                 "hold": 0,
@@ -595,12 +607,14 @@ def get_filtered_interviews(
         .outerjoin(Interview, Application.id == Interview.application_id)\
         .options(
             selectinload(Application.job),
+            selectinload(Application.hr),
             selectinload(Application.interview).selectinload(Interview.report)
         )
 
     # Apply visibility isolation
-    if current_user.role.lower() != "super_admin":
-        query = query.filter(Application.hr_id == current_user.id)
+    hr_scope = _hr_can_see_application(current_user)
+    if hr_scope is not None:
+        query = query.filter(hr_scope)
 
     # Filter by Job ID
     if job_id:

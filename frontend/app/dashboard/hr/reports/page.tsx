@@ -259,11 +259,14 @@ export default function ReportsPage() {
   // Dedicated Heatmap Data (Unfiltered by date/score to keep heatmap consistent)
   const heatmapApiUrl = useMemo(() => {
     const q = new URLSearchParams();
-    q.set("limit", "1000"); // Get a large enough sample for the heatmap
+    q.set("limit", "1000");
+    if (appliedFilters.job && appliedFilters.job !== "All") {
+      q.set("job_id", String(appliedFilters.job));
+    }
     return `/api/analytics/reports?${q.toString()}`;
-  }, []);
+  }, [appliedFilters.job]);
 
-  const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number, metrics?: { selected: number, hold: number, rejected: number, terminated: number, incomplete: number, avg_score: number, avg_questions: number, total_applied: number, total_finished: number } }>(reportsApiUrl, fetcher)
+  const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number, error?: string, metrics?: { selected: number, hold: number, rejected: number, terminated: number, incomplete: number, avg_score: number, avg_questions: number, total_applied: number, total_finished: number } }>(reportsApiUrl, fetcher)
   const { data: heatmapResponse } = useSWR<any>(heatmapApiUrl, fetcher)
 
   const rawReports = Array.isArray(reportsResponse)
@@ -552,14 +555,17 @@ export default function ReportsPage() {
 
     text += `QUESTION ANALYSIS\n`
     text += `----------------------------------------\n`
-    report.question_evaluations.forEach((q, i) => {
-      text += `\nQuestion ${i + 1}: ${q.question}\n`
-      text += `Score: ${q.evaluation.overall}/10\n`
-      if (q.evaluation.strengths) {
-        text += `  Strengths:\n${q.evaluation.strengths.map(s => `    - ${s}`).join('\n')}\n`
+    const evaluations = report.question_evaluations || []
+    evaluations.forEach((q, i) => {
+      const evalData = q.evaluation || {}
+      const score = evalData.overall ?? q.score ?? 'N/A'
+      text += `\nQuestion ${i + 1}: ${q.question || 'N/A'}\n`
+      text += `Score: ${score}/10\n`
+      if (evalData.strengths?.length) {
+        text += `  Strengths:\n${evalData.strengths.map((s: string) => `    - ${s}`).join('\n')}\n`
       }
-      if (q.evaluation.weaknesses) {
-        text += `  Weaknesses:\n${q.evaluation.weaknesses.map(w => `    - ${w}`).join('\n')}\n`
+      if (evalData.weaknesses?.length) {
+        text += `  Weaknesses:\n${evalData.weaknesses.map((w: string) => `    - ${w}`).join('\n')}\n`
       }
     })
 
@@ -652,12 +658,15 @@ export default function ReportsPage() {
     )
   }
 
-  if (fetchError) {
+  const apiErrorMessage =
+    (!Array.isArray(reportsResponse) && reportsResponse?.error) || null
+
+  if (fetchError || apiErrorMessage) {
     return (
       <div className="p-8">
         <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-200">
           <h3 className="font-bold">Error Loading Reports</h3>
-          <p>{fetchError.message || 'An error occurred while fetching reports.'}</p>
+          <p>{fetchError?.message || apiErrorMessage || 'An error occurred while fetching reports.'}</p>
           <Button onClick={() => mutate(reportsApiUrl)} variant="outline" className="mt-2">Retry</Button>
         </div>
       </div>
@@ -1320,6 +1329,12 @@ export default function ReportsPage() {
               >
                 Clear All
               </Button>
+            </div>
+          )}
+
+          {!Array.isArray(reportsResponse) && (reportsResponse?.failed ?? 0) > 0 && (
+            <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              {reportsResponse?.failed} report(s) on this page could not be loaded. Remaining rows are shown below.
             </div>
           )}
 

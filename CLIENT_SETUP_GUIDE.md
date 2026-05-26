@@ -67,12 +67,16 @@ sudo apt install -y certbot
 
 ### 2.2 Run the Production Schema
 
-1. In the Supabase dashboard, go to **SQL Editor**.
-2. Open `setup/production_schema.sql` from this repository.
-3. Paste the entire contents into the editor and click **Run**.
-4. This creates all 20+ tables, indexes, and constraints.
+> ⚠️ **New Supabase projects only.** If the database already has data (live production), **do not** re-run this script. Use `supabase/migrations/` or let the backend patch missing columns on deploy.
 
-> ✅ Verify: The **Table Editor** should show tables like `users`, `applications`, `jobs`, `audit_logs`, etc.
+1. In the Supabase dashboard, go to **SQL Editor**.
+2. Open `setup/production_schema.sql` from this repository (kept in sync with `supabase/migrations/20260408204544_initial_schema.sql`).
+3. Paste the entire contents into the editor and click **Run**.
+   - **Or** from the repo root with [Supabase CLI](https://supabase.com/docs/guides/cli): `supabase db push` (new projects only).
+4. This creates all tables, indexes, and constraints (including `offers`, `onboardings`, `question_sets`).
+5. Deploy the backend once so startup migrations can validate the schema.
+
+> ✅ Verify: The **Table Editor** should show tables like `users`, `applications`, `jobs`, `offers`, `onboardings`, `audit_logs`, etc.
 
 ### 2.3 Create Storage Buckets
 

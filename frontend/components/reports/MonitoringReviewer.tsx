@@ -53,7 +53,7 @@ interface MonitoringReviewerProps {
 }
 
 export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ interviewId, videoUrl }) => {
-  const { data: events = [], isLoading } = useSWR<MonitoringEvent[]>(
+  const { data: events = [], isLoading, error: monitoringError } = useSWR<MonitoringEvent[]>(
     interviewId ? `/api/interviews/${interviewId}/monitoring-events` : null,
     fetcher
   )
@@ -137,6 +137,16 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
       <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-3xl bg-slate-50 dark:bg-slate-900/50">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Loading intelligent frame monitoring logs...</p>
+      </div>
+    )
+  }
+
+  if (monitoringError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-3xl border-red-200 bg-red-50/50 dark:bg-red-950/20">
+        <AlertCircle className="w-8 h-8 text-red-500 mb-3" />
+        <p className="text-sm font-semibold text-red-700 dark:text-red-300">Could not load proctoring events</p>
+        <p className="text-xs text-red-600/80 mt-1">{(monitoringError as Error).message || 'Please try again later.'}</p>
       </div>
     )
   }

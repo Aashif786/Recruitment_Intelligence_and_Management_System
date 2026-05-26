@@ -194,10 +194,16 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                 <h3 className="font-bold">Status</h3>
                 <p>{fetchError || (error as Error).message}</p>
                 <div className="mt-2 text-sm text-gray-700">
-                    <p>Debugging Check:</p>
+                    <p>Check:</p>
                     <ul className="list-disc pl-5">
-                        <li>Ensure you are logged in as <strong>hr@example.com</strong> (Password: password123)</li>
-                        <li>Applications are only visible to the HR user who posted the job.</li>
+                        <li>Applications are only visible to the HR user who owns the job.</li>
+                        <li>Confirm you are signed in with an HR account that has access to this job.</li>
+                        {process.env.NODE_ENV === "development" && (
+                            <li className="text-muted-foreground">
+                                Dev only: seed users may use <strong>hr@company.com</strong> if configured via{" "}
+                                <code className="text-xs">SUPER_ADMIN_*</code> in backend <code className="text-xs">.env</code>.
+                            </li>
+                        )}
                     </ul>
                 </div>
             </div>

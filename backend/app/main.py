@@ -352,11 +352,6 @@ app.include_router(hr_settings.router)
 app.include_router(onboarding.router)
 app.include_router(repository.router)
 
-# Dev-only: E2E test setup endpoints (never exposed in production)
-if settings.env != "production":
-    from app.api import e2e_setup
-    app.include_router(e2e_setup.router)
-
 
 @app.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: FastAPIRequest, exc: RequestValidationError):

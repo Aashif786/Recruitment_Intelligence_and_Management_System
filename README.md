@@ -34,9 +34,9 @@
                                 │  └── app/core/       (auth/config)    │
                                 └──────┬──────────────────────┬─────────┘
                                        │                      │
-                                  PostgreSQL            Supabase Storage
-                                  (SQLAlchemy 2.0        (resumes, photos,
-                                   + Alembic)            offer PDFs)
+                                  Supabase (PostgreSQL)   Supabase Storage
+                                  (SQLAlchemy + startup   (resumes, photos,
+                                   migrations)            offer PDFs)
                                        │
                               AI Providers (OpenAI / Anthropic / Groq)
 ```
@@ -54,8 +54,7 @@ rims/
 │   │   ├── domain/           # SQLAlchemy models & Pydantic schemas
 │   │   ├── core/             # Auth, config, storage, timezone helpers
 │   │   └── infrastructure/   # Database session & migrations
-│   ├── tests/                # Pytest test suite
-│   ├── scripts/              # One-off migration/maintenance scripts
+│   ├── scripts/              # Production startup scripts
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
@@ -72,7 +71,8 @@ rims/
 │   │   └── page.tsx          # Marketing landing page
 │   ├── components/           # Shared UI components (Shadcn UI + custom)
 │   └── package.json
-├── database/                 # SQL schema & seed files
+├── setup/                    # Client production schema (see CLIENT_SETUP_GUIDE.md)
+├── supabase/migrations/      # Supabase migration history
 ├── docker-compose.prod.yml   # Production orchestration
 ├── ONBOARDING_GUIDE.md       # Onboarding pipeline & offer letter guide
 └── README.md
@@ -88,7 +88,7 @@ rims/
 | :--- | :--- |
 | Node.js | 18.x + |
 | Python | 3.10 – 3.12 |
-| PostgreSQL | 14 + |
+| [Supabase](https://supabase.com) project | PostgreSQL + Storage (see [CLIENT_SETUP_GUIDE.md](./CLIENT_SETUP_GUIDE.md)) |
 
 ### 1 — Clone & configure
 
@@ -108,61 +108,62 @@ venv\Scripts\activate
 # macOS / Linux
 source venv/bin/activate
 
-pip install -r requirements.txt
-cp .env.example .env          # fill in the values below
+cp .env.example .env          # fill in Supabase + secrets (see below)
+```
+
+**Dependencies:** `.\start.ps1` installs from `requirements_core.txt` (slim local set). **Docker/production** uses `backend/requirements.txt`. The repo-root `requirements.txt` is a minimal gunicorn/uvicorn pin only.
+
+**Windows (recommended):**
+
+```powershell
+.\start.ps1
+```
+
+**macOS / Linux (manual):**
+
+```bash
+export BACKEND_START_MODE=script
 python -m uvicorn app.main:app --reload --port 10000
 ```
+
+**Production (Linux / Docker):** see [CLIENT_SETUP_GUIDE.md](./CLIENT_SETUP_GUIDE.md) and `docker-compose.prod.yml`.
 
 **Interactive API docs:** http://localhost:10000/docs
 
 #### Required `.env` variables
 
+Copy from `backend/.env.example`. Minimum for local dev:
+
 ```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/rims
-
-# Auth
-SECRET_KEY=your-secret-key-here
-ALGORITHM=HS256
-
-# AI Providers (at least one required)
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
-GROQ_API_KEY=
-
-# Supabase Storage
-SUPABASE_URL=
+DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+JWT_SECRET=                          # openssl rand -hex 32
+ENCRYPTION_KEY=                      # Fernet key for phone encryption
+SUPABASE_URL=https://[PROJECT-REF].supabase.co
 SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_BUCKET=rims-files
-
-# Email (SMTP — for offer letters & notifications)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASSWORD=
-
-# App
-FRONTEND_URL=http://localhost:3000
+GROQ_API_KEY=                        # or OPENAI_API_KEY / ANTHROPIC_API_KEY
+ENV=development
+FRONTEND_BASE_URL=http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
+
+> For a **new** Supabase project, run `setup/production_schema.sql` in the SQL Editor first (see CLIENT_SETUP_GUIDE §2.2), then start the backend.
 
 ### 3 — Frontend
 
 ```bash
 cd frontend
+cp .env.example .env.local
 npm install
 npm run dev
 ```
 
+Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` (see `frontend/.env.example`).
+
 **App URL:** http://localhost:3000
 
-### 4 — Default Credentials
+### 4 — First admin user
 
-| Role | Email | Password |
-| :--- | :--- | :--- |
-| **Super Admin** | `admin@company.com` | `password123` |
-| **HR Manager** | `hr@company.com` | `password123` |
-
-> ⚠️ Change all default passwords immediately on first login in any environment other than local dev.
+Set `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` in `backend/.env` before the first backend start to bootstrap a Super Admin. Do **not** use default passwords in production.
 
 ---
 
@@ -187,8 +188,8 @@ npm run dev
 | :--- | :--- |
 | [ONBOARDING_GUIDE.md](./ONBOARDING_GUIDE.md) | Offer pipeline, template editor, email ingestion, and photo/ID card workflow |
 | [CLIENT_SETUP_GUIDE.md](./CLIENT_SETUP_GUIDE.md) | Production deployment checklist for client environments |
-| [PROJECT_REPORT.md](./PROJECT_REPORT.md) | Technical design decisions and implementation notes |
-| [DATABASE_SCHEMA.sql](./database/) | Full relational schema |
+| [setup/production_schema.sql](./setup/production_schema.sql) | Full relational schema for new Supabase projects |
+| [supabase/migrations/](./supabase/migrations/) | Same schema for Supabase CLI (`supabase db push`) |
 
 ---
 
