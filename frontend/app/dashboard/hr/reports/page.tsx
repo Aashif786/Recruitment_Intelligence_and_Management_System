@@ -1574,8 +1574,8 @@ export default function ReportsPage() {
                           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Applied</div>
                         </div>
                         <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.totalAttended}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Attended</div>
+                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.totalFinished}</div>
+                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Finished</div>
                         </div>
                       </div>
                     </div>
