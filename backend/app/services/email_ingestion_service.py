@@ -296,9 +296,26 @@ async def run_batch_resume_processing(db: Session):
             db.flush() # Get new_app.id
             
             # 3. Trigger Analysis
-            from app.services.ai_service import analyze_resume_background
-            # We trigger the standard background analysis task
-            analyze_resume_background(new_app.id, db)
+            # Derive relative Supabase storage path from attachment file URL
+            resume_file_path = None
+            if resume.file_url and "/MAIL_ATTACHMENTS/" in resume.file_url:
+                bucket_path = resume.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
+                resume_file_path = f"MAIL_ATTACHMENTS/{bucket_path}"
+            
+            new_app.resume_file_path = resume_file_path
+            db.flush()
+            
+            from app.api.applications import process_application_background
+            import asyncio
+            asyncio.create_task(
+                process_application_background(
+                    new_app.id,
+                    target_job.id,
+                    new_app.resume_file_path,
+                    candidate_email,
+                    candidate_name
+                )
+            )
             
             resume.processed = True
             db.commit()
