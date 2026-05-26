@@ -72,6 +72,7 @@ import {
   isProgressionAllZeros,
   isRadarAllZeros,
 } from '@/components/reports/interviewIncomplete'
+import { getRecommendationLabel, getRecommendationColor } from '@/lib/recommendation-label'
 
 // Constants
 const SKILL_CATEGORIES = [
@@ -171,18 +172,6 @@ function cleanQuestionText(text: string): string {
     cleaned = cleaned.slice(1, -1);
   }
   return cleaned.trim();
-}
-
-function getRecommendationLabel(score: number) {
-  if (score > 6) return 'Select';
-  if (score > 4) return 'Consider';
-  return 'Reject';
-}
-
-function getRecommendationColor(score: number) {
-  if (score > 6) return 'bg-primary/10 text-primary border-primary/20';
-  if (score > 4) return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
-  return 'bg-destructive/10 text-destructive border-destructive/20';
 }
 
 export default function ReportsPage() {
