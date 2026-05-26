@@ -274,7 +274,7 @@ export default function ReportsPage() {
     return `/api/analytics/reports?${q.toString()}`;
   }, []);
 
-  const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number, metrics?: { selected: number, hold: number, rejected: number, terminated: number, incomplete: number, avg_score: number, avg_questions: number, total_applied: number, total_attended: number } }>(reportsApiUrl, fetcher)
+  const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number, metrics?: { selected: number, hold: number, rejected: number, terminated: number, incomplete: number, avg_score: number, avg_questions: number, total_applied: number, total_finished: number } }>(reportsApiUrl, fetcher)
   const { data: heatmapResponse } = useSWR<any>(heatmapApiUrl, fetcher)
 
   const rawReports = Array.isArray(reportsResponse)
@@ -433,7 +433,7 @@ export default function ReportsPage() {
         avgScore: apiMetrics.avg_score.toFixed(2) || '0.00',
         avgQuestions: apiMetrics.avg_questions.toFixed(1) || '0.0',
         totalApplied: apiMetrics.total_applied || 0,
-        totalAttended: apiMetrics.total_attended || 0,
+        totalFinished: apiMetrics.total_finished || 0,
       };
     }
     
@@ -459,7 +459,7 @@ export default function ReportsPage() {
     const avgScore = total > 0 ? (filteredReports.reduce((acc: number, r: Report) => acc + Number(r?.overall_score || 0), 0) / (filteredReports.length || 1)).toFixed(2) : '0.00'
     const avgQuestions = total > 0 ? (filteredReports.reduce((acc: number, r: Report) => acc + (r?.total_questions_answered || 0), 0) / (filteredReports.length || 1)).toFixed(1) : '0.0'
 
-    return { total, selected: selectedCount, hold: holdCount, rejected: rejectedCount, terminated: terminatedCount, incomplete: incompleteCount, avgScore, avgQuestions }
+    return { total, selected: selectedCount, hold: holdCount, rejected: rejectedCount, terminated: terminatedCount, incomplete: incompleteCount, avgScore, avgQuestions, totalApplied: 0, totalFinished: 0 }
   }, [filteredReports, reportsResponse])
 
   const isAnyFilterActive = useMemo(() => {
@@ -1223,8 +1223,8 @@ export default function ReportsPage() {
                 <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalApplied}</p>
               </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Attended</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalAttended}</p>
+                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Finished</p>
+                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalFinished}</p>
               </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
                 <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Reports</p>

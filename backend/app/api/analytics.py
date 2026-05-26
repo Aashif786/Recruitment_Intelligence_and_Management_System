@@ -233,11 +233,11 @@ def get_interview_reports(
                     pass
 
             m_total_applied = base_app_query.count()
-            m_total_attended = base_app_query.join(Interview, Application.id == Interview.application_id).filter(Interview.status != 'not_started').count()
+            m_total_finished = base_app_query.join(Interview, Application.id == Interview.application_id).filter(Interview.status.in_(['completed', 'terminated', 'expired'])).count()
         except Exception as e:
-            logger.warning(f"[REPORTS] Global applied/attended metrics failed: {e}")
+            logger.warning(f"[REPORTS] Global applied/finished metrics failed: {e}")
             m_total_applied = 0
-            m_total_attended = 0
+            m_total_finished = 0
 
         # ── Compute aggregate metrics across ALL matching records (not just current page) ──
         try:
@@ -533,7 +533,7 @@ def get_interview_reports(
                 "avg_score": m_avg_score,
                 "avg_questions": m_avg_questions,
                 "total_applied": m_total_applied,
-                "total_attended": m_total_attended,
+                "total_finished": m_total_finished,
             }
         }
 
@@ -556,7 +556,7 @@ def get_interview_reports(
                 "avg_score": 0.0,
                 "avg_questions": 0.0,
                 "total_applied": 0,
-                "total_attended": 0,
+                "total_finished": 0,
             }
         }
 
