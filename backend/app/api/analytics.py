@@ -233,7 +233,10 @@ def get_interview_reports(
                     pass
 
             m_total_applied = base_app_query.count()
-            m_total_finished = base_app_query.join(Interview, Application.id == Interview.application_id).filter(Interview.status.in_(['completed', 'terminated', 'expired'])).count()
+            m_total_finished = base_app_query.outerjoin(Interview, Application.id == Interview.application_id).filter(or_(
+                Interview.status.in_(["completed", "terminated", "expired"]),
+                Application.status.in_(REPORTABLE_APPLICATION_STATUSES)
+            )).with_entities(func.count(Application.id.distinct())).scalar() or 0
         except Exception as e:
             logger.warning(f"[REPORTS] Global applied/finished metrics failed: {e}")
             m_total_applied = 0
