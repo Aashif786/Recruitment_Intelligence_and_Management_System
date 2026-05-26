@@ -171,7 +171,7 @@ export default function IngestedEmailsPage() {
             setShowCredentials(false)
         } catch (err: any) {
             console.error('Save settings error:', err)
-            toast.error(err.response?.data?.detail || 'Failed to save settings.', { id: toastId })
+            toast.error(err.response?.data?.detail || 'Settings could not be saved. Please try again.', { id: toastId })
         } finally {
             setIsSavingSettings(false)
         }
@@ -210,7 +210,7 @@ export default function IngestedEmailsPage() {
             setTimeout(() => mutate(), 30000)
         } catch (err: any) {
             console.error('Sync error:', err)
-            toast.error(err.response?.data?.detail || err.message || 'Sync failed. Please verify your IMAP login details.', { id: toastId })
+            toast.error(err.response?.data?.detail || 'Mailbox sync failed. Please verify your email address and App Password, then try again.', { id: toastId })
         } finally {
             setIsSyncing(false)
         }
@@ -237,7 +237,7 @@ export default function IngestedEmailsPage() {
             mutate()
         } catch (err: any) {
             console.error('Assignment error:', err)
-            toast.error(err.response?.data?.detail || 'Failed to assign candidate.', { id: toastId })
+            toast.error(err.response?.data?.detail || 'Could not assign the candidate to the selected job. Please try again.', { id: toastId })
         } finally {
             setIsAssigning(false)
         }

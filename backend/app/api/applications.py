@@ -1869,6 +1869,7 @@ async def update_application_status(
     from app.services.state_machine import (
         CandidateStateMachine, TransitionAction,
         InvalidTransitionError, DuplicateTransitionError,
+        get_user_friendly_fsm_error,
     )
 
     application = db.query(Application).filter(Application.id == application_id).with_for_update().first()
@@ -1906,10 +1907,8 @@ async def update_application_status(
         )
         # Flush to confirm DB state without committing yet
         db.flush()
-    except InvalidTransitionError as e:
-        raise HTTPException(status_code=400, detail=e.message)
-    except DuplicateTransitionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except (InvalidTransitionError, DuplicateTransitionError) as e:
+        raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
 
     # Handle HR notes
     if status_update.hr_notes:

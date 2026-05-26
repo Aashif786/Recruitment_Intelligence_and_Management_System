@@ -53,7 +53,7 @@ export default function RegisterPage() {
 
     const emailRegex = /^(?!\d+@)(?![^@]*\.\.)(?!^\.)[A-Za-z0-9_\-+]+(?:\.[A-Za-z0-9_\-+]+)*@(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/;
     if (!emailRegex.test(email)) {
-      setError("Enter valid email");
+      setError("Please enter a valid work email address (e.g. you@company.com).");
       return;
     }
 
@@ -68,7 +68,7 @@ export default function RegisterPage() {
     }
 
     if (passwordCriteriaCount < 4) {
-      setError('Password does not meet all requirements')
+      setError('Password must be at least 8 characters and include an uppercase letter, a number, and a special character.')
       return
     }
 

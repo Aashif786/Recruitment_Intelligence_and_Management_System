@@ -185,9 +185,21 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
         mail.logout()
         return {"success": True, "count": saved_count}
         
+    except imaplib.IMAP4.error as e:
+        error_str = str(e).lower()
+        logger.error(f"IMAP authentication or protocol error: {e}")
+        if "authentication" in error_str or "login" in error_str or "invalid credentials" in error_str or b"AUTHENTICATIONFAILED" in str(e).encode():
+            return {"success": False, "error": "Mailbox login failed. Please check your IMAP email address and App Password."}
+        return {"success": False, "error": "Mailbox connection failed. Please verify your IMAP settings and that IMAP access is enabled in Gmail."}
+    except ConnectionRefusedError:
+        logger.error("IMAP connection refused")
+        return {"success": False, "error": "Could not reach the Gmail IMAP server. Please check your network connection and try again."}
+    except TimeoutError:
+        logger.error("IMAP connection timed out")
+        return {"success": False, "error": "The mailbox connection timed out. Please check your network and try again."}
     except Exception as e:
         logger.error(f"IMAP Error: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "Mailbox sync failed. Please verify your IMAP credentials and that 'Less secure app access' or App Passwords are correctly configured in Gmail."}
 
 
 import requests

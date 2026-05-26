@@ -98,7 +98,7 @@ async def get_application_by_short_id(db: Session, short_id: str, lock=False):
         query = query.with_for_update()
     return query.first()
 
-from app.services.state_machine import CandidateStateMachine, TransitionAction, CandidateState
+from app.services.state_machine import CandidateStateMachine, TransitionAction, CandidateState, InvalidTransitionError, DuplicateTransitionError, get_user_friendly_fsm_error
 
 def check_hr_permission(user: User, application: Application, db: Session):
     """
@@ -386,17 +386,24 @@ async def request_offer_approval(
             background_tasks.add_task(process_offer_email, application.id, application.offer_pdf_path, gs.get("company_name", "Our Company"))
             return {"status": "success", "message": "Offer letter sent successfully."}
             
+        except (InvalidTransitionError, DuplicateTransitionError) as e:
+            logger.error(f"OFFER_RELEASE_FSM_ERROR: {str(e)}")
+            db.rollback()
+            raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
         except Exception as e:
             import traceback
             logger.error(f"OFFER_RELEASE_CRITICAL_FAILURE: {str(e)}\n{traceback.format_exc()}")
             db.rollback()
-            raise HTTPException(status_code=400, detail=f"Offer letter could not be sent: {str(e)}")
+            raise HTTPException(status_code=500, detail="We encountered a problem sending the offer letter. Please try again or contact support.")
     else:
         # Staging path
         try:
             fsm.transition(application, TransitionAction.SEND_FOR_APPROVAL, user_id=current_user.id)
+        except (InvalidTransitionError, DuplicateTransitionError) as e:
+            raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
         except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            logger.error(f"OFFER_STAGE_ERROR: {str(e)}")
+            raise HTTPException(status_code=500, detail="Unable to stage the offer for approval. Please try again.")
         
         application.status = "pending_approval"
         application.offer_approval_status = "pending"
@@ -433,12 +440,14 @@ async def approve_offer_letter(
     check_hr_permission(current_user, application, db)
     
     # State Machine Hardening
-    from app.services.state_machine import CandidateStateMachine, TransitionAction
     fsm = CandidateStateMachine(db)
     try:
         fsm.transition(application, TransitionAction.SEND_OFFER, user_id=current_user.id)
+    except (InvalidTransitionError, DuplicateTransitionError) as e:
+        raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"OFFER_APPROVE_FSM_ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail="Unable to approve the offer at this time. Please try again.")
 
     settings_records = db.query(GlobalSettings).all()
     gs = {s.key: s.value for s in settings_records}
@@ -476,7 +485,7 @@ async def approve_offer_letter(
     except Exception as e:
         logger.error(f"Puppeteer transition failed: {e}")
         log_audit(db, "OFFER_PDF_FAILED", application.id, current_user.id, {"error": str(e)})
-        raise HTTPException(status_code=500, detail=f"Document generation failure: {str(e)}")
+        raise HTTPException(status_code=500, detail="We encountered a problem generating the offer letter document. Please verify the offer template in Settings and try again.")
 
     # Update Application State
     application.offer_sent = True
@@ -638,7 +647,7 @@ async def capture_photo(
     except Exception as e:
         db.rollback()
         logger.error(f"Cloud photo save failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Photo save failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Photo could not be saved. Please check your connection and try again.")
         
     return {"status": "success", "candidate_photo_path": application.candidate_photo_path}
 
@@ -752,7 +761,7 @@ async def generate_id_card(
     except Exception as e:
         db.rollback()
         logger.error(f"ID Card Generation Error: {e}")
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="ID card could not be generated. Please ensure the candidate photo has been captured and try again.")
 
 @router.get("/applications/{application_id}/download-id-card")
 def download_id_card(
