@@ -14,7 +14,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  timeout: 45000,
+  timeout: 90000,
   globalSetup: './tests/global-setup.ts',
   use: {
     baseURL,

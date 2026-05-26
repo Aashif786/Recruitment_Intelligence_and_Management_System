@@ -31,13 +31,15 @@ test.use({
             '--use-angle=swiftshader',
         ],
     },
-    permissions: ['camera', 'microphone'],
 });
 
 test.describe('Expert Assessment - Interview Flow', () => {
     test.describe.configure({ mode: 'serial' });
 
-    test.beforeEach(async ({ page }) => {
+    test.beforeEach(async ({ page, context, browserName }) => {
+        if (browserName === 'chromium') {
+            await context.grantPermissions(['camera', 'microphone']);
+        }
         await page.addInitScript(HEADLESS_STUBS);
         
         page.on('response', async response => {
