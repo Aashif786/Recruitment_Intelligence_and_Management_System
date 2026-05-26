@@ -62,7 +62,7 @@ function Stop-Backend {
     Write-Host "Backend stopped."
 }
 
-function Check-Environment {
+function Test-Environment {
     Write-Host "Checking environment health..."
     
     if (!(Test-Path ".\venv")) {
@@ -130,7 +130,7 @@ function Repair-Environment {
 }
 
 function Start-Backend {
-    if (!(Check-Environment)) { exit 1 }
+    if (!(Test-Environment)) { exit 1 }
 
     # Kill any orphaned processes — TIME_WAIT zombies will be bypassed by
     # SO_REUSEADDR in run_server.py, so we don't abort if the port "looks" busy.
@@ -175,6 +175,6 @@ switch ($action) {
     "stop"    { Stop-Backend }
     "restart" { Restart-Backend }
     "repair"  { Repair-Environment }
-    "check"   { Check-Environment }
+    "check"   { Test-Environment }
     default   { Write-Host "Usage: .\start.ps1 [start|stop|restart|repair|check]" }
 }
