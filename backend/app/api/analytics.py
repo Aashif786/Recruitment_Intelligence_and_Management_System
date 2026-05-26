@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload, contains_eager
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, or_
 from typing import List, Dict, Any, Optional
 from app.infrastructure.database import get_db
 from app.domain.models import User, Job, Application, Interview, InterviewReport, InterviewQuestion, InterviewAnswer
@@ -21,6 +21,154 @@ def _hr_can_see_application(current_user: User):
     if current_user.role.lower() == "super_admin":
         return None
     return or_(Application.hr_id == current_user.id, Job.hr_id == current_user.id)
+
+
+REPORTABLE_APPLICATION_STATUSES = [
+    "interview_completed", "review_later", "hired", "rejected",
+    "offer_sent", "pending_approval", "accepted", "onboarded",
+    "physical_interview",
+]
+
+REPORTS_EXPORT_MAX_ROWS = 10_000
+
+
+def _build_reports_query(
+    db: Session,
+    current_user: User,
+    *,
+    job_id: Optional[int] = None,
+    status: Optional[str] = None,
+    experience: Optional[str] = None,
+    skill: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    score_min: Optional[float] = None,
+    score_max: Optional[float] = None,
+    search: Optional[str] = None,
+):
+    """Shared filtered query for reports list, heatmap, and CSV export."""
+    from app.domain.models import ResumeExtraction
+
+    query = (
+        db.query(Application)
+        .outerjoin(Interview, Application.id == Interview.application_id)
+        .outerjoin(InterviewReport, Interview.id == InterviewReport.interview_id)
+        .outerjoin(Job, Application.job_id == Job.id)
+        .filter(
+            or_(
+                Interview.status.in_(["completed", "terminated", "expired"]),
+                Application.status.in_(REPORTABLE_APPLICATION_STATUSES),
+            )
+        )
+    )
+
+    hr_scope = _hr_can_see_application(current_user)
+    if hr_scope is not None:
+        query = query.filter(hr_scope)
+
+    if job_id and str(job_id).lower() != "all":
+        query = query.filter(Application.job_id == job_id)
+
+    if status and str(status).lower() != "all":
+        status_lower = status.lower()
+        eff_score = func.coalesce(InterviewReport.overall_score, Interview.overall_score, 0)
+
+        if status_lower == "select":
+            query = query.filter(eff_score > 6)
+        elif status_lower == "consider":
+            query = query.filter(and_(eff_score > 4, eff_score <= 6))
+        elif status_lower == "reject":
+            query = query.filter(eff_score <= 4)
+        elif status_lower == "not completed":
+            query = query.filter(or_(Interview.id.is_(None), Interview.status != "completed"))
+        elif status_lower == "terminated":
+            query = query.filter(
+                or_(
+                    Interview.status == "terminated",
+                    and_(
+                        InterviewReport.termination_reason.isnot(None),
+                        InterviewReport.termination_reason != "",
+                    ),
+                )
+            )
+        elif status_lower != "default":
+            query = query.filter(func.lower(Application.status) == status_lower)
+
+    if experience and experience != "All":
+        exp_val = experience
+        if exp_val.lower() == "mid":
+            query = query.filter(
+                Application.resume_extraction.has(
+                    or_(
+                        ResumeExtraction.experience_level.ilike("mid"),
+                        ResumeExtraction.experience_level.ilike("mid-level"),
+                    )
+                )
+            )
+        else:
+            query = query.filter(
+                Application.resume_extraction.has(
+                    ResumeExtraction.experience_level.ilike(f"%{exp_val}%")
+                )
+            )
+
+    if skill and skill != "All":
+        skill_space = skill.replace("_", " ")
+        query = query.filter(
+            or_(
+                Application.resume_extraction.has(
+                    or_(
+                        ResumeExtraction.extracted_skills.ilike(f"%{skill}%"),
+                        ResumeExtraction.extracted_skills.ilike(f"%{skill_space}%"),
+                    )
+                ),
+                Interview.locked_skill.ilike(f"%{skill}%"),
+                Interview.locked_skill.ilike(f"%{skill_space}%"),
+            )
+        )
+
+    if search:
+        term = f"%{search}%"
+        query = query.filter(
+            or_(
+                Application.candidate_name.ilike(term),
+                Job.title.ilike(term),
+            )
+        )
+
+    if from_date:
+        try:
+            sd = datetime.strptime(from_date, "%Y-%m-%d").replace(hour=0, minute=0, second=0)
+            query = query.filter(
+                or_(
+                    Interview.created_at >= sd,
+                    Application.applied_at >= sd,
+                    InterviewReport.created_at >= sd,
+                )
+            )
+        except ValueError:
+            pass
+
+    if to_date:
+        try:
+            ed = datetime.strptime(to_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            query = query.filter(
+                or_(
+                    Interview.created_at <= ed,
+                    Application.applied_at <= ed,
+                    InterviewReport.created_at <= ed,
+                )
+            )
+        except ValueError:
+            pass
+
+    effective_score_filter = func.coalesce(InterviewReport.overall_score, Interview.overall_score)
+    if score_min is not None:
+        query = query.filter(effective_score_filter >= score_min)
+    if score_max is not None:
+        query = query.filter(effective_score_filter <= score_max)
+
+    return query
 
 
 router = APIRouter()
@@ -85,6 +233,156 @@ def get_dashboard_analytics(
 
 
 
+@router.get("/reports/heatmap")
+@limiter.limit("60/minute")
+def get_reports_heatmap(
+    request: Request,
+    job_id: Optional[int] = None,
+    status: Optional[str] = None,
+    experience: Optional[str] = None,
+    skill: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    score_min: Optional[float] = None,
+    score_max: Optional[float] = None,
+    search: Optional[str] = None,
+    current_user: User = Depends(get_current_hr),
+    db: Session = Depends(get_db),
+):
+    """Lightweight date histogram for the reports calendar (no Q&A payloads)."""
+    try:
+        query = _build_reports_query(
+            db,
+            current_user,
+            job_id=job_id,
+            status=status,
+            experience=experience,
+            skill=skill,
+            from_date=from_date,
+            to_date=to_date,
+            score_min=score_min,
+            score_max=score_max,
+            search=search,
+        )
+        report_date = func.coalesce(
+            InterviewReport.created_at,
+            Interview.created_at,
+            Application.applied_at,
+        )
+        rows = (
+            query.with_entities(
+                func.date(report_date).label("day"),
+                func.count(func.distinct(Application.id)).label("cnt"),
+            )
+            .group_by(func.date(report_date))
+            .all()
+        )
+        counts = {
+            (row.day.isoformat() if hasattr(row.day, "isoformat") else str(row.day)): int(row.cnt)
+            for row in rows
+            if row.day is not None
+        }
+        return {"counts": counts, "total_days": len(counts)}
+    except Exception as e:
+        logger.error(f"[REPORTS][HEATMAP] {e}", exc_info=True)
+        return {"counts": {}, "total_days": 0, "error": "Failed to load heatmap data."}
+
+
+@router.get("/reports/export")
+@limiter.limit("10/minute")
+def export_interview_reports_csv(
+    request: Request,
+    job_id: Optional[int] = None,
+    status: Optional[str] = None,
+    experience: Optional[str] = None,
+    skill: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    score_min: Optional[float] = None,
+    score_max: Optional[float] = None,
+    search: Optional[str] = None,
+    current_user: User = Depends(get_current_hr),
+    db: Session = Depends(get_db),
+):
+    """Export all rows matching current filters as CSV (capped for safety)."""
+    from fastapi.responses import StreamingResponse
+    from app.domain.models import ResumeExtraction
+    import csv
+    import io
+
+    try:
+        query = _build_reports_query(
+            db,
+            current_user,
+            job_id=job_id,
+            status=status,
+            experience=experience,
+            skill=skill,
+            from_date=from_date,
+            to_date=to_date,
+            score_min=score_min,
+            score_max=score_max,
+            search=search,
+        )
+        report_date = func.coalesce(
+            InterviewReport.created_at,
+            Interview.created_at,
+            Application.applied_at,
+        )
+        eff_score = func.coalesce(InterviewReport.overall_score, Interview.overall_score, 0)
+
+        rows = (
+            query.outerjoin(ResumeExtraction, Application.id == ResumeExtraction.application_id)
+            .with_entities(
+                Application.candidate_name,
+                report_date,
+                Job.title,
+                eff_score,
+                Application.status,
+                ResumeExtraction.experience_level,
+                ResumeExtraction.extracted_skills,
+            )
+            .order_by(report_date.desc())
+            .limit(REPORTS_EXPORT_MAX_ROWS)
+            .all()
+        )
+
+        output = io.StringIO()
+        output.write("\ufeff")
+        writer = csv.writer(output)
+        writer.writerow(
+            ["Candidate", "Date", "Role", "Score", "Status", "Experience", "Skills"]
+        )
+
+        for row in rows:
+            name = row.candidate_name or "Unknown"
+            dt = row[1].strftime("%b %d, %Y") if row[1] else ""
+            role = row.title or "N/A"
+            score = f"{float(row[3] or 0):.2f}"
+            st = (row.status or "").replace("_", " ").title()
+            exp = row.experience_level or "N/A"
+            skills_raw = row.extracted_skills or ""
+            try:
+                parsed = json.loads(skills_raw) if skills_raw else []
+                skills = "; ".join(parsed) if isinstance(parsed, list) else str(skills_raw)
+            except Exception:
+                skills = str(skills_raw) if skills_raw else "N/A"
+            writer.writerow([name, dt, role, score, st, exp, skills])
+
+        filename = f"interview_reports_{datetime.now().strftime('%Y%m%d')}.csv"
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except Exception as e:
+        logger.error(f"[REPORTS][EXPORT] {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to export reports.",
+        )
+
+
 @router.get("/reports")
 @limiter.limit("60/minute")
 def get_interview_reports(
@@ -109,116 +407,20 @@ def get_interview_reports(
     """
     try:
         logger.info(f"[REPORTS] Fetching reports: job_id={job_id}, status={status}, exp={experience}, skill={skill}, from={from_date}, to={to_date}, search={search}")
-        from sqlalchemy import or_
-        # Source of truth is Application, joined with Interview
-        query = db.query(Application)\
-            .outerjoin(Interview, Application.id == Interview.application_id)\
-            .outerjoin(InterviewReport, Interview.id == InterviewReport.interview_id)\
-            .outerjoin(Job, Application.job_id == Job.id)
-        
-        # Filter for "Work that should be reported"
-        REPORTABLE_APPLICATION_STATUSES = [
-            "interview_completed", "review_later", "hired", "rejected", 
-            "offer_sent", "pending_approval", "accepted", "onboarded",
-            "physical_interview"
-        ]
-        
-        query = query.filter(or_(
-            Interview.status.in_(["completed", "terminated", "expired"]),
-            Application.status.in_(REPORTABLE_APPLICATION_STATUSES)
-        ))
-
-        # Apply visibility isolation (aligned with AnalyticsService dashboard)
+        query = _build_reports_query(
+            db,
+            current_user,
+            job_id=job_id,
+            status=status,
+            experience=experience,
+            skill=skill,
+            from_date=from_date,
+            to_date=to_date,
+            score_min=score_min,
+            score_max=score_max,
+            search=search,
+        )
         hr_scope = _hr_can_see_application(current_user)
-        if hr_scope is not None:
-            query = query.filter(hr_scope)
-        
-        # Apply Filters
-        if job_id and str(job_id).lower() != "all":
-            query = query.filter(Application.job_id == job_id)
-        
-        if status and str(status).lower() != "all":
-            status_lower = status.lower()
-            eff_score = func.coalesce(InterviewReport.overall_score, Interview.overall_score, 0)
-            
-            if status_lower == "select":
-                query = query.filter(eff_score > 6)
-            elif status_lower == "consider":
-                query = query.filter(and_(eff_score > 4, eff_score <= 6))
-            elif status_lower == "reject":
-                query = query.filter(eff_score <= 4)
-            elif status_lower == "not completed":
-                query = query.filter(or_(Interview.id == None, Interview.status != "completed"))
-            elif status_lower == "terminated":
-                query = query.filter(or_(
-                    Interview.status == "terminated",
-                    and_(
-                        InterviewReport.termination_reason.isnot(None),
-                        InterviewReport.termination_reason != "",
-                    ),
-                ))
-            elif status_lower == "default":
-                pass
-            else:
-                # Direct application status match (case-insensitive)
-                query = query.filter(func.lower(Application.status) == status_lower)
-
-        if experience and experience != "All":
-            from app.domain.models import ResumeExtraction
-            exp_val = experience
-            if exp_val.lower() == "mid":
-                query = query.filter(Application.resume_extraction.has(or_(
-                    ResumeExtraction.experience_level.ilike("mid"),
-                    ResumeExtraction.experience_level.ilike("mid-level")
-                )))
-            else:
-                query = query.filter(Application.resume_extraction.has(ResumeExtraction.experience_level.ilike(f"%{exp_val}%")))
-
-        if skill and skill != "All":
-            from app.domain.models import ResumeExtraction
-            skill_space = skill.replace('_', ' ')
-            query = query.filter(or_(
-                Application.resume_extraction.has(or_(
-                    ResumeExtraction.extracted_skills.ilike(f"%{skill}%"),
-                    ResumeExtraction.extracted_skills.ilike(f"%{skill_space}%")
-                )),
-                Interview.locked_skill.ilike(f"%{skill}%"),
-                Interview.locked_skill.ilike(f"%{skill_space}%")
-            ))
-
-        if search:
-            term = f"%{search}%"
-            query = query.filter(or_(
-                Application.candidate_name.ilike(term),
-                Job.title.ilike(term)
-            ))
-
-        if from_date:
-            try:
-                sd = datetime.strptime(from_date, "%Y-%m-%d").replace(hour=0, minute=0, second=0)
-                query = query.filter(or_(
-                    Interview.created_at >= sd,
-                    Application.applied_at >= sd,
-                    InterviewReport.created_at >= sd
-                ))
-            except ValueError:
-                pass
-        if to_date:
-            try:
-                ed = datetime.strptime(to_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
-                query = query.filter(or_(
-                    Interview.created_at <= ed,
-                    Application.applied_at <= ed,
-                    InterviewReport.created_at <= ed
-                ))
-            except ValueError:
-                pass
-
-        effective_score_filter = func.coalesce(InterviewReport.overall_score, Interview.overall_score)
-        if score_min is not None:
-            query = query.filter(effective_score_filter >= score_min)
-        if score_max is not None:
-            query = query.filter(effective_score_filter <= score_max)
 
         total = query.with_entities(func.count(Application.id.distinct())).scalar() or 0
         logger.info(f"[REPORTS] Query total: {total}")

@@ -7,7 +7,9 @@
     "dev": "npx --yes kill-port 3000 && next dev -p 3000",
     "lint": "eslint .",
     "start": "next start",
-    "postinstall": "node patch-lightswind.js"
+    "postinstall": "node patch-lightswind.js",
+    "test:e2e:reports": "playwright test tests/reports.spec.ts",
+    "test:e2e:reports:install": "playwright install chromium"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -84,6 +86,7 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^22",

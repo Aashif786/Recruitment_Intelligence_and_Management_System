@@ -161,6 +161,21 @@ Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` (see `frontend/.env.example`).
 
 **App URL:** http://localhost:3000
 
+#### HR Reports (optional checks)
+
+- **Backend smoke:** from `backend/`, with `BACKEND_START_MODE=script` set, run `python scripts/verify_reports_module.py`.
+- **Playwright (reports UI):** requires a running backend, frontend, and HR credentials:
+
+```bash
+cd frontend
+npx playwright install chromium
+set E2E_HR_EMAIL=hr@example.com
+set E2E_HR_PASSWORD=your-password
+npm run test:e2e:reports
+```
+
+Reports use a lightweight `/api/analytics/reports/heatmap` endpoint for the calendar and **Export all filtered** downloads the full filtered CSV (not just the current page).
+
 ### 4 — First admin user
 
 Set `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` in `backend/.env` before the first backend start to bootstrap a Super Admin. Do **not** use default passwords in production.

@@ -35,7 +35,14 @@ def main() -> int:
         return 1
 
     routes = [getattr(r, "path", "") for r in router.routes]
-    required = {"/reports", "/dashboard", "/interviews", "/config/skills"}
+    required = {
+        "/reports",
+        "/reports/heatmap",
+        "/reports/export",
+        "/dashboard",
+        "/interviews",
+        "/config/skills",
+    }
     missing = required - set(routes)
     if missing:
         errors.append(f"Missing routes: {missing}")

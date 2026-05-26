@@ -42,7 +42,9 @@ import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import useSWR, { mutate } from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
+import { APIClient } from '@/app/dashboard/lib/api-client'
 import { API_BASE_URL } from '@/lib/config'
+import { toast } from 'sonner'
 import {
   Radar,
   RadarChart,
@@ -222,12 +224,8 @@ export default function ReportsPage() {
 
 
 
-  // Construct API URL with server-side filters
-  const reportsApiUrl = useMemo(() => {
+  const reportsFilterQueryString = useMemo(() => {
     const q = new URLSearchParams();
-    q.set("limit", String(reportsPerPage));
-    q.set("skip", String((reportsPage - 1) * reportsPerPage));
-    
     if (appliedFilters.status !== "Default") q.set("status", appliedFilters.status);
     if (appliedFilters.job !== "All") q.set("job_id", appliedFilters.job);
     if (appliedFilters.skill !== "All") q.set("skill", appliedFilters.skill);
@@ -235,46 +233,36 @@ export default function ReportsPage() {
     if (appliedFilters.search) q.set("search", appliedFilters.search);
     if (appliedFilters.score[0] > 0) q.set("score_min", String(appliedFilters.score[0]));
     if (appliedFilters.score[1] < 10) q.set("score_max", String(appliedFilters.score[1]));
-    
-    const { from, to, date } = appliedFilters
-    const hasValidRange = from && to ? !from.isAfter(to, 'day') : true
-    
-    if (from && hasValidRange) q.set("from_date", from.format('YYYY-MM-DD'));
-    if (to && hasValidRange) q.set("to_date", to.format('YYYY-MM-DD'));
 
+    const { from, to, date } = appliedFilters;
+    const hasValidRange = from && to ? !from.isAfter(to, "day") : true;
+    if (from && hasValidRange) q.set("from_date", from.format("YYYY-MM-DD"));
+    if (to && hasValidRange) q.set("to_date", to.format("YYYY-MM-DD"));
     if (date && !from && !to) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const d = `${year}-${month}-${day}`;
+      const d = dayjs(date).format("YYYY-MM-DD");
       q.set("from_date", d);
       q.set("to_date", d);
     }
+    return q.toString();
+  }, [appliedFilters]);
 
+  const reportsApiUrl = useMemo(() => {
+    const q = new URLSearchParams(reportsFilterQueryString);
+    q.set("limit", String(reportsPerPage));
+    q.set("skip", String((reportsPage - 1) * reportsPerPage));
     return `/api/analytics/reports?${q.toString()}`;
-  }, [reportsPage, reportsPerPage, appliedFilters]);
+  }, [reportsPage, reportsPerPage, reportsFilterQueryString]);
 
-
-
-  // Dedicated Heatmap Data (Unfiltered by date/score to keep heatmap consistent)
   const heatmapApiUrl = useMemo(() => {
-    const q = new URLSearchParams();
-    q.set("limit", "1000");
-    if (appliedFilters.job && appliedFilters.job !== "All") {
-      q.set("job_id", String(appliedFilters.job));
-    }
-    return `/api/analytics/reports?${q.toString()}`;
-  }, [appliedFilters.job]);
+    return `/api/analytics/reports/heatmap?${reportsFilterQueryString}`;
+  }, [reportsFilterQueryString]);
 
   const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number, error?: string, metrics?: { selected: number, hold: number, rejected: number, terminated: number, incomplete: number, avg_score: number, avg_questions: number, total_applied: number, total_finished: number } }>(reportsApiUrl, fetcher)
-  const { data: heatmapResponse } = useSWR<any>(heatmapApiUrl, fetcher)
+  const { data: heatmapResponse } = useSWR<{ counts?: Record<string, number>; error?: string }>(heatmapApiUrl, fetcher)
 
   const rawReports = Array.isArray(reportsResponse)
     ? reportsResponse
     : (reportsResponse?.reports || []);
-  const heatmapReports = Array.isArray(heatmapResponse)
-    ? heatmapResponse
-    : (heatmapResponse?.reports || []);
   const totalCount = Array.isArray(reportsResponse)
     ? reportsResponse.length
     : (reportsResponse?.total ?? rawReports.length ?? 0);
@@ -375,18 +363,21 @@ export default function ReportsPage() {
   const { data: allJobsData } = useSWR<any[]>('/api/jobs?limit=500', fetcher);
   const uniqueExperiences = useMemo(() => ["intern", "junior", "mid", "senior", "lead"], [])
 
-  // Derived Interview Counts for Calendar Heatmap
+  const [isExportingCsv, setIsExportingCsv] = useState(false)
+
+  // Derived interview counts for calendar heatmap (from lightweight API)
   const interviewCounts = useMemo(() => {
     const counts: Record<string, number> = {}
-    heatmapReports.forEach((r: Report) => {
-      const date = new Date(r.timestamp)
+    const apiCounts = heatmapResponse?.counts || {}
+    Object.entries(apiCounts).forEach(([isoDay, count]) => {
+      const date = new Date(`${isoDay}T12:00:00`)
       if (!isNaN(date.getTime())) {
         const dateStr = date.toDateString()
-        counts[dateStr] = (counts[dateStr] || 0) + 1
+        counts[dateStr] = (counts[dateStr] || 0) + count
       }
     })
     return counts
-  }, [heatmapReports])
+  }, [heatmapResponse])
 
   const ReportDensityDay = (props: PickerDayProps) => {
     const dayKey = props.day.toDate().toDateString()
@@ -572,39 +563,18 @@ export default function ReportsPage() {
     return text
   }
 
-  const downloadCSV = () => {
-    // Reorganized headers to put important metrics first, long skills list last
-    const headers = ['Candidate,Date,Role,Score,Status,Experience,Skills']
-    const rows = filteredReports.map((r: Report) => {
-      // Clean up skills and handle commas/quotes for CSV safety
-      let cleanSkills = 'N/A';
-      try {
-        const skillsData = r.candidate_profile.primary_skill || r.candidate_profile.skills;
-        if (skillsData) {
-          const skillsArray = typeof skillsData === 'string' ? JSON.parse(skillsData) : skillsData;
-          cleanSkills = Array.isArray(skillsArray) ? skillsArray.join('; ') : String(skillsData);
-        }
-      } catch (e) {
-        cleanSkills = String(r.candidate_profile.primary_skill || 'N/A');
-      }
-
-      // Format status for readability
-      const status = r.status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-      return [
-        `"${r.candidate_profile.candidate_name || r.filename.replace('.json', '')}"`,
-        `"${r.display_date_short}"`,
-        `"${r.candidate_profile.applied_role || 'N/A'}"`,
-        `"${r.overall_score.toFixed(2)}"`,
-        `"${status}"`,
-        `"${r.candidate_profile.experience_level || 'N/A'}"`,
-        `"${cleanSkills.replace(/"/g, '""')}"` // Skills at the end
-      ].join(',')
-    })
-
-    // Add UTF-8 BOM for better Excel compatibility
-    const csvContent = '\uFEFF' + [headers, ...rows].join('\n')
-    downloadFile(csvContent, `interview_reports_${new Date().toISOString().split('T')[0]}.csv`, 'csv')
+  const downloadCSV = async () => {
+    setIsExportingCsv(true)
+    try {
+      const filename = `interview_reports_${new Date().toISOString().split('T')[0]}.csv`
+      await APIClient.downloadFile(`/api/analytics/reports/export?${reportsFilterQueryString}`, filename)
+      toast.success(`Exported up to ${totalCount} matching report(s)`)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Export failed'
+      toast.error(msg)
+    } finally {
+      setIsExportingCsv(false)
+    }
   }
 
   const downloadFile = (content: string, filename: string, type: 'json' | 'txt' | 'csv') => {
@@ -1373,12 +1343,13 @@ export default function ReportsPage() {
               
               <div className="flex items-center gap-3">
                 {activeTab === 'table' && (
-                  <Button 
-                    onClick={downloadCSV} 
+                  <Button
+                    onClick={() => void downloadCSV()}
+                    disabled={isExportingCsv || totalCount === 0}
                     variant="outline" 
                     className="gap-2 bg-background hover:bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-300 shadow-sm h-11 rounded-full px-6 font-bold animate-in fade-in slide-in-from-right-4 duration-300"
                   >
-                    <FileText className="h-4 w-4" /> Export to Excel
+                    <FileText className="h-4 w-4" /> {isExportingCsv ? 'Exporting…' : 'Export all filtered'}
                   </Button>
                 )}
 
@@ -1410,9 +1381,9 @@ export default function ReportsPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4">
                   {filteredReports.length > 0 ? (
-                    filteredReports.map((report: Report, idx: number) => (
+                    filteredReports.map((report: Report) => (
                       <ReportCard
-                        key={idx}
+                        key={report.id}
                         report={report}
                         onClick={() => setViewingReport(report)}
                       />
@@ -1450,8 +1421,12 @@ export default function ReportsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredReports.map((report: Report, idx: number) => (
-                        <TableRow key={idx}>
+                      {filteredReports.map((report: Report) => (
+                        <TableRow
+                          key={report.id}
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => setViewingReport(report)}
+                        >
                           <TableCell className="font-semibold text-slate-700 dark:text-slate-200">
                             {report.candidate_profile.candidate_name || report.filename.replace('.json', '')}
                           </TableCell>
