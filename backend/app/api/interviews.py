@@ -66,6 +66,8 @@ from app.services.interview_generation_service import STAGE_APTITUDE, STAGE_FIRS
 from app.services.interview_evaluation_service import evaluate_answer_task
 from app.services.interview_reporting_service import _finalize_interview_and_report, _finalize_interview_and_report_internal
 
+@router.post("/access")
+@limiter.limit("15/minute")
 async def access_interview(
     request: Request,
     data: InterviewAccess,
