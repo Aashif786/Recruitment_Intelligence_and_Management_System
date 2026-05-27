@@ -206,7 +206,7 @@ app = FastAPI(
     title="HR Recruitment System API",
     description="AI-powered automated recruitment platform",
     version="1.0.0",
-    redirect_slashes=True,
+    redirect_slashes=False,
     lifespan=lifespan,
     docs_url="/docs" if settings.env != "production" else None,
     redoc_url="/redoc" if settings.env != "production" else None,
