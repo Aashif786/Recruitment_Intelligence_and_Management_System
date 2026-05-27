@@ -323,7 +323,6 @@ async def run_batch_resume_processing(db: Session):
                 resume_file_path=resume_file_path,
                 resume_hash=resume_hash,
                 status='applied',
-                source='email_ingestion',
                 hr_notes="Ingested automatically from Email Recruiter Channel.",
                 applied_at=datetime.utcnow(),
                 resume_status='pending'
