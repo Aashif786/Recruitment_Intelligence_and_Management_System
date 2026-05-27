@@ -8,8 +8,10 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
-      - frontend_blue
-      - backend_blue
+      frontend_blue:
+        condition: service_healthy
+      backend_blue:
+        condition: service_healthy
     restart: always
 
   # --- BLUE ENVIRONMENT ---
