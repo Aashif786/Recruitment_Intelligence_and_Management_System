@@ -2,11 +2,10 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"
-      - "443:443"
+      - "9999:80"   # Host nginx proxies caldimproducts.com/calrims → localhost:9999
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # SSL is terminated by the host nginx — no certs needed here
     depends_on:
       frontend_blue:
         condition: service_healthy
