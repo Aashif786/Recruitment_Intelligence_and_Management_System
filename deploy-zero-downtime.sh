@@ -9,24 +9,24 @@ git fetch --all
 git reset --hard origin/main
 
 # 1. Determine active environment
-ACTIVE_ENV=$(docker ps --format "{{.Names}}" | grep -E "frontend_(blue|green)" | head -n 1 | awk -F'_' '{print $2}')
+# Use grep -oP to extract exactly 'blue' or 'green' from the container name
+# e.g., "rims-frontend_blue-1" → "blue"
+ACTIVE_ENV=$(docker ps --format "{{.Names}}" | grep -E "frontend_(blue|green)" | head -n 1 | grep -oP '(?<=frontend_)(blue|green)' || true)
+
 if [ -z "$ACTIVE_ENV" ]; then
     ACTIVE_ENV="green" # Default to green so we deploy blue first
 fi
 
 if [ "$ACTIVE_ENV" == "blue" ]; then
     DEPLOY_ENV="green"
-    DEPLOY_FRONTEND_PORT="3002"
-    DEPLOY_BACKEND_PORT="8002"
 else
     DEPLOY_ENV="blue"
-    DEPLOY_FRONTEND_PORT="3001"
-    DEPLOY_BACKEND_PORT="8001"
 fi
 
 echo "Active environment is: $ACTIVE_ENV. Deploying to: $DEPLOY_ENV"
 
 # 2. Build and boot the new environment safely in the background
+echo "🏗️ Building and starting $DEPLOY_ENV environment..."
 docker compose -f docker-compose.prod.yml up -d --build frontend_$DEPLOY_ENV backend_$DEPLOY_ENV
 
 # 3. Wait for Healthchecks (Wait up to 120 seconds)
@@ -43,6 +43,8 @@ if [ -z "$CONTAINER_NAME" ]; then
     # Fallback to a guess if search fails
     CONTAINER_NAME="rims-backend_$DEPLOY_ENV-1"
 fi
+
+echo "Watching container: $CONTAINER_NAME"
 
 while [ "$BACKEND_HEALTH" != "healthy" ] && [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     sleep 5
@@ -61,9 +63,7 @@ fi
 
 echo "✅ New environment $DEPLOY_ENV is healthy."
 
-echo "✅ New environment $DEPLOY_ENV is healthy."
-
-# 4. Traffic Switching (Step 4 & 7)
+# 4. Traffic Switching
 echo "🔀 Switching NGINX traffic to $DEPLOY_ENV..."
 # Use a temporary file and 'cat' to preserve the inode, ensuring Docker bind-mounts update correctly
 sed "s/frontend_$ACTIVE_ENV:3000/frontend_$DEPLOY_ENV:3000/g" nginx.conf > nginx.conf.tmp
@@ -71,11 +71,32 @@ sed -i "s/backend_$ACTIVE_ENV:10000/backend_$DEPLOY_ENV:10000/g" nginx.conf.tmp
 cat nginx.conf.tmp > nginx.conf
 rm nginx.conf.tmp
 
-docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
+echo "📋 nginx.conf now routes to: $DEPLOY_ENV"
+grep -E "server (frontend|backend)_" nginx.conf || true
 
+# Wait for nginx container to be in a running (not restarting) state before reloading
+echo "⏳ Ensuring nginx container is running before reload..."
+NGINX_RETRIES=12
+NGINX_COUNT=0
+NGINX_STATUS="restarting"
+while [ "$NGINX_STATUS" != "running" ] && [ $NGINX_COUNT -lt $NGINX_RETRIES ]; do
+    sleep 5
+    NGINX_STATUS=$(docker inspect --format='{{.State.Status}}' rims-nginx-1 2>/dev/null || echo "unknown")
+    echo "Nginx status: $NGINX_STATUS ($((NGINX_COUNT * 5))s / 60s)"
+    NGINX_COUNT=$((NGINX_COUNT + 1))
+done
+
+if [ "$NGINX_STATUS" != "running" ]; then
+    echo "⚠️ Nginx is not running (status: $NGINX_STATUS). Attempting to start it..."
+    docker compose -f docker-compose.prod.yml up -d nginx
+    sleep 10
+fi
+
+# Reload nginx to pick up the new upstream
+docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
 echo "✅ Traffic successfully routed to $DEPLOY_ENV."
 
-# 5. Stabilize (Step 9: Observability Window)
+# 5. Stabilize (Observability Window)
 echo "🛑 Keeping old environment '$ACTIVE_ENV' alive for 15 minutes for instant rollback coverage..."
 # In a real environment, a separate cron task would spin down the old container after confirming 0 error spikes.
 
