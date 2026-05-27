@@ -1282,7 +1282,7 @@ async def ingest_email_resumes(req: EmailIngestRequest, background_tasks: Backgr
     
     # Phase 2: Background Processing (Asynchronous)
     # We return the count of new resumes found immediately, and process AI mapping in background.
-    background_tasks.add_task(run_batch_resume_processing, db)
+    background_tasks.add_task(run_batch_resume_processing)
     
     return {
         "message": "Ingestion complete. Processing applications in background.", 
