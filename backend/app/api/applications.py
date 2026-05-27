@@ -1282,7 +1282,14 @@ async def ingest_email_resumes(req: EmailIngestRequest, background_tasks: Backgr
     
     # Phase 2: Background Processing (Asynchronous)
     # We return the count of new resumes found immediately, and process AI mapping in background.
-    background_tasks.add_task(run_batch_resume_processing)
+    async def run_batch_in_background():
+        bg_db = SessionLocal()
+        try:
+            await run_batch_resume_processing(bg_db)
+        finally:
+            bg_db.close()
+            
+    background_tasks.add_task(run_batch_in_background)
     
     return {
         "message": "Ingestion complete. Processing applications in background.", 
@@ -1400,6 +1407,7 @@ class AssignResumeRequest(BaseModel):
 async def assign_ingested_email(
     resume_id: int,
     req: AssignResumeRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
@@ -1500,15 +1508,13 @@ async def assign_ingested_email(
     
     # Trigger background AI analysis
     from app.api.applications import process_application_background
-    import asyncio
-    asyncio.create_task(
-        process_application_background(
-            new_application.id,
-            job.id,
-            new_application.resume_file_path,
-            raw_email,
-            candidate_name
-        )
+    background_tasks.add_task(
+        process_application_background,
+        new_application.id,
+        job.id,
+        new_application.resume_file_path,
+        raw_email,
+        candidate_name
     )
     
     return {

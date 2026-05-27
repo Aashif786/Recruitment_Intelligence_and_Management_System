@@ -332,15 +332,12 @@ async def run_batch_resume_processing(db: Session):
             
             # 3. Trigger Analysis
             from app.api.applications import process_application_background
-            import asyncio
-            asyncio.create_task(
-                process_application_background(
-                    new_app.id,
-                    target_job.id,
-                    new_app.resume_file_path,
-                    candidate_email,
-                    candidate_name
-                )
+            await process_application_background(
+                new_app.id,
+                target_job.id,
+                new_app.resume_file_path,
+                candidate_email,
+                candidate_name
             )
             
             resume.processed = True
