@@ -1377,7 +1377,7 @@ def get_ingested_emails(
             "subject": item.subject,
             "file_name": item.file_name,
             "file_url": item.file_url,
-            "received_at": item.received_at,
+            "received_at": item.received_at.replace(tzinfo=timezone.utc) if item.received_at else None,
             "processed": item.processed,
             "application_id": app.id if app else None,
             "job_title": app.job.title if app and app.job else None,
