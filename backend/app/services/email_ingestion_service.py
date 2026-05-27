@@ -282,14 +282,33 @@ async def run_batch_resume_processing(db: Session):
             match_email = re.search(r'<([^>]+)>', sender_raw)
             candidate_email = match_email.group(1).lower().strip() if match_email else sender_raw.lower().strip()
             
-            # Final Duplicate Check: Ensure they haven't already applied to THIS job
-            existing_app = db.query(Application).filter(
+            # Storage path and download file to calculate hash
+            resume_file_path = None
+            if resume.file_url and "/MAIL_ATTACHMENTS/" in resume.file_url:
+                bucket_path = resume.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
+                resume_file_path = f"MAIL_ATTACHMENTS/{bucket_path}"
+                
+            content = b""
+            if resume.file_url:
+                import requests
+                try:
+                    response = requests.get(resume.file_url)
+                    if response.status_code == 200:
+                        content = response.content
+                except Exception as e:
+                    logger.error(f"Failed to download resume file from URL: {e}")
+                    
+            import hashlib
+            resume_hash = hashlib.sha256(content).hexdigest() if content else "dummy_hash_" + str(resume.id)
+
+            # Final Duplicate Check: Ensure they haven't already applied to THIS job with this resume content
+            existing_res = db.query(Application).filter(
                 Application.job_id == target_job.id,
-                Application.candidate_email == candidate_email
+                Application.resume_hash == resume_hash
             ).first()
             
-            if existing_app:
-                logger.info(f"Candidate {candidate_email} already has an application for job {target_job.id}. Skipping.")
+            if existing_res:
+                logger.info(f"Resume with hash {resume_hash} already has an application. Skipping duplicate.")
                 resume.processed = True
                 db.commit()
                 continue
@@ -297,20 +316,33 @@ async def run_batch_resume_processing(db: Session):
             # Create the application record
             new_app = Application(
                 job_id=target_job.id,
+                hr_id=target_job.hr_id,
                 candidate_name=candidate_name,
                 candidate_email=candidate_email,
-                resume_url=resume.file_url,
-                status='pending',
+                resume_file_name=resume.file_name,
+                resume_file_path=resume_file_path,
+                resume_hash=resume_hash,
+                status='applied',
                 source='email_ingestion',
-                applied_at=datetime.utcnow()
+                hr_notes="Ingested automatically from Email Recruiter Channel.",
+                applied_at=datetime.utcnow(),
+                resume_status='pending'
             )
             db.add(new_app)
             db.flush() # Get new_app.id
             
             # 3. Trigger Analysis
-            from app.services.ai_service import analyze_resume_background
-            # We trigger the standard background analysis task
-            analyze_resume_background(new_app.id, db)
+            from app.api.applications import process_application_background
+            import asyncio
+            asyncio.create_task(
+                process_application_background(
+                    new_app.id,
+                    target_job.id,
+                    new_app.resume_file_path,
+                    candidate_email,
+                    candidate_name
+                )
+            )
             
             resume.processed = True
             db.commit()

@@ -1325,6 +1325,7 @@ def get_ingested_emails(
 
         # Match application strictly by unique Supabase storage path first to prevent generic filename collisions
         app = None
+        bucket_path = None
         if item.file_url:
             bucket_path = item.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
             app = db.query(Application).filter(
@@ -1342,13 +1343,21 @@ def get_ingested_emails(
                 from app.domain.models import Job
                 app = db.query(Application).join(Job).filter(
                     Application.candidate_email.ilike(raw_email),
-                    Job.job_id == extracted_code
+                    Job.job_id == extracted_code,
+                    or_(
+                        Application.resume_file_path.is_(None),
+                        Application.resume_file_path.like(f"%{bucket_path}%") if bucket_path else False
+                    )
                 ).order_by(Application.applied_at.desc()).first()
                 
             if not app:
                 # Safe fallback: find candidate's most recent application across the platform
                 app = db.query(Application).filter(
-                    Application.candidate_email.ilike(raw_email)
+                    Application.candidate_email.ilike(raw_email),
+                    or_(
+                        Application.resume_file_path.is_(None),
+                        Application.resume_file_path.like(f"%{bucket_path}%") if bucket_path else False
+                    )
                 ).order_by(Application.applied_at.desc()).first()
 
         candidate_email_to_check = app.candidate_email if app else raw_email

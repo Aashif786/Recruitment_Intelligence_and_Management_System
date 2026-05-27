@@ -67,4 +67,4 @@ def update_settings(
     db.commit()
     
     # Return updated settings
-    return get_settings(db=db)
+    return get_settings(request=request, db=db)
