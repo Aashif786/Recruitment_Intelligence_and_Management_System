@@ -202,6 +202,7 @@ export default function PublicJobsPage() {
                                                 </div>
                                                 <CardTitle className="text-2xl font-bold leading-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-primary group-hover:to-accent transition-all line-clamp-2">
                                                     {job.title}
+                                                    <span className="block text-xs font-mono font-semibold text-muted-foreground mt-1">Job ID: {job.id}</span>
                                                 </CardTitle>
                                             </CardHeader>
 

@@ -145,7 +145,15 @@ export default function IngestedEmailsPage() {
 
     const allItems = data?.items ?? []
     
-    const filteredItems = allItems;
+    // Apply client-side filter to ensure UI matches filter selection
+    const filteredItems = useMemo(() => {
+        if (statusFilter === 'mapped') {
+            return allItems.filter(item => !!item.application_id)
+        } else if (statusFilter === 'unmapped') {
+            return allItems.filter(item => !item.application_id)
+        }
+        return allItems
+    }, [allItems, statusFilter])
 
     const totalCount = data?.total ?? 0;
     const totalPages = data?.pages ?? 0;
