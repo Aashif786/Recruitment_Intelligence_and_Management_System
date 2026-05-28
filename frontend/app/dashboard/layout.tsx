@@ -67,6 +67,11 @@ export default function DashboardLayout({
     )
   }
 
+  // Prevent rendering protected content for unauthenticated users
+  if (!isAuthenticated && !isOffline) {
+    return null;
+  }
+
   if (isOffline && !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6 text-center">

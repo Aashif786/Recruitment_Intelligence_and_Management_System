@@ -619,9 +619,47 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
   // ─── PROCTORING SETUP ──────────────────────────────────────────────────────
   const cameraInitializedRef = useRef(false);
+  const deviceChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initCameraRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Handle device reconnection with debouncing
+  const handleDeviceChange = useCallback(async () => {
+    // Clear any pending debounce timeout
+    if (deviceChangeTimeoutRef.current) {
+      clearTimeout(deviceChangeTimeoutRef.current);
+    }
+
+    // Debounce: wait 100ms before attempting reconnection
+    deviceChangeTimeoutRef.current = setTimeout(async () => {
+      // Only attempt reconnection if:
+      // 1. Camera is currently disconnected
+      // 2. Interview is not finished (allow reconnection during preview and active interview)
+      if (!cameraInitializedRef.current && !isFinishedRef.current) {
+        try {
+          // Enumerate devices to confirm video input is available
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const hasVideoInput = devices.some(device => device.kind === 'videoinput');
+          
+          if (hasVideoInput) {
+            console.log('[Camera] Video device detected, attempting reinitialization...');
+            // Call initCamera to reinitialize the stream
+            if (initCameraRef.current) {
+              await initCameraRef.current();
+            }
+          }
+        } catch (err) {
+          console.error('[Camera] Device enumeration failed:', err);
+        }
+      }
+    }, 100);
+  }, []);
 
   useEffect(() => {
     async function initCamera() {
+      // Clear old stream references before reinitialization
+      activeStreamRef.current?.getTracks().forEach(track => track.stop());
+      activeStreamRef.current = null;
+      
       if (cameraInitializedRef.current) return;
       
       try {
@@ -641,6 +679,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         if (videoTrack) {
           videoTrack.onmute = () => handleStrike('Camera feed disabled/muted');
           videoTrack.onended = () => {
+            cameraInitializedRef.current = false;
             handleStrike('Camera hardware disconnected');
           };
         }
@@ -687,18 +726,27 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       }
     }
     
+    // Store initCamera in ref so handleDeviceChange can call it
+    initCameraRef.current = initCamera;
+    
     initCamera();
+    
+    // Register devicechange event listener to detect camera reconnection
+    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
 
     // ── cleanup only runs on true component unmount, NOT on re-renders ──
     const mountedStream = { ref: activeStreamRef };
     return () => {
+      // Remove devicechange event listener
+      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+      
       // Only stop tracks when the whole component unmounts (user leaves interview)
       if (mountedStream.ref.current) {
         mountedStream.ref.current.getTracks().forEach(t => t.stop());
         console.log('[Camera] Stopped all tracks on component unmount.');
       }
     };
-  }, [handleStrike]); // handleStrike is now stable — doesn't change on isStarted
+  }, [handleStrike, handleDeviceChange]); // handleStrike is now stable — doesn't change on isStarted
 
   // Synchronize camera stream to pre-start preview when loading completes
   useEffect(() => {
@@ -725,14 +773,16 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     const onFSChange = () => {
       const isFull = !!document.fullscreenElement;
       setIsFullscreen(isFull);
-      // If session is running and user exits fullscreen, show the gate overlay
+      // If session is running and user exits fullscreen, record strike and show gate
       if (!isFull && isStartedRef.current) {
+        console.log('[Proctoring] Fullscreen exit detected');
+        handleStrike('Exited fullscreen mode');
         setShowFullscreenGate(true);
       }
     };
     document.addEventListener('fullscreenchange', onFSChange);
     return () => document.removeEventListener('fullscreenchange', onFSChange);
-  }, []);
+  }, [handleStrike]);
 
   const enterFullscreen = async () => {
     try {
@@ -929,9 +979,17 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     }, 3000);
 
     const handleVisibility = () => {
-      if (document.hidden) handleStrike('Tab switched');
+      if (!isStartedRef.current) return; // Only detect during active interview
+      if (document.hidden) {
+        console.log('[Proctoring] Tab switch detected');
+        handleStrike('Tab switched');
+      }
     };
-    const handleBlur = () => handleStrike('Window focus lost');
+    const handleBlur = () => {
+      if (!isStartedRef.current) return; // Only detect during active interview
+      console.log('[Proctoring] Window focus lost');
+      handleStrike('Window focus lost');
+    };
     
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
