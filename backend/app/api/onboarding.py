@@ -7,7 +7,7 @@ from app.domain.models import User, Application, GlobalSettings, Notification, A
 from app.domain.schemas import ApplicationResponse, OfferResponseRequest
 from app.core.auth import get_current_hr, get_current_admin
 from app.services.offer_letter_service import generate_offer_letter_pdf, get_offer_letter_data
-from app.services.email_service import send_offer_letter_email, send_simple_email, send_onboarding_reminder_email, send_joining_confirmation_email
+from app.services.email_service import send_offer_letter_email, send_simple_email, send_onboarding_reminder_email, send_joining_confirmation_email, send_onboarding_summary_email
 from app.core.config import get_settings
 from typing import List, Optional
 import os
@@ -657,53 +657,88 @@ async def capture_photo(
 @router.post("/cron/check-reminders")
 def check_onboarding_reminders(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
-    (System/Admin) Check for candidates joining in exactly 7 days and send reminder.
-    Task 1 Requirement.
+    (System/Admin) Check for candidates joining in the next 7 days.
+    - Sends a consolidated summary email to all super_admins and HR users.
+    - Sends individual per-candidate reminder emails for those not yet notified.
     """
     today = get_ist_now().date()
-    target_date = today + timedelta(days=7)
-    
-    start_of_target = datetime.combine(target_date, datetime.min.time())
-    end_of_target = datetime.combine(target_date, datetime.max.time())
 
-    # Find candidates who accepted offer and join in exactly 7 days
+    # Full 7-day window: today through today+7 (inclusive)
+    start_of_window = datetime.combine(today, datetime.min.time())
+    end_of_window = datetime.combine(today + timedelta(days=7), datetime.max.time())
+
     from app.domain.models import Onboarding, Offer
-    candidates = db.query(Application).join(Onboarding).outerjoin(Offer).filter(
+
+    # ── 1. All accepted candidates joining in the next 7 days ───────────────
+    all_upcoming = db.query(Application).join(Onboarding).filter(
         Application.status.in_(["accepted"]),
-        Onboarding.joining_date >= start_of_target,
-        Onboarding.joining_date <= end_of_target,
-        Offer.reminder_sent_at == None
+        Onboarding.joining_date >= start_of_window,
+        Onboarding.joining_date <= end_of_window,
     ).all()
-    
+
+    # ── 2. Collect every admin / super-admin / HR email for summary ─────────
+    authority_users = db.query(User).filter(
+        User.role.in_(["super_admin", "hr"]),
+        User.is_active == True,
+        User.approval_status == "approved",
+    ).all()
+    authority_emails = list({u.email for u in authority_users if u.email})
+
+    # ── 3. Send the consolidated summary to all higher authorities ──────────
+    if all_upcoming and authority_emails:
+        summary_payload = [
+            {
+                "name": app.candidate_name,
+                "job_title": app.job.title if app.job else "N/A",
+                "joining_date": app.joining_date.strftime("%B %d, %Y")
+                if app.joining_date else "TBD",
+            }
+            for app in all_upcoming
+        ]
+        # Sort by joining date so the table is chronological
+        summary_payload.sort(key=lambda x: x["joining_date"])
+
+        for email_addr in authority_emails:
+            background_tasks.add_task(
+                send_onboarding_summary_email,
+                to_email=email_addr,
+                candidates_list=summary_payload,
+            )
+
+    # ── 4. Individual reminders for candidates not yet notified ─────────────
+    unnotified = db.query(Application).join(Onboarding).outerjoin(Offer).filter(
+        Application.status.in_(["accepted"]),
+        Onboarding.joining_date >= start_of_window,
+        Onboarding.joining_date <= end_of_window,
+        Offer.reminder_sent_at == None,
+    ).all()
+
     reminders_sent = 0
-    super_admins = db.query(User).filter(User.role == "super_admin").all()
-    admin_emails = [admin.email for admin in super_admins if admin.email]
-
-    for app in candidates:
-        hr_email = app.hr.email if app.hr else None
-        
-        emails_to_notify = []
-        if hr_email: emails_to_notify.append(hr_email)
-        emails_to_notify.extend(admin_emails)
-        emails_to_notify = list(set(emails_to_notify))
-
-        joining_date_str = app.joining_date.strftime("%B %d, %Y")
+    for app in unnotified:
+        joining_date_str = app.joining_date.strftime("%B %d, %Y") if app.joining_date else "TBD"
         job_title = app.job.title if app.job else "N/A"
 
-        for email_addr in emails_to_notify:
+        # Per-candidate individual notification to the assigned HR
+        hr_email = app.hr.email if app.hr else None
+        if hr_email:
             background_tasks.add_task(
                 send_onboarding_reminder_email,
-                to_email=email_addr,
+                to_email=hr_email,
                 candidate_name=app.candidate_name,
                 joining_date=joining_date_str,
-                job_title=job_title
+                job_title=job_title,
             )
 
         app.reminder_sent_at = get_ist_now()
         reminders_sent += 1
-        
+
     db.commit()
-    return {"status": "success", "reminders_queued": reminders_sent}
+    return {
+        "status": "success",
+        "upcoming_candidates": len(all_upcoming),
+        "summary_sent_to": len(authority_emails),
+        "individual_reminders_queued": reminders_sent,
+    }
 
 @router.post("/applications/{application_id}/generate-id-card")
 async def generate_id_card(

@@ -792,6 +792,72 @@ async def send_onboarding_reminder_email(to_email: str, candidate_name: str, joi
     """
     return await execute_email_with_retries(to_email, subject, body, event_type="ONBOARDING_REMINDER")
 
+async def send_onboarding_summary_email(to_email: str, candidates_list: list):
+    """
+    Send a consolidated summary email to super admins / HR listing all candidates
+    joining in the next 7 days.
+
+    candidates_list: list of dicts with keys: name, job_title, joining_date (str)
+    """
+    if not candidates_list:
+        return True
+
+    subject = f"📅 Upcoming Joinings — Next 7 Days ({len(candidates_list)} candidate{'s' if len(candidates_list) != 1 else ''})"
+
+    rows_html = "".join(
+        f"""
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <td style="padding:10px 14px; font-weight:600; color:#111827;">{c['name']}</td>
+          <td style="padding:10px 14px; color:#374151;">{c['job_title']}</td>
+          <td style="padding:10px 14px; color:#059669; font-weight:600;">{c['joining_date']}</td>
+        </tr>
+        """
+        for c in candidates_list
+    )
+
+    body = f"""
+    <html>
+    <body style="font-family:'Segoe UI',sans-serif; color:#111827; background:#f9fafb; margin:0; padding:0;">
+      <div style="max-width:600px; margin:32px auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%); padding:28px 32px;">
+          <h1 style="margin:0; font-size:22px; color:#ffffff; font-weight:700;">📅 Upcoming Joinings — Next 7 Days</h1>
+          <p style="margin:8px 0 0 0; color:#bfdbfe; font-size:14px;">
+            {len(candidates_list)} candidate{'s are' if len(candidates_list) != 1 else ' is'} scheduled to join in the next 7 days.
+            Please ensure all preparations (IT access, workspace, credentials) are completed well in advance.
+          </p>
+        </div>
+
+        <!-- Table -->
+        <div style="padding:24px 32px;">
+          <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <thead>
+              <tr style="background:#f3f4f6;">
+                <th style="padding:10px 14px; text-align:left; color:#6b7280; font-weight:600; text-transform:uppercase; font-size:12px; border-bottom:2px solid #e5e7eb;">Candidate</th>
+                <th style="padding:10px 14px; text-align:left; color:#6b7280; font-weight:600; text-transform:uppercase; font-size:12px; border-bottom:2px solid #e5e7eb;">Role / Position</th>
+                <th style="padding:10px 14px; text-align:left; color:#6b7280; font-weight:600; text-transform:uppercase; font-size:12px; border-bottom:2px solid #e5e7eb;">Joining Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows_html}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:20px 32px; background:#f9fafb; border-top:1px solid #e5e7eb;">
+          <p style="margin:0; font-size:13px; color:#9ca3af;">
+            This is an automated daily summary from the Recruitment & Onboarding Management System.
+            Please do not reply to this email.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    return await execute_email_with_retries(to_email, subject, body, event_type="ONBOARDING_SUMMARY")
+
 async def send_joining_confirmation_email(to_email: str, candidate_name: str, job_title: str, candidate_photo_url: str):
     subject = f"Joining Confirmation: {candidate_name}"
     body = f"""
