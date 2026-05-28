@@ -52,8 +52,8 @@ export default function QuestionPanel({ question, isLoading, currentQuestionNumb
                         <p className="text-sm font-black text-slate-400 uppercase tracking-widest animate-pulse">Analyzing context for next question...</p>
                     </div>
                 ) : (
-                    <p className="text-xl md:text-2xl font-bold text-slate-800 leading-relaxed italic pr-4">
-                        "{question?.question || "Initializing Assessment..."}"
+                    <p className="text-2xl md:text-3xl font-extrabold text-slate-900 leading-relaxed tracking-tight">
+                        {question?.question || "Initializing Assessment..."}
                     </p>
                 )}
             </CardContent>
