@@ -15,6 +15,13 @@ def main():
     debug_data["docker_ps"] = run_cmd("docker ps -a")
     debug_data["nginx_conf"] = run_cmd("cat nginx.conf")
     
+    # Check what routes are registered inside the running containers
+    debug_data["routes_green"] = run_cmd("docker compose -f docker-compose.prod.yml exec -T backend_green python -c \"import os; os.environ['BACKEND_START_MODE']='docker'; from app.main import app; print([(r.path, r.methods) for r in app.routes if 'access' in r.path])\"")
+    debug_data["routes_blue"] = run_cmd("docker compose -f docker-compose.prod.yml exec -T backend_blue python -c \"import os; os.environ['BACKEND_START_MODE']='docker'; from app.main import app; print([(r.path, r.methods) for r in app.routes if 'access' in r.path])\"")
+    
+    # Check the contents of backend/app/api/interviews.py on VPS
+    debug_data["vps_interviews_lines"] = run_cmd("sed -n '65,75p' backend/app/api/interviews.py")
+    
     # Try checking docker logs
     debug_data["docker_logs"] = run_cmd("docker compose -f docker-compose.prod.yml logs --tail=50")
     
