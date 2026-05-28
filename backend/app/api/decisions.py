@@ -12,7 +12,7 @@ from app.core.auth import get_current_user, get_current_hr
 from app.core.ownership import validate_hr_ownership
 from app.services.email_service import send_hired_email, send_rejected_email
 import logging
-from app.core.timezone import get_ist_now
+from app.core.timezone import get_ist_now, to_naive_ist
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/decisions", tags=["hiring decisions"])
@@ -138,6 +138,9 @@ async def hire_candidate(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid joining date format. Please select a valid date.")
 
+    # Convert to naive IST for database compatibility and uniform comparison
+    jdate_ist = to_naive_ist(jdate)
+
     # 2. Load global settings (company branding, offer template)
     gs = {s.key: s.value for s in db.query(GlobalSettings).all()}
     template_str = gs.get("offer_letter_template", "")
@@ -160,7 +163,7 @@ async def hire_candidate(
         raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
 
     # 4. Snapshot the template on the Application for historical record
-    application.joining_date = jdate
+    application.joining_date = jdate_ist
     application.offer_template_snapshot = template_str
 
     # 5. Render the HTML template with candidate data
@@ -168,7 +171,7 @@ async def hire_candidate(
         candidate_name=application.candidate_name,
         job_role=application.job.title if application.job else "N/A",
         department=(application.job.domain if application.job else "Engineering") or "Engineering",
-        joining_date=jdate,
+        joining_date=jdate_ist,
         company_name=gs.get("company_name", "Our Company"),
         logo_url=gs.get("company_logo_url", ""),
         hr_email=gs.get("hr_email", ""),
@@ -203,7 +206,7 @@ async def hire_candidate(
         hr_id=current_user.id,
         decision="hired",
         decision_comments=hire_data.notes,
-        joining_date=jdate,
+        joining_date=jdate_ist,
         offer_letter_path=storage_path,
         decided_at=get_ist_now()
     )

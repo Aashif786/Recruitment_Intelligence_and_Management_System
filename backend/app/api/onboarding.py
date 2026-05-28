@@ -309,15 +309,18 @@ async def request_offer_approval(
         logger.error(f"Date parsing error: {e}")
         raise HTTPException(status_code=400, detail="Invalid joining date format. Expected YYYY-MM-DD or ISO format.")
 
+    # Convert to naive IST for database compatibility and uniform comparison
+    jdate_ist = to_naive_ist(jdate)
+
     # Validation: Joining date cannot be in the past
-    if jdate.date() < get_ist_now().date():
+    if jdate_ist.date() < get_ist_now().date():
         raise HTTPException(status_code=400, detail="Joining date cannot be in the past.")
 
     settings_records = db.query(GlobalSettings).all()
     gs = {s.key: s.value for s in settings_records}
     
     # Initialize basic offer fields
-    application.joining_date = jdate
+    application.joining_date = jdate_ist
     application.offer_template_snapshot = gs.get("offer_letter_template")
     application.offer_token = str(uuid.uuid4())
     application.offer_short_id = generate_short_id()

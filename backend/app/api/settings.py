@@ -25,6 +25,15 @@ def get_settings(
     settings_records = db.query(GlobalSettings).all()
     settings_dict = {s.key: s.value for s in settings_records}
     
+    from app.core.auth import get_current_user
+    has_sensitive_access = False
+    try:
+        user = get_current_user(request, db)
+        if user and user.role in {"super_admin", "hr"} and user.approval_status == "approved" and user.is_active:
+            has_sensitive_access = True
+    except Exception:
+        pass
+
     return {
         "company_logo_url": settings_dict.get("company_logo_url", ""),
         "company_name": settings_dict.get("company_name", ""),
@@ -32,10 +41,10 @@ def get_settings(
         "hr_email": settings_dict.get("hr_email", ""),
         "hr_name": settings_dict.get("hr_name", ""),
         "hr_phone": settings_dict.get("hr_phone", ""),
-        "offer_letter_template": settings_dict.get("offer_letter_template", ""),
-        "imap_email": settings_dict.get("imap_email", ""),
-        "imap_password": settings_dict.get("imap_password", ""),
-        "auto_sync_enabled": settings_dict.get("auto_sync_enabled", "false").lower() == "true"
+        "offer_letter_template": settings_dict.get("offer_letter_template", "") if has_sensitive_access else "",
+        "imap_email": settings_dict.get("imap_email", "") if has_sensitive_access else "",
+        "imap_password": settings_dict.get("imap_password", "") if has_sensitive_access else "",
+        "auto_sync_enabled": (settings_dict.get("auto_sync_enabled", "false").lower() == "true") if has_sensitive_access else False
     }
 
 @router.post("", response_model=GlobalSettingsResponse)
