@@ -84,6 +84,9 @@ _REQUIRED_COLUMNS = [
     ("jobs", "aptitude_repo_set_id", "INTEGER"),
     ("jobs", "technical_repo_set_id", "INTEGER"),
     ("jobs", "behavioural_repo_set_id", "INTEGER"),
+    # Email inbox edge cases fix - retry tracking
+    ("attachment_resumes", "retry_count", "INTEGER DEFAULT 0"),
+    ("attachment_resumes", "last_error", "TEXT"),
 ]
 
 

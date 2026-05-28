@@ -840,4 +840,6 @@ class AttachmentResume(Base):
     mime_type = Column(String(100))
     received_at = Column(DateTime, default=get_ist_now)
     processed = Column(Boolean, default=False)
+    retry_count = Column(Integer, default=0)
+    last_error = Column(Text, nullable=True) # Store error messages for debugging
 

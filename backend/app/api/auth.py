@@ -186,7 +186,7 @@ def verify_otp(request: Request, verification_data: UserVerifyOTP, db: Session =
         raise HTTPException(status_code=500, detail="Verification finalization failed safely.")
 
 @router.post("/login")
-@limiter.limit("30/minute")
+@limiter.limit("100/minute")  # Increased for production usage
 def login(request: Request, response: Response, credentials: UserLogin, db: Session = Depends(get_db)):
     """Login and set secure JWT HttpOnly cookie"""
     credentials.email = credentials.email.lower().strip()
