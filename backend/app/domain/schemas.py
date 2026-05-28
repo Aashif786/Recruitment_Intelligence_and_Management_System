@@ -897,6 +897,17 @@ class GlobalSettingsUpdate(BaseModel):
     imap_email: Optional[str] = None
     imap_password: Optional[str] = None
     auto_sync_enabled: Optional[bool] = None
+    
+    product_name: Optional[str] = None
+    dark_logo_url: Optional[str] = None
+    favicon_url: Optional[str] = None
+    footer_text: Optional[str] = None
+    support_email: Optional[str] = None
+    theme_color: Optional[str] = None
+    terms_url: Optional[str] = None
+    privacy_url: Optional[str] = None
+    seo_title_default: Optional[str] = None
+    seo_description_default: Optional[str] = None
 
 class GlobalSettingsResponse(BaseModel):
     company_logo_url: Optional[str] = ""
@@ -909,6 +920,17 @@ class GlobalSettingsResponse(BaseModel):
     imap_email: Optional[str] = ""
     imap_password: Optional[str] = ""
     auto_sync_enabled: bool = False
+    
+    product_name: Optional[str] = ""
+    dark_logo_url: Optional[str] = ""
+    favicon_url: Optional[str] = ""
+    footer_text: Optional[str] = ""
+    support_email: Optional[str] = ""
+    theme_color: Optional[str] = ""
+    terms_url: Optional[str] = ""
+    privacy_url: Optional[str] = ""
+    seo_title_default: Optional[str] = ""
+    seo_description_default: Optional[str] = ""
 
 # ============================================================================
 # Candidate Offer Actions

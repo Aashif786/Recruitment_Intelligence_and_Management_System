@@ -25,6 +25,9 @@ def get_settings(
     settings_records = db.query(GlobalSettings).all()
     settings_dict = {s.key: s.value for s in settings_records}
     
+    from app.core.branding import get_all_branding
+    branding = get_all_branding(db)
+    
     from app.core.auth import get_current_user
     has_sensitive_access = False
     try:
@@ -35,8 +38,8 @@ def get_settings(
         pass
 
     return {
-        "company_logo_url": settings_dict.get("company_logo_url", ""),
-        "company_name": settings_dict.get("company_name", ""),
+        "company_logo_url": branding.get("company_logo_url"),
+        "company_name": branding.get("company_name"),
         "company_address": settings_dict.get("company_address", ""),
         "hr_email": settings_dict.get("hr_email", ""),
         "hr_name": settings_dict.get("hr_name", ""),
@@ -44,7 +47,18 @@ def get_settings(
         "offer_letter_template": settings_dict.get("offer_letter_template", "") if has_sensitive_access else "",
         "imap_email": settings_dict.get("imap_email", "") if has_sensitive_access else "",
         "imap_password": settings_dict.get("imap_password", "") if has_sensitive_access else "",
-        "auto_sync_enabled": (settings_dict.get("auto_sync_enabled", "false").lower() == "true") if has_sensitive_access else False
+        "auto_sync_enabled": (settings_dict.get("auto_sync_enabled", "false").lower() == "true") if has_sensitive_access else False,
+        
+        "product_name": branding.get("product_name"),
+        "dark_logo_url": branding.get("dark_logo_url"),
+        "favicon_url": branding.get("favicon_url"),
+        "footer_text": branding.get("footer_text"),
+        "support_email": branding.get("support_email"),
+        "theme_color": branding.get("theme_color"),
+        "terms_url": branding.get("terms_url"),
+        "privacy_url": branding.get("privacy_url"),
+        "seo_title_default": branding.get("seo_title_default"),
+        "seo_description_default": branding.get("seo_description_default")
     }
 
 @router.post("", response_model=GlobalSettingsResponse)

@@ -12,6 +12,7 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { ThemeTogglerButton } from '@/components/animate-ui/components/buttons/theme-toggler'
 import useSWR from 'swr'
 import { APIClient } from '@/app/dashboard/lib/api-client'
+import { useBranding } from '@/lib/branding-client'
 
 export const GlobalNavbar = React.memo(function GlobalNavbar() {
   const [mounted, setMounted] = useState(false)
@@ -23,9 +24,9 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
   const pathname = usePathname()
   const { isAuthenticated, user } = useAuth()
 
-  const { data: settings } = useSWR('/api/settings', (url) => APIClient.get(url)) as { data: any }
-  const companyLogo = settings?.company_logo_url || "/calrims/logo-dark.png"
-  const companyName = settings?.company_name || "CALRIMS"
+  const { branding } = useBranding()
+  const companyLogo = branding.logoUrl
+  const companyName = branding.companyName
 
   if (!mounted) return null
 

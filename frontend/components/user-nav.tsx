@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation'
 import { LogOut, User as UserIcon, Settings, GitFork, Image as ImageIcon } from 'lucide-react'
 import useSWR from 'swr'
 import { APIClient } from '@/app/dashboard/lib/api-client'
+import { getBranding } from '@/lib/branding'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -53,12 +54,13 @@ export function UserNav() {
     }, [user?.full_name])
 
     const { data: settings, mutate } = useSWR('/api/settings', (url) => APIClient.get(url)) as { data: any, mutate: any }
+    const branding = getBranding(settings)
 
     const avatarUrl = useMemo(() => {
-        if (settings?.company_logo_url) return settings.company_logo_url
+        if (branding?.logoUrl) return branding.logoUrl
         if (user?.profile_image_url) return user.profile_image_url
         return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.email || 'default')}`
-    }, [user?.profile_image_url, user?.email, settings?.company_logo_url])
+    }, [user?.profile_image_url, user?.email, branding?.logoUrl])
 
     const handleUpdateLogo = async () => {
         if (!logoUrl.trim()) {
@@ -90,8 +92,8 @@ export function UserNav() {
                             className="bg-background object-cover"
                         />
                         <AvatarFallback className="bg-transparent font-bold animate-in fade-in duration-500 overflow-hidden">
-                            {settings?.company_logo_url ? (
-                                <img src={settings.company_logo_url} className="h-full w-full object-contain" alt="Logo Fallback" />
+                            {branding?.logoUrl ? (
+                                <img src={branding.logoUrl} className="h-full w-full object-contain" alt="Logo Fallback" />
                             ) : (
                                 <div className="h-full w-full flex items-center justify-center bg-primary/25 text-primary shadow-inner">
                                     {initials}

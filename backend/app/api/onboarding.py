@@ -217,6 +217,8 @@ async def get_hr_offer_preview(
     
     settings_records = db.query(GlobalSettings).all()
     gs = {s.key: s.value for s in settings_records}
+    from app.core.branding import get_all_branding
+    branding = get_all_branding(db)
     
     template_str = application.offer_template_snapshot or gs.get("offer_letter_template", "")
     if not template_str:
@@ -227,8 +229,8 @@ async def get_hr_offer_preview(
         application.job.title if application.job else "N/A",
         (application.job.domain if application.job else "Engineering") or "Engineering",
         application.joining_date or datetime.now(),
-        gs.get("company_name", "Our Company"),
-        gs.get("company_logo_url", ""),
+        branding.get("company_name"),
+        branding.get("company_logo_url"),
         gs.get("hr_email", ""),
         gs.get("hr_name", ""),
         gs.get("hr_phone", ""),
@@ -318,6 +320,8 @@ async def request_offer_approval(
 
     settings_records = db.query(GlobalSettings).all()
     gs = {s.key: s.value for s in settings_records}
+    from app.core.branding import get_all_branding
+    branding = get_all_branding(db)
     
     # Initialize basic offer fields
     application.joining_date = jdate_ist
@@ -343,8 +347,8 @@ async def request_offer_approval(
                 job_role=application.job.title if application.job else "N/A",
                 department=(application.job.domain if application.job else "Engineering") or "Engineering",
                 joining_date=application.joining_date,
-                company_name=gs.get("company_name", "Our Company"),
-                logo_url=gs.get("company_logo_url", ""),
+                company_name=branding.get("company_name"),
+                logo_url=branding.get("company_logo_url"),
                 hr_email=gs.get("hr_email", ""),
                 hr_name=gs.get("hr_name", ""),
                 hr_phone=gs.get("hr_phone", ""),
@@ -454,6 +458,8 @@ async def approve_offer_letter(
 
     settings_records = db.query(GlobalSettings).all()
     gs = {s.key: s.value for s in settings_records}
+    from app.core.branding import get_all_branding
+    branding = get_all_branding(db)
     
     # PDF Generation (Puppeteer + Supabase)
     try:
@@ -464,8 +470,8 @@ async def approve_offer_letter(
             job_role=application.job.title if application.job else "N/A",
             department=(application.job.domain if application.job else "Engineering") or "Engineering",
             joining_date=application.joining_date,
-            company_name=gs.get("company_name", "Our Company"),
-            logo_url=gs.get("company_logo_url", ""),
+            company_name=branding.get("company_name"),
+            logo_url=branding.get("company_logo_url"),
             hr_email=gs.get("hr_email", ""),
             hr_name=gs.get("hr_name", ""),
             hr_phone=gs.get("hr_phone", ""),
@@ -573,12 +579,13 @@ async def get_offer_preview(request: Request, token: str, db: Session = Depends(
         if expiry < get_ist_now():
             raise HTTPException(status_code=400, detail="Offer expired.")
 
-    company_name_setting = db.query(GlobalSettings).filter(GlobalSettings.key == "company_name").first()
+    from app.core.branding import get_branding_value
+    resolved_company_name = get_branding_value(db, "company_name")
     return {
         "candidate_name": application.candidate_name,
         "job_title": application.job.title if application.job else "Unknown Role",
         "joining_date": application.joining_date.isoformat() if application.joining_date else None,
-        "company_name": company_name_setting.value if company_name_setting and company_name_setting.value else "Our Company"
+        "company_name": resolved_company_name
     }
 
 def generate_employee_id(db: Session):
@@ -768,13 +775,15 @@ async def generate_id_card(
         template = env.get_template("id_card_template.html")
         
         gs = {s.key: s.value for s in db.query(GlobalSettings).all()}
+        from app.core.branding import get_all_branding
+        branding = get_all_branding(db)
         
         # Get Candidate Photo (signed URL)
         photo_url = get_signed_url(settings.supabase_bucket_id_photos, application.candidate_photo_path)
         
         data = {
-            "company_name": gs.get("company_name") or settings.company_name,
-            "logo_url": gs.get("company_logo_url", ""),
+            "company_name": branding.get("company_name"),
+            "logo_url": branding.get("company_logo_url"),
             "candidate_name": application.candidate_name,
             "employee_id": application.employee_id,
             "job_role": application.job.title if application.job else "N/A",

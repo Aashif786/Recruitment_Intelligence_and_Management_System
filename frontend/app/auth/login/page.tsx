@@ -11,6 +11,7 @@ import { cn } from '@/app/dashboard/lib/utils'
 import { getSessionData } from '@/lib/session-store'
 import useSWR from 'swr'
 import { APIClient } from '@/app/dashboard/lib/api-client'
+import { useBranding } from '@/lib/branding-client'
 
 function LoginContent() {
   const router = useRouter()
@@ -24,9 +25,10 @@ function LoginContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const hasSubmitted = React.useRef(false)
 
-  const { data: settings } = useSWR('/api/settings', (url) => APIClient.get(url)) as { data: any }
-  const companyLogo = settings?.company_logo_url || "/calrims/logo-dark.png"
-  const companyName = settings?.company_name || "RIMS"
+  const { branding } = useBranding()
+  const companyLogo = branding.logoUrl
+  const companyName = branding.companyName
+  const productName = branding.productName
 
   useEffect(() => {
     if (searchParams.get('expired') === 'true') {

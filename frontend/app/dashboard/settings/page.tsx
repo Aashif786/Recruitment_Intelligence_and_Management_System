@@ -27,7 +27,17 @@ export default function SettingsPage() {
         hr_email: '',
         hr_name: '',
         hr_phone: '',
-        offer_letter_template: ''
+        offer_letter_template: '',
+        product_name: '',
+        dark_logo_url: '',
+        favicon_url: '',
+        footer_text: '',
+        support_email: '',
+        theme_color: '',
+        terms_url: '',
+        privacy_url: '',
+        seo_title_default: '',
+        seo_description_default: ''
     })
 
     if (user && user.role !== 'hr' && user.role !== 'super_admin') {
@@ -49,7 +59,25 @@ export default function SettingsPage() {
         setLoading(true)
         try {
             const data = await APIClient.get('/api/settings') as any
-            setSettings(data)
+            setSettings({
+                company_logo_url: data.company_logo_url || '',
+                company_name: data.company_name || '',
+                company_address: data.company_address || '',
+                hr_email: data.hr_email || '',
+                hr_name: data.hr_name || '',
+                hr_phone: data.hr_phone || '',
+                offer_letter_template: data.offer_letter_template || '',
+                product_name: data.product_name || '',
+                dark_logo_url: data.dark_logo_url || '',
+                favicon_url: data.favicon_url || '',
+                footer_text: data.footer_text || '',
+                support_email: data.support_email || '',
+                theme_color: data.theme_color || '',
+                terms_url: data.terms_url || '',
+                privacy_url: data.privacy_url || '',
+                seo_title_default: data.seo_title_default || '',
+                seo_description_default: data.seo_description_default || ''
+            })
         } catch (error) {
             toast.error("Failed to load settings")
         } finally {
@@ -62,33 +90,57 @@ export default function SettingsPage() {
             return;
         }
 
-    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(settings.hr_email);
-    if (!isEmailValid) {
-        toast.error("Please enter a valid email address");
-        return;
-    }
+        const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(settings.hr_email);
+        if (!isEmailValid) {
+            toast.error("Please enter a valid email address");
+            return;
+        }
 
-    const isPhoneValid = /^\+?[0-9\s]{7,15}$/.test(settings.hr_phone);
-    if (!isPhoneValid) {
-        toast.error("Please enter a valid phone number (7-15 digits)");
-        return;
-    }
+        const isPhoneValid = /^\+?[0-9\s]{7,15}$/.test(settings.hr_phone);
+        if (!isPhoneValid) {
+            toast.error("Please enter a valid phone number (7-15 digits)");
+            return;
+        }
 
-    const isCompanyNameValid = /^[A-Za-z\s&.,'-]{2,100}$/.test(settings.company_name);
-    if (!isCompanyNameValid) {
-        toast.error("Please enter a valid company name");
-        return;
-    }
+        const isCompanyNameValid = /^[A-Za-z\s&.,'-]{2,100}$/.test(settings.company_name);
+        if (!isCompanyNameValid) {
+            toast.error("Please enter a valid company name");
+            return;
+        }
 
-    const isNameValid = /^[A-Za-z\s'-]{2,50}$/.test(settings.hr_name);
-    if (!isNameValid) {
-        toast.error("Please enter a valid name");
-        return;
-    }
+        const isNameValid = /^[A-Za-z\s'-]{2,50}$/.test(settings.hr_name);
+        if (!isNameValid) {
+            toast.error("Please enter a valid name");
+            return;
+        }
+
+        if (settings.theme_color && !/^#[0-9A-Fa-f]{6}$/.test(settings.theme_color) && !/^#[0-9A-Fa-f]{3}$/.test(settings.theme_color)) {
+            toast.error("Theme color must be a valid HEX color code (e.g. #2563eb)");
+            return;
+        }
 
         setSaving(true)
         try {
-            await APIClient.post('/api/settings', settings)
+            const updated = await APIClient.post('/api/settings', settings) as any
+            setSettings({
+                company_logo_url: updated.company_logo_url || '',
+                company_name: updated.company_name || '',
+                company_address: updated.company_address || '',
+                hr_email: updated.hr_email || '',
+                hr_name: updated.hr_name || '',
+                hr_phone: updated.hr_phone || '',
+                offer_letter_template: updated.offer_letter_template || '',
+                product_name: updated.product_name || '',
+                dark_logo_url: updated.dark_logo_url || '',
+                favicon_url: updated.favicon_url || '',
+                footer_text: updated.footer_text || '',
+                support_email: updated.support_email || '',
+                theme_color: updated.theme_color || '',
+                terms_url: updated.terms_url || '',
+                privacy_url: updated.privacy_url || '',
+                seo_title_default: updated.seo_title_default || '',
+                seo_description_default: updated.seo_description_default || ''
+            })
             toast.success("Saved successfully")
         } catch (error) {
             toast.error("Failed to update settings")
@@ -250,6 +302,128 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
 
+                {/* White-Label Branding Config Card */}
+                <Card className="border-border/50 shadow-sm overflow-hidden md:col-span-2">
+                    <CardHeader className="bg-muted/30">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <Settings className="h-5 w-5 text-primary" />
+                            White-Label Branding Config
+                        </CardTitle>
+                        <CardDescription>Customize the application's logo, colors, text, and policies for your brand identity</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="product_name">Product Name</Label>
+                                <Input 
+                                    id="product_name" 
+                                    value={settings.product_name} 
+                                    onChange={(e) => setSettings({...settings, product_name: e.target.value})}
+                                    placeholder="e.g. CAL-RIMS"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="theme_color">Primary Accent Color (HEX)</Label>
+                                <div className="flex gap-2">
+                                    <Input 
+                                        id="theme_color" 
+                                        value={settings.theme_color} 
+                                        onChange={(e) => setSettings({...settings, theme_color: e.target.value})}
+                                        placeholder="e.g. #2563eb"
+                                        maxLength={7}
+                                    />
+                                    <div 
+                                        className="w-12 h-10 rounded-lg border border-border shadow-inner flex-shrink-0" 
+                                        style={{ backgroundColor: settings.theme_color || '#2563eb' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="dark_logo_url">Dark Logo URL</Label>
+                                <Input 
+                                    id="dark_logo_url" 
+                                    value={settings.dark_logo_url} 
+                                    onChange={(e) => setSettings({...settings, dark_logo_url: e.target.value})}
+                                    placeholder="e.g. /calrims/logo-dark.png"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="favicon_url">Favicon URL</Label>
+                                <Input 
+                                    id="favicon_url" 
+                                    value={settings.favicon_url} 
+                                    onChange={(e) => setSettings({...settings, favicon_url: e.target.value})}
+                                    placeholder="e.g. /calrims/logo.png"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="support_email">Support Email</Label>
+                                <Input 
+                                    id="support_email" 
+                                    value={settings.support_email} 
+                                    onChange={(e) => setSettings({...settings, support_email: e.target.value})}
+                                    placeholder="e.g. support@company.com"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="terms_url">Terms of Service URL</Label>
+                                <Input 
+                                    id="terms_url" 
+                                    value={settings.terms_url} 
+                                    onChange={(e) => setSettings({...settings, terms_url: e.target.value})}
+                                    placeholder="e.g. /calrims/terms/"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="privacy_url">Privacy Policy URL</Label>
+                                <Input 
+                                    id="privacy_url" 
+                                    value={settings.privacy_url} 
+                                    onChange={(e) => setSettings({...settings, privacy_url: e.target.value})}
+                                    placeholder="e.g. /calrims/privacy/"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="seo_title_default">Default SEO Title</Label>
+                                <Input 
+                                    id="seo_title_default" 
+                                    value={settings.seo_title_default} 
+                                    onChange={(e) => setSettings({...settings, seo_title_default: e.target.value})}
+                                    placeholder="e.g. MyBrand - Recruitment Portal"
+                                />
+                            </div>
+
+                            <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="footer_text">Footer Copyright/Branding Text</Label>
+                                <Input 
+                                    id="footer_text" 
+                                    value={settings.footer_text} 
+                                    onChange={(e) => setSettings({...settings, footer_text: e.target.value})}
+                                    placeholder="e.g. Powered by Acme Corp. Built for teams who care about who they hire."
+                                />
+                            </div>
+
+                            <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="seo_description_default">Default SEO Description</Label>
+                                <Textarea 
+                                    id="seo_description_default" 
+                                    value={settings.seo_description_default} 
+                                    onChange={(e) => setSettings({...settings, seo_description_default: e.target.value})}
+                                    placeholder="Enter default SEO meta description..."
+                                    rows={2}
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {/* New Theme Preference Card */}
                 <Card className="border-border/50 shadow-sm overflow-hidden md:col-span-2">
                     <CardHeader className="bg-muted/30">
@@ -259,7 +433,7 @@ export default function SettingsPage() {
                                     <Settings className="h-5 w-5 text-primary" />
                                     Theme Preferences
                                 </CardTitle>
-                                <CardDescription>Choose how CAL-RIMS looks to you</CardDescription>
+                                <CardDescription>Choose how your workspace looks</CardDescription>
                             </div>
                             <ModeToggle />
                         </div>

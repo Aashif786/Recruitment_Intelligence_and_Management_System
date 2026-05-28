@@ -11,8 +11,10 @@ import { APIClient } from '@/app/dashboard/lib/api-client'
 import { toast } from "sonner"
 import { AlertTriangle, Send, CheckCircle2, ChevronLeft, ShieldCheck, Loader2 } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useBranding } from '@/lib/branding-client'
 
 export default function SupportPage() {
+    const { branding } = useBranding()
     const router = useRouter()
     const searchParams = useSearchParams()
     const [email, setEmail] = useState('')
@@ -267,7 +269,7 @@ export default function SupportPage() {
 
                 <div className="mt-12 text-center pb-8 animate-in fade-in duration-1000 delay-500">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                        CAL-RIMS AI Recruitment Platform • Secure Support
+                        {branding.productName} AI Recruitment Platform • Secure Support
                     </p>
                 </div>
             </div>

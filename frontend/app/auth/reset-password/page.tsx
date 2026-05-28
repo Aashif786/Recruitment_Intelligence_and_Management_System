@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
         setIsSubmitting(true)
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:10000'}/api/auth/reset-password`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:10000'}/api/auth/reset-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp, new_password: newPassword }),

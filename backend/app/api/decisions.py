@@ -143,6 +143,9 @@ async def hire_candidate(
 
     # 2. Load global settings (company branding, offer template)
     gs = {s.key: s.value for s in db.query(GlobalSettings).all()}
+    from app.core.branding import get_all_branding
+    branding = get_all_branding(db)
+    
     template_str = gs.get("offer_letter_template", "")
     if not template_str:
         raise HTTPException(
@@ -172,8 +175,8 @@ async def hire_candidate(
         job_role=application.job.title if application.job else "N/A",
         department=(application.job.domain if application.job else "Engineering") or "Engineering",
         joining_date=jdate_ist,
-        company_name=gs.get("company_name", "Our Company"),
-        logo_url=gs.get("company_logo_url", ""),
+        company_name=branding.get("company_name"),
+        logo_url=branding.get("company_logo_url"),
         hr_email=gs.get("hr_email", ""),
         hr_name=gs.get("hr_name", ""),
         hr_phone=gs.get("hr_phone", ""),

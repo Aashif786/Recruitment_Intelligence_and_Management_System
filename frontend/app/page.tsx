@@ -20,7 +20,10 @@ import { Libre_Franklin } from "next/font/google";
 
 const franklin = Libre_Franklin({ subsets: ["latin"] });
 
+import { useBranding } from "@/lib/branding-client";
+
 export default function Home() {
+  const { branding } = useBranding();
   const { isAuthenticated, user, isLoading } = useAuth();
   const router = useRouter();
   const [showError, setShowError] = useState(false);
@@ -1053,31 +1056,30 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <img
-                src="/calrims/caldim-logo-dark.png"
-                alt="Calrims Logo"
-                className="h-9 w-auto"
+                src={branding.darkLogoUrl}
+                alt="Logo"
+                className="h-9 w-auto object-contain max-w-[150px]"
               />
               <span className="text-md font-bold text-white/90">
-                Caldim Engineering
+                {branding.companyName}
               </span>
             </div>
             <p className="text-white/70 text-md md:text-md text-center max-w-xl">
-              © {new Date().getFullYear()} Powered by Caldim Engineering. Built
-              for teams who care about who they hire.
+              {branding.footerText}
             </p>
             <div className="flex gap-5 text-md md:text-md">
-              <a
-                href="#"
+              <Link
+                href={branding.privacyUrl}
                 className="text-white/70 hover:text-white transition-colors"
               >
                 Privacy
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                href={branding.termsUrl}
                 className="text-white/70 hover:text-white transition-colors"
               >
                 Terms
-              </a>
+              </Link>
               <a
                 href="#"
                 className="text-white/70 hover:text-white transition-colors"
