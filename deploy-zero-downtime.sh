@@ -99,8 +99,8 @@ if [ "$NGINX_STATUS" != "running" ]; then
     sleep 10
 fi
 
-# Reload nginx to pick up the new upstream
-docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
+# Restart nginx to ensure Docker propagates the bind-mounted nginx.conf file changes and picks up the new upstream
+docker compose -f docker-compose.prod.yml restart nginx
 echo "✅ Traffic successfully routed to $DEPLOY_ENV."
 
 # 5. Stabilize (Observability Window)
