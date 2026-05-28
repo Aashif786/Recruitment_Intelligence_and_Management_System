@@ -1076,30 +1076,13 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
               )}
 
               <Button
+                disabled={!isDeviceTestSuccess}
                 className={`w-full h-16 rounded-2xl font-black text-xl shadow-xl transition-all duration-300 ${
                   !isDeviceTestSuccess 
-                    ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' 
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none hover:bg-slate-300' 
                     : 'shadow-primary/20'
                 }`}
                 onClick={async () => {
-                  if (!isDeviceTestSuccess) {
-                    const reason = "Invalid Interview session";
-                    setTerminationReason(reason);
-                    setIsTerminated(true);
-                    try {
-                      await fetch(`${API_BASE_URL}/api/interviews/${interviewId}/fail-device-test`, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ reason })
-                      });
-                    } catch (err) {
-                      console.error("Failed to report device test failure:", err);
-                    }
-                    return;
-                  }
                   // Request fullscreen before starting interview
                   try {
                     await document.documentElement.requestFullscreen();
