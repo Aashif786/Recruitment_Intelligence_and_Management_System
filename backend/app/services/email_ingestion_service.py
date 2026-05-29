@@ -541,6 +541,7 @@ async def run_batch_resume_processing(db: Session):
                     raise ValueError("Only HTTPS scheme is allowed for safety.")
                 
                 # Check netloc/domain
+                settings = get_settings()
                 allowed_domains = []
                 if settings.supabase_url:
                     supabase_netloc = urlparse(settings.supabase_url).netloc
