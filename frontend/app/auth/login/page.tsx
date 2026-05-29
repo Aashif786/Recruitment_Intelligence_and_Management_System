@@ -105,7 +105,7 @@ function LoginContent() {
     <div className="h-[calc(100vh-4rem)] flex-1 w-full flex flex-col lg:flex-row bg-background selection:bg-primary/20 relative overflow-hidden">
 
       {/* LEFT COLUMN: Hero Imagery (Hidden on Mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-950">
+      <div className="hidden lg:flex lg:flex-col lg:justify-between lg:w-1/2 relative overflow-hidden bg-slate-950 p-12">
         {/* The generated AI/HR image */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -116,7 +116,7 @@ function LoginContent() {
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/60 to-transparent" />
 
         {/* Content overlaid on image (Top Left Corner) */}
-        <div className="absolute top-10 left-12 z-20">
+        <div className="z-20">
           <div className="flex flex-col gap-5 w-full max-w-[55rem]">
             <h2 className="text-4xl lg:text-[2.75rem] font-light uppercase tracking-[0.15em] leading-[1.3] text-white/90">
               Recruitment Intelligence & <br /> Management System
@@ -130,7 +130,7 @@ function LoginContent() {
         </div>
 
         {/* Content overlaid on image (Bottom) */}
-        <div className="relative z-10 p-12 mt-auto flex flex-col justify-end h-full w-full max-w-2xl text-slate-100">
+        <div className="relative z-10 mt-8 flex flex-col justify-end w-full max-w-2xl text-slate-100">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
