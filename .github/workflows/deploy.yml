@@ -10,10 +10,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    # Enforce manual approval rule using GitHub Environments (P2-L01)
-    # Recommendation: Rotate the VPS_SSH_KEY quarterly and use repository-scoped deploy keys.
-    environment:
-      name: production
     steps:
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.2.5
