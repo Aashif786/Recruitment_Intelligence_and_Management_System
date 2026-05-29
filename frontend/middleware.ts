@@ -14,8 +14,10 @@ export function middleware(request: NextRequest) {
   // Protected routes - require authentication
   if (pathname.startsWith('/dashboard')) {
     if (!token) {
-      const loginUrl = new URL('/auth/login', request.url);
+      const basePath = request.nextUrl.basePath || '';
+      const loginUrl = new URL(`${basePath}/auth/login`, request.url);
       loginUrl.searchParams.set('expired', 'true');
+      loginUrl.searchParams.set('from', pathname);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
