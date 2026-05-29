@@ -54,3 +54,16 @@ def get_job(job_id: str) -> Optional[Dict[str, Any]]:
         except Exception:
             pass
     return _ai_jobs_fallback.get(job_id)
+
+class AIJobsMapping:
+    def __contains__(self, item: str) -> bool:
+        return get_job(item) is not None
+
+    def __getitem__(self, item: str) -> Dict[str, Any]:
+        job = get_job(item)
+        if job is None:
+            raise KeyError(item)
+        return job
+
+ai_jobs = AIJobsMapping()
+
