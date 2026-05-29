@@ -1310,8 +1310,6 @@ def get_ingested_emails(
     List all ingested email resumes (HR only)
     """
     query = db.query(AttachmentResume)
-    if processed is not None:
-        query = query.filter(AttachmentResume.processed == processed)
     if search:
         query = query.filter(
             or_(
@@ -1320,8 +1318,8 @@ def get_ingested_emails(
                 AttachmentResume.file_name.ilike(f"%{search}%")
             )
         )
-    total = query.count()
-    items = query.order_by(AttachmentResume.id.desc()).offset(skip).limit(limit).all()
+    # Fetch all items to allow accurate mapping-based filtering in Python (since mapping is resolved dynamically)
+    items = query.order_by(AttachmentResume.id.desc()).all()
     
     results = []
     for item in items:
@@ -1392,8 +1390,18 @@ def get_ingested_emails(
             "is_duplicate": is_duplicate
         })
         
+    # Python-level filter to match UI's status filter accurately
+    if processed is not None:
+        if processed:
+            results = [r for r in results if r["application_id"] is not None]
+        else:
+            results = [r for r in results if r["application_id"] is None]
+
+    total = len(results)
+    paginated_items = results[skip : skip + limit]
+    
     return {
-        "items": results,
+        "items": paginated_items,
         "total": total,
         "page": (skip // limit) + 1,
         "size": limit,
