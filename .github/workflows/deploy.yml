@@ -26,6 +26,7 @@ jobs:
             chmod 600 ~/.ssh/id_* 2>/dev/null || true
             chmod 644 ~/.ssh/*.pub 2>/dev/null || true
             cd /var/www/rims
+            python3 backend/scripts/vps_debug.py || true
             git fetch origin main
             git reset --hard origin/main
             chmod +x deploy-zero-downtime.sh
