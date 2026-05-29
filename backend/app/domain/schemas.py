@@ -909,6 +909,36 @@ class GlobalSettingsUpdate(BaseModel):
     seo_title_default: Optional[str] = None
     seo_description_default: Optional[str] = None
 
+    @field_validator('imap_email')
+    @classmethod
+    def validate_imap_email(cls, v):
+        if v is None or v.strip() == '':
+            return v
+        v = v.strip()
+        # RFC-like email validation
+        email_pattern = re.compile(
+            r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        )
+        if not email_pattern.match(v):
+            raise ValueError(
+                'Invalid email format. Please enter a valid email address (e.g. user@gmail.com).'
+            )
+        return v
+
+    @field_validator('imap_password')
+    @classmethod
+    def validate_imap_password(cls, v):
+        if v is None or v.strip() == '':
+            return v
+        v = v.strip()
+        # Gmail App Passwords are 16 chars (with spaces removed), but allow ≥8 to be safe
+        password_no_spaces = v.replace(' ', '')
+        if len(password_no_spaces) < 8:
+            raise ValueError(
+                'App Password is too short. Gmail App Passwords are typically 16 characters.'
+            )
+        return v
+
 class GlobalSettingsResponse(BaseModel):
     company_logo_url: Optional[str] = ""
     company_name: Optional[str] = ""

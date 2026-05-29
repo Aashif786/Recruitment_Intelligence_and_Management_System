@@ -92,6 +92,9 @@ export default function IngestedEmailsPage() {
     const [imapPass, setImapPass] = useState('')
     const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
     const [showCredentials, setShowCredentials] = useState(false)
+    const [emailError, setEmailError] = useState('')
+    const [passwordError, setPasswordError] = useState('')
+    const [configError, setConfigError] = useState('')
 
     // Load current settings on mount
     useEffect(() => {
@@ -160,13 +163,33 @@ export default function IngestedEmailsPage() {
 
     // Save IMAP Settings
     const handleSaveSettings = async () => {
+        // Clear previous errors
+        setEmailError('')
+        setPasswordError('')
+        setConfigError('')
+
         if (!imapUser.trim() || !imapPass.trim()) {
-            toast.error('Please enter both IMAP Email and App Password')
+            if (!imapUser.trim()) setEmailError('Email address is required')
+            if (!imapPass.trim()) setPasswordError('App Password is required')
+            return
+        }
+
+        // Client-side email format validation
+        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+        if (!emailPattern.test(imapUser.trim())) {
+            setEmailError('Invalid email format. Please enter a valid email address (e.g. user@gmail.com).')
+            return
+        }
+
+        // Client-side password length check (Gmail App Passwords are 16 chars)
+        const passwordNoSpaces = imapPass.trim().replace(/\s/g, '')
+        if (passwordNoSpaces.length < 8) {
+            setPasswordError('App Password is too short. Gmail App Passwords are typically 16 characters.')
             return
         }
 
         setIsSavingSettings(true)
-        const toastId = toast.loading('Saving recruiter mailbox configuration...')
+        const toastId = toast.loading('Verifying mailbox credentials and saving configuration...')
 
         try {
             await APIClient.post('/api/settings', {
@@ -175,11 +198,33 @@ export default function IngestedEmailsPage() {
                 auto_sync_enabled: autoSyncEnabled
             })
 
-            toast.success('Configuration saved! Auto-sync will now run in the background.', { id: toastId })
+            toast.success('Mailbox verified and configuration saved! Auto-sync will now run in the background.', { id: toastId })
             setShowCredentials(false)
+            setConfigError('')
         } catch (err: any) {
             console.error('Save settings error:', err)
-            toast.error(err.response?.data?.detail || 'Settings could not be saved. Please try again.', { id: toastId })
+            toast.dismiss(toastId)
+            const detail = err.response?.data?.detail || ''
+
+            // Parse Pydantic 422 validation errors
+            if (err.response?.status === 422 && Array.isArray(err.response?.data?.detail)) {
+                const errors = err.response.data.detail
+                for (const e of errors) {
+                    const field = e.loc?.[e.loc.length - 1] || ''
+                    const msg = e.msg?.replace('Value error, ', '') || 'Invalid value'
+                    if (field === 'imap_email') setEmailError(msg)
+                    else if (field === 'imap_password') setPasswordError(msg)
+                    else setConfigError(msg)
+                }
+                toast.error('Please fix the validation errors below.', { id: toastId })
+            } else if (typeof detail === 'string' && detail.includes('Authentication failed')) {
+                // IMAP auth failure from our _verify_imap_credentials
+                setConfigError(detail)
+                toast.error('Mailbox authentication failed. Credentials were not saved.', { id: toastId })
+            } else {
+                setConfigError(detail || 'Settings could not be saved. Please try again.')
+                toast.error(detail || 'Settings could not be saved. Please try again.', { id: toastId })
+            }
         } finally {
             setIsSavingSettings(false)
         }
@@ -326,16 +371,26 @@ export default function IngestedEmailsPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="pt-8 space-y-6">
+                        {configError && (
+                            <div className="p-4 rounded-xl bg-red-50 border-2 border-red-200 text-red-700 text-sm font-semibold flex items-start gap-3">
+                                <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-black text-red-800 text-xs uppercase tracking-wider mb-1">Connection Failed</p>
+                                    <p>{configError}</p>
+                                </div>
+                            </div>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="imap_user" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">IMAP Email Address</Label>
                                 <Input
                                     id="imap_user"
                                     value={imapUser}
-                                    onChange={e => setImapUser(e.target.value)}
-                                    className="h-12 bg-background border-2 border-input rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium"
+                                    onChange={e => { setImapUser(e.target.value); setEmailError(''); setConfigError(''); }}
+                                    className={`h-12 bg-background border-2 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium ${emailError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10' : 'border-input'}`}
                                     placeholder="example@gmail.com"
                                 />
+                                {emailError && <p className="text-xs font-bold text-red-500 ml-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{emailError}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="imap_pass" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Gmail App Password</Label>
@@ -343,10 +398,11 @@ export default function IngestedEmailsPage() {
                                     id="imap_pass"
                                     type="password"
                                     value={imapPass}
-                                    onChange={e => setImapPass(e.target.value)}
-                                    className="h-12 bg-background border-2 border-input rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium"
+                                    onChange={e => { setImapPass(e.target.value); setPasswordError(''); setConfigError(''); }}
+                                    className={`h-12 bg-background border-2 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium ${passwordError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10' : 'border-input'}`}
                                     placeholder="xxxx xxxx xxxx xxxx"
                                 />
+                                {passwordError && <p className="text-xs font-bold text-red-500 ml-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{passwordError}</p>}
                             </div>
                         </div>
                         

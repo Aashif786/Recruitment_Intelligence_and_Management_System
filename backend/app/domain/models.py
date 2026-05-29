@@ -148,6 +148,8 @@ class Application(Base):
     last_attempt_at = Column(DateTime)
     background_task_id = Column(String(100))
     scoring_metadata = Column(JSON, nullable=True) # JSON string of weights/logic
+    email_status = Column(String(20), default='pending')
+    email_sent_at = Column(DateTime, nullable=True)
 
     # Relationships
     job = relationship("Job", back_populates="applications")

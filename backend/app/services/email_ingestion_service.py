@@ -359,11 +359,13 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                             continue
                                         
                                         # Create database record
+                                        # SECURITY: Store sanitized filename to prevent path traversal
+                                        # in filenames like ../../etc/passwd.pdf being persisted to DB.
                                         new_resume = AttachmentResume(
                                             message_id=msg_id,
                                             sender_email=sender,
                                             subject=subject,
-                                            file_name=filename,
+                                            file_name=safe_filename,
                                             file_url=file_url,
                                             file_data=None,
                                             email_body=email_body,
@@ -375,7 +377,7 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                         db.add(new_resume)
                                         saved_count += 1
                                         resume_count += 1
-                                        logger.info(f"Ingested new resume from {raw_email}: {filename}")
+                                        logger.info(f"Ingested new resume from {raw_email}: {safe_filename}")
                         
                         if resume_count == 0:
                             logger.info(f"Email from {raw_email} had no resume attachments.")

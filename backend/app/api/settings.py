@@ -1,9 +1,14 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
-from app.infrastructure.database import get_db
+from app.infrastructure.database import get_db, SessionLocal
 from app.domain.models import GlobalSettings, User
 from app.domain.schemas import GlobalSettingsUpdate, GlobalSettingsResponse
 from app.core.auth import get_current_hr
+from app.services.email_ingestion_service import fetch_resume_attachments, run_batch_resume_processing
+import imaplib
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 from fastapi import Request
@@ -13,6 +18,25 @@ from app.core.rate_limiter import limiter
 def ensure_global_settings_table(db: Session) -> None:
     """Create the settings table on demand for legacy databases."""
     GlobalSettings.__table__.create(bind=db.get_bind(), checkfirst=True)
+
+
+def _verify_imap_credentials(email: str, password: str) -> dict:
+    """Test IMAP connection to Gmail. Returns {"ok": True} or {"ok": False, "error": "..."}."""
+    try:
+        mail = imaplib.IMAP4_SSL("imap.gmail.com", 993, timeout=15)
+        try:
+            mail.login(email, password)
+            mail.logout()
+            return {"ok": True}
+        except imaplib.IMAP4.error as e:
+            return {
+                "ok": False,
+                "error": f"Authentication failed. Please check your email and App Password. ({e})"
+            }
+        except Exception as e:
+            return {"ok": False, "error": f"IMAP login error: {e}"}
+    except Exception as e:
+        return {"ok": False, "error": f"Could not connect to Gmail IMAP server: {e}"}
 
 
 @router.get("", response_model=GlobalSettingsResponse)
@@ -65,12 +89,38 @@ def get_settings(
 @limiter.limit("60/minute")
 def update_settings(
     request: Request, settings_data: GlobalSettingsUpdate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
     """Update global settings (HR only)."""
     ensure_global_settings_table(db)
     data = settings_data.model_dump(exclude_unset=True)
+    
+    # ── IMAP credential verification ──────────────────────────────────
+    # If the user is setting/changing IMAP email or password, verify the
+    # credentials actually work before persisting them.
+    imap_email_new = data.get("imap_email")
+    imap_password_new = data.get("imap_password")
+    
+    if imap_email_new or imap_password_new:
+        # Resolve the full pair: use new value if provided, else fall back to DB
+        existing = {s.key: s.value for s in db.query(GlobalSettings).all()}
+        email_to_test = (imap_email_new or existing.get("imap_email", "")).strip()
+        password_to_test = (imap_password_new or existing.get("imap_password", "")).strip()
+        
+        if email_to_test and password_to_test:
+            result = _verify_imap_credentials(email_to_test, password_to_test)
+            if not result["ok"]:
+                logger.warning(
+                    "IMAP credential verification failed for %s: %s",
+                    email_to_test, result["error"]
+                )
+                raise HTTPException(
+                    status_code=422,
+                    detail=result["error"]
+                )
+    # ──────────────────────────────────────────────────────────────────
     
     for key, value in data.items():
         if value is None:
@@ -88,6 +138,25 @@ def update_settings(
             db.add(setting)
             
     db.commit()
+
+    # Trigger immediate sync in background if auto_sync_enabled was toggled ON (or updated while True)
+    if data.get("auto_sync_enabled") is True:
+        async def run_sync_in_background():
+            bg_db = SessionLocal()
+            try:
+                # Retrieve fully resolved credentials from DB
+                existing = {s.key: s.value for s in bg_db.query(GlobalSettings).all()}
+                email = existing.get("imap_email", "").strip()
+                password = existing.get("imap_password", "").strip()
+                if email and password:
+                    fetch_resume_attachments(bg_db, email, password)
+                    await run_batch_resume_processing(bg_db)
+            except Exception as e:
+                logger.error(f"Immediate background sync on setting save failed: {e}")
+            finally:
+                bg_db.close()
+        background_tasks.add_task(run_sync_in_background)
     
     # Return updated settings
     return get_settings(request=request, db=db)
+
