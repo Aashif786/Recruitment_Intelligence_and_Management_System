@@ -40,12 +40,12 @@ export default function SettingsPage() {
         seo_description_default: ''
     })
 
-    if (user && user.role !== 'hr' && user.role !== 'super_admin') {
+    if (user && user.role !== 'super_admin') {
         return (
             <div className="flex flex-col items-center justify-center p-20 gap-4 text-center">
                 <ShieldAlert className="h-16 w-16 text-destructive opacity-20" />
                 <h2 className="text-2xl font-black">Access Denied</h2>
-                <p className="text-muted-foreground">This page is restricted to HR and Administrators only.</p>
+                <p className="text-muted-foreground">This page is restricted to Super Administrators only.</p>
                 <Button onClick={() => router.push('/dashboard/hr')}>Return to Dashboard</Button>
             </div>
         )
@@ -58,7 +58,7 @@ export default function SettingsPage() {
     const fetchSettings = async () => {
         setLoading(true)
         try {
-            const data = await APIClient.get('/api/settings') as any
+            const data = await APIClient.get('/api/settings/sensitive') as any
             setSettings({
                 company_logo_url: data.company_logo_url || '',
                 company_name: data.company_name || '',

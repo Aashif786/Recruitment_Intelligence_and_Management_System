@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db, SessionLocal
 from app.domain.models import GlobalSettings, User
 from app.domain.schemas import GlobalSettingsUpdate, GlobalSettingsResponse
-from app.core.auth import get_current_hr
+from app.core.auth import get_current_hr, get_current_admin
 from app.services.email_ingestion_service import fetch_resume_attachments, run_batch_resume_processing
 import imaplib
 import logging
@@ -39,12 +39,7 @@ def _verify_imap_credentials(email: str, password: str) -> dict:
         return {"ok": False, "error": f"Could not connect to Gmail IMAP server: {e}"}
 
 
-@router.get("", response_model=GlobalSettingsResponse)
-@limiter.limit("60/minute")
-def get_settings(
-    request: Request, db: Session = Depends(get_db)
-):
-    """Fetch global settings (public - used for branding on login/register pages)."""
+def _get_sensitive_settings_dict(db: Session) -> dict:
     ensure_global_settings_table(db)
     settings_records = db.query(GlobalSettings).all()
     settings_dict = {s.key: s.value for s in settings_records}
@@ -52,15 +47,6 @@ def get_settings(
     from app.core.branding import get_all_branding
     branding = get_all_branding(db)
     
-    from app.core.auth import get_current_user
-    has_sensitive_access = False
-    try:
-        user = get_current_user(request, db)
-        if user and user.role in {"super_admin", "hr"} and user.approval_status == "approved" and user.is_active:
-            has_sensitive_access = True
-    except Exception:
-        pass
-
     return {
         "company_logo_url": branding.get("company_logo_url"),
         "company_name": branding.get("company_name"),
@@ -68,10 +54,10 @@ def get_settings(
         "hr_email": settings_dict.get("hr_email", ""),
         "hr_name": settings_dict.get("hr_name", ""),
         "hr_phone": settings_dict.get("hr_phone", ""),
-        "offer_letter_template": settings_dict.get("offer_letter_template", "") if has_sensitive_access else "",
-        "imap_email": settings_dict.get("imap_email", "") if has_sensitive_access else "",
-        "imap_password": settings_dict.get("imap_password", "") if has_sensitive_access else "",
-        "auto_sync_enabled": (settings_dict.get("auto_sync_enabled", "false").lower() == "true") if has_sensitive_access else False,
+        "offer_letter_template": settings_dict.get("offer_letter_template", ""),
+        "imap_email": settings_dict.get("imap_email", ""),
+        "imap_password": settings_dict.get("imap_password", ""),
+        "auto_sync_enabled": settings_dict.get("auto_sync_enabled", "false").lower() == "true",
         
         "product_name": branding.get("product_name"),
         "dark_logo_url": branding.get("dark_logo_url"),
@@ -85,20 +71,76 @@ def get_settings(
         "seo_description_default": branding.get("seo_description_default")
     }
 
+
+@router.get("", response_model=GlobalSettingsResponse)
+@limiter.limit("60/minute")
+def get_settings(
+    request: Request, db: Session = Depends(get_db)
+):
+    """Fetch global settings (public - branding only, sensitive fields omitted)."""
+    ensure_global_settings_table(db)
+    from app.core.branding import get_all_branding
+    branding = get_all_branding(db)
+
+    return {
+        "company_logo_url": branding.get("company_logo_url"),
+        "company_name": branding.get("company_name"),
+        "company_address": "",
+        "hr_email": "",
+        "hr_name": "",
+        "hr_phone": "",
+        "offer_letter_template": "",
+        "imap_email": "",
+        "imap_password": "",
+        "auto_sync_enabled": False,
+        
+        "product_name": branding.get("product_name"),
+        "dark_logo_url": branding.get("dark_logo_url"),
+        "favicon_url": branding.get("favicon_url"),
+        "footer_text": branding.get("footer_text"),
+        "support_email": branding.get("support_email"),
+        "theme_color": branding.get("theme_color"),
+        "terms_url": branding.get("terms_url"),
+        "privacy_url": branding.get("privacy_url"),
+        "seo_title_default": branding.get("seo_title_default"),
+        "seo_description_default": branding.get("seo_description_default")
+    }
+
+
+@router.get("/branding", response_model=GlobalSettingsResponse)
+@limiter.limit("60/minute")
+def get_branding_settings(
+    request: Request, db: Session = Depends(get_db)
+):
+    """Fetch branding settings (public)."""
+    return get_settings(request=request, db=db)
+
+
+@router.get("/sensitive", response_model=GlobalSettingsResponse)
+@limiter.limit("60/minute")
+def get_sensitive_settings(
+    request: Request,
+    current_user: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Fetch sensitive settings (Super Admin only)."""
+    return _get_sensitive_settings_dict(db)
+
+
 @router.post("", response_model=GlobalSettingsResponse)
 @limiter.limit("60/minute")
 def update_settings(
     request: Request, settings_data: GlobalSettingsUpdate,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_hr),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """Update global settings (HR only)."""
+    """Update global settings (Super Admin only)."""
     ensure_global_settings_table(db)
     data = settings_data.model_dump(exclude_unset=True)
     
     # ── IMAP credential verification ──────────────────────────────────
-    # If the user is setting/changing IMAP email or password, verify the
+    # If the admin is setting/changing IMAP email or password, verify the
     # credentials actually work before persisting them.
     imap_email_new = data.get("imap_email")
     imap_password_new = data.get("imap_password")
@@ -157,6 +199,6 @@ def update_settings(
                 bg_db.close()
         background_tasks.add_task(run_sync_in_background)
     
-    # Return updated settings
-    return get_settings(request=request, db=db)
+    # Return updated sensitive settings
+    return _get_sensitive_settings_dict(db)
 

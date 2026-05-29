@@ -183,15 +183,13 @@ def get_current_user(
 
 def get_current_hr(current_user: User = Depends(get_current_user)) -> User:
     """Dependency to ensure an approved HR or Super Admin session."""
-    return ensure_approved_staff(current_user, {"super_admin", "hr"})
+    return ensure_approved_staff(current_user, APPROVED_STAFF_ROLES)
 
 def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
     """Dependency to ensure user is an approved Super Admin."""
     return ensure_approved_staff(current_user, {"super_admin"})
 
-def get_current_candidate(current_user: User = Depends(get_current_user)) -> User:
-    """Dependency to ensure user is a Candidate"""
-    return ensure_user_has_roles(current_user, {"candidate"})
+
 
 def get_current_interview(
     request: Request,

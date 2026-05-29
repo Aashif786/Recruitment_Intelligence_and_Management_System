@@ -1,20 +1,56 @@
-from typing import Dict, Any
+import json
+from typing import Dict, Any, Optional
+from app.core.redis_store import get_redis_client
 
-# Simple in-memory dict for job tracking
-ai_jobs: Dict[str, Dict[str, Any]] = {}
+# Simple in-memory dict for job tracking (fallback)
+_ai_jobs_fallback: Dict[str, Dict[str, Any]] = {}
+_JOB_TTL = 86400  # 24 hours
+
+def _get_redis_key(job_id: str) -> str:
+    return f"rims:ai_job:{job_id}"
 
 def create_job(job_id: str):
-    ai_jobs[job_id] = {"status": "processing", "result": None, "error": None}
+    r = get_redis_client()
+    job_data = {"status": "processing", "result": None, "error": None}
+    if r:
+        try:
+            r.setex(_get_redis_key(job_id), _JOB_TTL, json.dumps(job_data))
+            return
+        except Exception:
+            pass
+    _ai_jobs_fallback[job_id] = job_data
 
 def complete_job(job_id: str, result: Any = None):
-    if job_id in ai_jobs:
-        ai_jobs[job_id]["status"] = "completed"
-        ai_jobs[job_id]["result"] = result
+    r = get_redis_client()
+    job_data = {"status": "completed", "result": result, "error": None}
+    if r:
+        try:
+            r.setex(_get_redis_key(job_id), _JOB_TTL, json.dumps(job_data))
+            return
+        except Exception:
+            pass
+    if job_id in _ai_jobs_fallback:
+        _ai_jobs_fallback[job_id] = job_data
 
 def fail_job(job_id: str, error: str):
-    if job_id in ai_jobs:
-        ai_jobs[job_id]["status"] = "failed"
-        ai_jobs[job_id]["error"] = error
+    r = get_redis_client()
+    job_data = {"status": "failed", "result": None, "error": error}
+    if r:
+        try:
+            r.setex(_get_redis_key(job_id), _JOB_TTL, json.dumps(job_data))
+            return
+        except Exception:
+            pass
+    if job_id in _ai_jobs_fallback:
+        _ai_jobs_fallback[job_id] = job_data
 
-def get_job(job_id: str):
-    return ai_jobs.get(job_id)
+def get_job(job_id: str) -> Optional[Dict[str, Any]]:
+    r = get_redis_client()
+    if r:
+        try:
+            val = r.get(_get_redis_key(job_id))
+            if val:
+                return json.loads(val)
+        except Exception:
+            pass
+    return _ai_jobs_fallback.get(job_id)

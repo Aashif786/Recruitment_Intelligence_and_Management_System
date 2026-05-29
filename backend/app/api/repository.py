@@ -24,30 +24,9 @@ from app.core.rate_limiter import limiter
 
 def _ensure_question_sets_table(db: Session) -> None:
     """
-    Ensure the question_sets table exists. Called on first request as a safety net
-    in case the startup migration hasn't run yet (e.g. existing DB without restart).
+    No-op. Table creation is handled by startup migrations.
     """
-    try:
-        from sqlalchemy import text, inspect
-        inspector = inspect(db.bind)
-        if "question_sets" not in inspector.get_table_names():
-            db.execute(text("""
-                CREATE TABLE IF NOT EXISTS question_sets (
-                    id SERIAL PRIMARY KEY,
-                    title VARCHAR(255) NOT NULL,
-                    round_type VARCHAR(50) NOT NULL,
-                    job_roles TEXT,
-                    questions TEXT NOT NULL DEFAULT '[]',
-                    topic_tags TEXT,
-                    hr_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                )
-            """))
-            db.commit()
-            logger.info("[Repository] question_sets table created on-demand.")
-    except Exception as e:
-        logger.warning(f"[Repository] _ensure_question_sets_table: {e}")
+    pass
 
 
 # ── Pydantic schemas ──────────────────────────────────────────────────────────
@@ -161,6 +140,8 @@ def list_question_sets(
         
         # Initialize the query object
         qs = db.query(QuestionSet)
+        if current_user.role != "super_admin":
+            qs = qs.filter(or_(QuestionSet.hr_id == current_user.id, QuestionSet.hr_id.is_(None)))
         
         if round_type:
             qs = qs.filter(QuestionSet.round_type == round_type)
@@ -230,7 +211,10 @@ def get_question_set(
     current_user=Depends(get_current_hr),
 ):
     _ensure_question_sets_table(db)
-    s = db.query(QuestionSet).filter(QuestionSet.id == set_id).first()
+    query = db.query(QuestionSet).filter(QuestionSet.id == set_id)
+    if current_user.role != "super_admin":
+        query = query.filter(or_(QuestionSet.hr_id == current_user.id, QuestionSet.hr_id.is_(None)))
+    s = query.first()
     if not s:
         raise HTTPException(status_code=404, detail="Question set not found.")
     questions = _parse_json_field(s.questions, [])
@@ -303,9 +287,12 @@ def update_question_set(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_hr),
 ):
-    s = db.query(QuestionSet).filter(QuestionSet.id == set_id).first()
+    query = db.query(QuestionSet).filter(QuestionSet.id == set_id)
+    if current_user.role != "super_admin":
+        query = query.filter(QuestionSet.hr_id == current_user.id)
+    s = query.first()
     if not s:
-        raise HTTPException(status_code=404, detail="Question set not found.")
+        raise HTTPException(status_code=404, detail="Question set not found or access denied.")
     if payload.round_type not in ("aptitude", "technical", "behavioural"):
         raise HTTPException(status_code=400, detail="round_type must be aptitude, technical, or behavioural.")
 
@@ -349,8 +336,11 @@ def delete_question_set(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_hr),
 ):
-    s = db.query(QuestionSet).filter(QuestionSet.id == set_id).first()
+    query = db.query(QuestionSet).filter(QuestionSet.id == set_id)
+    if current_user.role != "super_admin":
+        query = query.filter(QuestionSet.hr_id == current_user.id)
+    s = query.first()
     if not s:
-        raise HTTPException(status_code=404, detail="Question set not found.")
+        raise HTTPException(status_code=404, detail="Question set not found or access denied.")
     db.delete(s)
     db.commit()

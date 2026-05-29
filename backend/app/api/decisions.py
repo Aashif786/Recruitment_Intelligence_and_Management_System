@@ -255,9 +255,8 @@ def get_application_decision(
                 # Check job ownership if application.hr_id is null/mismatched
                 if not application.job or application.job.hr_id != current_user.id:
                     raise HTTPException(status_code=403, detail="Forbidden: You do not own this application.")
-        elif current_user.role.lower() == "candidate":
-            if (application.candidate_email or "").lower() != (current_user.email or "").lower():
-                raise HTTPException(status_code=403, detail="Unauthorized access")
+        else:
+            raise HTTPException(status_code=403, detail="Forbidden: Access restricted.")
     
     
     decision = db.query(HiringDecision).options(

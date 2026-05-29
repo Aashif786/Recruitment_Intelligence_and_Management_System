@@ -53,7 +53,7 @@ export function UserNav() {
             .slice(0, 2)
     }, [user?.full_name])
 
-    const { data: settings, mutate } = useSWR('/api/settings', (url) => APIClient.get(url)) as { data: any, mutate: any }
+    const { data: settings, mutate } = useSWR('/api/settings/branding', (url) => APIClient.get(url)) as { data: any, mutate: any }
     const branding = getBranding(settings)
 
     const avatarUrl = useMemo(() => {
@@ -73,7 +73,7 @@ export function UserNav() {
             toast.success("Brand logo updated successfully")
             setIsLogoDialogOpen(false)
             // Trigger SWR revalidation
-            mutate('/api/settings')
+            mutate('/api/settings/branding')
         } catch (error) {
             toast.error("Failed to update logo")
         } finally {
@@ -118,7 +118,7 @@ export function UserNav() {
                         <Settings className="mr-3 h-4 w-4 text-muted-foreground" />
                         <span>Settings</span>
                     </DropdownMenuItem>
-                    {(user?.role === 'hr' || user?.role === 'super_admin') && (
+                    {user?.role === 'super_admin' && (
                         <DropdownMenuItem 
                             className="cursor-pointer py-2.5 focus:bg-accent/40" 
                             onClick={() => {

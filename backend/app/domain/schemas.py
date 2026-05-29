@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from datetime import datetime
 import re
 import json
@@ -124,6 +124,10 @@ class ResetPasswordRequest(BaseModel):
     @classmethod
     def validate_email(cls, v):
         return UserRegister.validate_email_robust(v)
+
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    profile_image_url: Optional[str] = None
 
 # ============================================================================
 # Job Schemas
@@ -294,6 +298,22 @@ class JobResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     
+    class Config:
+        from_attributes = True
+
+class JobPublicResponse(BaseModel):
+    id: int
+    job_id: Optional[str] = None
+    title: str
+    description: str
+    experience_level: str
+    location: Optional[str] = 'Remote'
+    mode_of_work: Optional[str] = 'Remote'
+    job_type: Optional[str] = 'Full-Time'
+    domain: Optional[str] = 'Engineering'
+    status: str
+    created_at: datetime
+
     class Config:
         from_attributes = True
 
@@ -641,8 +661,12 @@ class InterviewAnswerSubmit(BaseModel):
     @field_validator('answer_text')
     @classmethod
     def validate_answer_text(cls, v):
-        if len(v) > 50000:
-            raise ValueError("Answer text is too long (max 50,000 characters).")
+        if len(v) > 10000:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=400,
+                detail="Answer text is too long (max 10,000 characters)."
+            )
         return v
 
 class InterviewQuestionResponse(BaseModel):
@@ -731,10 +755,19 @@ class MonitoringEventCreate(BaseModel):
     def validate_event_type(cls, v):
         if not v or not v.strip():
             raise ValueError("event_type cannot be empty.")
-        if len(v) > 50:
-            # Truncate silently to fit DB column rather than rejecting valid proctoring events
-            return v[:50]
-        return v
+        import re
+        v_clean = re.sub(r'[^a-z0-9_]', '_', v.strip().lower())
+        
+        valid_types = {
+            "focus_lost", "face_not_visible", "multiple_faces", "normal", 
+            "tab_switch", "fullscreen_exit", "face_not_detected", "multiple_people"
+        }
+        if v_clean in valid_types:
+            return v_clean
+        if re.match(r"^focus_lost_strike_\d+_[a-z0-9_]+$", v_clean):
+            return v_clean
+            
+        raise ValueError(f"Invalid event_type: {v}")
 
     @field_validator('confidence_score')
     @classmethod
@@ -822,6 +855,29 @@ class GeneralGrievanceCreate(BaseModel):
     access_key: str
     issue_type: str
     description: str
+
+class SupportTicketCreate(BaseModel):
+    email: EmailStr
+    access_key: str
+    grievance_type: str
+    description: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_access_key(cls, data):
+        if isinstance(data, dict):
+            if "key" in data and "access_key" not in data:
+                data["access_key"] = data["key"]
+        return data
+
+    @field_validator('grievance_type')
+    @classmethod
+    def validate_grievance_type(cls, v):
+        valid_types = {"technical", "access_issue", "misconduct_appeal", "key_reissue", "other"}
+        v_clean = v.strip().lower()
+        if v_clean not in valid_types:
+            raise ValueError(f"Invalid grievance_type. Must be one of {valid_types}")
+        return v_clean
 
 class InterviewIssueResolve(BaseModel):
     hr_response: Optional[str] = ""  # Optional for 'dismiss' action; required for reply/resolve

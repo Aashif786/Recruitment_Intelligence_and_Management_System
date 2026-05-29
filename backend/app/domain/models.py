@@ -16,7 +16,7 @@ class User(Base):
     __tablename__ = "users"
     __table_args__ = (
         CheckConstraint(
-            "role IN ('super_admin', 'hr', 'recruiter', 'pending_hr', 'candidate')",
+            "role IN ('super_admin', 'hr', 'pending_hr')",
             name='check_users_role',
         ),
         CheckConstraint("approval_status IN ('pending', 'approved', 'rejected')", name='check_users_approval_status'),
@@ -33,6 +33,8 @@ class User(Base):
     profile_image_url = Column(String(500), nullable=True)
     otp_code = Column(String(255), nullable=True)
     otp_expiry = Column(DateTime(timezone=True), nullable=True, index=True)
+    otp_attempt_count = Column(Integer, default=0, nullable=False)
+    otp_locked_until = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime, default=get_ist_now, server_default=func.now())
     updated_at = Column(DateTime, default=get_ist_now, server_default=func.now(), onupdate=get_ist_now)
 
@@ -114,6 +116,9 @@ class Application(Base):
     candidate_phone = Column(EncryptedText)
     candidate_phone_hash = Column(String(64), nullable=True, index=True)
     # plain digits for easier debugging/validation
+    # TODO: Issue M-07: candidate_phone_normalized stores candidate phone numbers in plain text.
+    # In the future, this column should be removed or encrypted to avoid PII leak.
+    # We keep it for now due to database constraint requirements, but log a warning at startup.
     candidate_phone_normalized = Column(String(50), nullable=True, index=True)
     # Original user-provided phone value (encrypted) for auditing/debugging.
     # The normalized digits-only value is still stored in `candidate_phone`.
@@ -351,6 +356,7 @@ class Offer(Base):
     offer_email_status = Column(String(20), default='pending')
     offer_email_retry_count = Column(Integer, default=0)
     reminder_sent_at = Column(DateTime)
+    offer_preview_count = Column(Integer, default=0, nullable=False)
     
     application = relationship("Application", back_populates="offer")
     approver = relationship("User", foreign_keys=[offer_approved_by])
@@ -786,7 +792,7 @@ class GlobalSettings(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     key = Column(String(100), unique=True, nullable=False, index=True)
-    value = Column(Text, nullable=False)
+    value = Column(EncryptedText, nullable=False)
     created_at = Column(DateTime, default=get_ist_now)
     updated_at = Column(DateTime, default=get_ist_now, onupdate=get_ist_now)
 

@@ -217,100 +217,7 @@ async def _send_via_resend(to_email: str, subject: str, html_body: str) -> dict:
         )
         return {"success": False, "error": str(e)}
 
-async def send_email_async(to_email: str, subject: str, html_body: str, attachments: list = None) -> dict:
-    """Async wrapper for the SMTP sender with up to 2 retries (3 total attempts)."""
-    # Attachments: keep SMTP path for now (Resend implementation is HTML-only).
-    if attachments:
-        loop = asyncio.get_running_loop()
-        max_retries = 2
-        last_error = "Unknown error"
-
-        for attempt in range(max_retries + 1):
-            result = await loop.run_in_executor(
-                None,
-                _send_via_smtp,
-                to_email,
-                subject,
-                html_body,
-                attachments,
-            )
-            if result["success"]:
-                return {**result, "provider": "smtp"}
-
-            if result.get("deferred"):
-                return {
-                    "success": False,
-                    "provider": "smtp",
-                    "deferred": True,
-                    "error": result.get("error") or "Deferred due to SMTP quota",
-                }
-
-            last_error = result["error"]
-            if attempt < max_retries:
-                wait_time = (attempt + 1) * 2  # Exponential-ish backoff: 2s, 4s
-                logger.warning(f"Retrying SMTP email to {to_email} in {wait_time}s (Attempt {attempt + 1}/{max_retries})...")
-                await asyncio.sleep(wait_time)
-
-        return {"success": False, "provider": "smtp", "error": f"Failed after {max_retries + 1} attempts: {last_error}", "deferred": False}
-
-    # No attachments:
-    # Resend is explicit opt-in and only used when BOTH RESEND_API_KEY and RESEND_FROM are set.
-    resend_api_key = (getattr(settings, "resend_api_key", "") or "").strip()
-    resend_from = (getattr(settings, "resend_from", "") or "").strip()
-    if resend_api_key and resend_from:
-        smtp_configured = bool(settings.smtp_host and settings.smtp_user and settings.smtp_password)
-
-        # Retry Resend up to 3 times with 5 second delay
-        resend_max_retries = 2
-        resend_last_error = "Unknown error"
-        for resend_attempt in range(resend_max_retries + 1):
-            result = await _send_via_resend(to_email, subject, html_body)
-            if result["success"]:
-                return {**result, "provider": "resend"}
-            resend_last_error = result["error"]
-            if resend_attempt < resend_max_retries:
-                await asyncio.sleep(5)
-
-        last_error = resend_last_error
-
-        if smtp_configured:
-            logger.warning(
-                f"[EMAIL FALLBACK TO SMTP] Resend failed for {to_email} ({last_error}); falling back to SMTP."
-            )
-            loop = asyncio.get_running_loop()
-            max_smtp_retries = 2
-            smtp_last_error = "Unknown error"
-            try:
-                for smtp_attempt in range(max_smtp_retries + 1):
-                    smtp_result = await loop.run_in_executor(
-                        None,
-                        _send_via_smtp,
-                        to_email,
-                        subject,
-                        html_body,
-                        None,
-                    )
-                    if smtp_result["success"]:
-                        return {**smtp_result, "provider": "smtp"}
-                    if smtp_result.get("deferred"):
-                        return {
-                            "success": False,
-                            "provider": "smtp",
-                            "deferred": True,
-                            "error": smtp_result.get("error") or "Deferred due to SMTP quota",
-                        }
-                    smtp_last_error = smtp_result["error"]
-                    if smtp_attempt < max_smtp_retries:
-                        wait_time = (smtp_attempt + 1) * 2
-                        await asyncio.sleep(wait_time)
-            except Exception as e:
-                # Never crash request flow due to email issues.
-                logger.error(f"[EMAIL FALLBACK TO SMTP] SMTP fallback crashed: {e}", exc_info=True)
-            return {"success": False, "provider": "smtp", "error": f"Failed after SMTP fallback: {smtp_last_error}", "deferred": False}
-
-        return {"success": False, "provider": "resend", "error": f"Failed after Resend attempt: {last_error}", "deferred": False}
-
-    # Fallback: SMTP (original behavior).
+async def _send_via_smtp_helper(to_email: str, subject: str, html_body: str, attachments: list = None) -> dict:
     loop = asyncio.get_running_loop()
     max_retries = 2
     last_error = "Unknown error"
@@ -342,6 +249,47 @@ async def send_email_async(to_email: str, subject: str, html_body: str, attachme
             await asyncio.sleep(wait_time)
 
     return {"success": False, "provider": "smtp", "error": f"Failed after {max_retries + 1} attempts: {last_error}", "deferred": False}
+
+
+async def _send_via_resend_helper(to_email: str, subject: str, html_body: str) -> dict:
+    # Retry Resend up to 3 times with 5 second delay
+    resend_max_retries = 2
+    resend_last_error = "Unknown error"
+    for resend_attempt in range(resend_max_retries + 1):
+        result = await _send_via_resend(to_email, subject, html_body)
+        if result["success"]:
+            return {**result, "provider": "resend"}
+        resend_last_error = result["error"]
+        if resend_attempt < resend_max_retries:
+            await asyncio.sleep(5)
+
+    last_error = resend_last_error
+    smtp_configured = bool(settings.smtp_host and settings.smtp_user and settings.smtp_password)
+    if smtp_configured:
+        logger.warning(
+            f"[EMAIL FALLBACK TO SMTP] Resend failed for {to_email} ({last_error}); falling back to SMTP."
+        )
+        return await _send_via_smtp_helper(to_email, subject, html_body, None)
+
+    return {"success": False, "provider": "resend", "error": f"Failed after Resend attempt: {last_error}", "deferred": False}
+
+
+async def send_email_async(to_email: str, subject: str, html_body: str, attachments: list = None, provider: Optional[str] = None) -> dict:
+    """Async wrapper for SMTP / Resend selection with fallback and retries."""
+    if provider == "smtp":
+        return await _send_via_smtp_helper(to_email, subject, html_body, attachments)
+    elif provider == "resend":
+        return await _send_via_resend_helper(to_email, subject, html_body)
+        
+    if attachments:
+        return await _send_via_smtp_helper(to_email, subject, html_body, attachments)
+
+    resend_api_key = (getattr(settings, "resend_api_key", "") or "").strip()
+    resend_from = (getattr(settings, "resend_from", "") or "").strip()
+    if resend_api_key and resend_from:
+        return await _send_via_resend_helper(to_email, subject, html_body)
+
+    return await _send_via_smtp_helper(to_email, subject, html_body, attachments)
 
 async def execute_email_with_retries(
     to_email: str, 

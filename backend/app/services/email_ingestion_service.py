@@ -533,6 +533,32 @@ async def run_batch_resume_processing(db: Session):
                 db.commit()
                 continue
             
+            # SSRF Protection: validate resume.file_url before fetching (P2-H05)
+            from urllib.parse import urlparse
+            try:
+                parsed_url = urlparse(resume.file_url)
+                if not parsed_url.scheme or parsed_url.scheme.lower() != "https":
+                    raise ValueError("Only HTTPS scheme is allowed for safety.")
+                
+                # Check netloc/domain
+                allowed_domains = []
+                if settings.supabase_url:
+                    supabase_netloc = urlparse(settings.supabase_url).netloc
+                    if supabase_netloc:
+                        allowed_domains.append(supabase_netloc)
+                
+                netloc_lower = parsed_url.netloc.lower()
+                is_allowed = netloc_lower.endswith(".supabase.co") or netloc_lower == "supabase.co" or any(d == netloc_lower for d in allowed_domains)
+                
+                if not is_allowed:
+                    raise ValueError(f"Domain '{netloc_lower}' is not in the list of allowed Supabase storage domains.")
+            except Exception as ssrf_err:
+                logger.error(f"SSRF Prevention: Blocked fetching URL '{resume.file_url}': {ssrf_err}")
+                resume.processed = True
+                resume.last_error = f"SSRF Prevention: Blocked fetching URL: {ssrf_err}"
+                db.commit()
+                continue
+
             # Download file and calculate hash
             content = b""
             try:

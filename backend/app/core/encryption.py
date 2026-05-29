@@ -12,6 +12,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+ENFORCE_ENCRYPTION = False
+
 
 # ---------------------------------------------------------------------------
 # Key Management
@@ -104,6 +106,11 @@ def decrypt_field(ciphertext: str) -> str:
     
     # Backward compatibility: if it doesn't look like a Fernet token, assume it's plain text
     if not is_encrypted(ciphertext):
+        if ENFORCE_ENCRYPTION:
+            logger.error(f"CRITICAL SECURITY WARNING: Unencrypted data found in encrypted column: '{ciphertext[:20]}...'")
+            raise ValueError("Unencrypted data detected in encrypted column after migration enforcement.")
+        else:
+            logger.warning(f"Unencrypted legacy data returned from encrypted column: '{ciphertext[:20]}...'")
         return ciphertext
     
     try:

@@ -570,6 +570,15 @@ async def get_offer_preview(request: Request, token: str, db: Session = Depends(
     application = db.query(Application).join(Offer).filter(Offer.offer_token == token).first()
     if not application:
         raise HTTPException(status_code=404, detail="Offer not found")
+
+    offer = application.offer
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+
+    if offer.offer_preview_count >= 10:
+        raise HTTPException(status_code=403, detail="Offer preview limit exceeded.")
+
+    offer.offer_preview_count = (offer.offer_preview_count or 0) + 1
     
     if application.offer_token_used:
         raise HTTPException(status_code=400, detail="Offer already responded to.")
@@ -578,6 +587,8 @@ async def get_offer_preview(request: Request, token: str, db: Session = Depends(
         expiry = to_naive_ist(application.offer_token_expiry)
         if expiry < get_ist_now():
             raise HTTPException(status_code=400, detail="Offer expired.")
+            
+    db.commit()
 
     from app.core.branding import get_branding_value
     resolved_company_name = get_branding_value(db, "company_name")
@@ -590,8 +601,9 @@ async def get_offer_preview(request: Request, token: str, db: Session = Depends(
 
 def generate_employee_id(db: Session):
     """Utility to generate a unique employee ID (Task 8)."""
+    import secrets
     while True:
-        emp_id = 'EMP-' + ''.join(random.choices(string.digits, k=6))
+        emp_id = 'EMP-' + ''.join(secrets.choice(string.digits) for _ in range(6))
         exists = db.query(Application).filter(Application.employee_id == emp_id).first()
         if not exists:
             return emp_id

@@ -384,7 +384,9 @@ async def generate_test_token(
 
 
 @router.post("/{interview_id}/start")
+@limiter.limit("20/minute")
 async def start_interview_session(
+    request: Request,
     interview_id: int,
     data: InterviewStart,
     interview_session: Interview = Depends(get_current_interview_any_status),
@@ -462,7 +464,9 @@ async def start_interview_session(
 
 
 @router.get("/{interview_id}/stage")
+@limiter.limit("20/minute")
 async def get_interview_stage(
+    request: Request,
     interview_id: int,
     interview_session: Interview = Depends(get_current_interview_any_status),
     db: Session = Depends(get_db)
@@ -535,7 +539,9 @@ async def get_interview_stage(
 
 
 @router.get("/{interview_id}/questions")
+@limiter.limit("20/minute")
 async def get_all_questions(
+    request: Request,
     interview_id: int,
     interview_session: Interview = Depends(get_current_interview_any_status),
     db: Session = Depends(get_db)
@@ -602,7 +608,9 @@ async def get_all_questions(
 
 
 @router.get("/{interview_id}/current-question", response_model=InterviewQuestionResponse)
+@limiter.limit("20/minute")
 async def get_current_question(
+    request: Request,
     interview_id: int,
     interview_session: Interview = Depends(get_current_interview),
     db: Session = Depends(get_db)
@@ -779,6 +787,10 @@ async def submit_answer(
         answer_len = len(data.answer_text or "")
         if answer_len > 10000:
             logger.warning(f"Extremely long answer detected for interview {interview_id}: {answer_len} chars")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Answer text is too long (max 10,000 characters)."
+            )
         
         # Reject empty or purely whitespace answers for non-aptitude questions
         if (current_question.question_type or "").lower() != "aptitude":
@@ -1059,7 +1071,9 @@ async def submit_answer(
 
 
 @router.post("/{interview_id}/complete-aptitude")
+@limiter.limit("20/minute")
 async def complete_aptitude(
+    request: Request,
     interview_id: int,
     interview_session: Interview = Depends(get_current_interview),
     db: Session = Depends(get_db)
@@ -1288,7 +1302,9 @@ async def fail_device_test(
 
 
 @router.post("/{interview_id}/security-violation")
+@limiter.limit("20/minute")
 async def report_security_violation(
+    request: Request,
     interview_id: int,
     background_tasks: BackgroundTasks,
     data: dict = Body(...),
@@ -1343,6 +1359,7 @@ async def report_security_violation(
 
 
 @router.post("/{interview_id}/end")
+@limiter.limit("20/minute")
 async def end_interview(
     request: Request,
     interview_id: int,
@@ -1476,7 +1493,9 @@ async def end_interview(
     }
 
 @router.post("/{interview_id}/abandon")
+@limiter.limit("20/minute")
 async def abandon_interview(
+    request: Request,
     interview_id: int,
     background_tasks: BackgroundTasks,
     interview_session: Interview = Depends(get_current_interview_any_status),
@@ -1559,7 +1578,9 @@ def get_interview(
     return interview
 
 @router.get("/{interview_id}/report", response_model=InterviewReportResponse)
+@limiter.limit("20/minute")
 async def get_interview_report(
+    request: Request,
     interview_id: int,
     current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
@@ -1643,13 +1664,33 @@ async def transcribe_interview_audio(
     if interview_session.id != interview_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    # ── SIZE LIMIT ──
-    # Limit transcription audio to 15MB (sufficient for 2-3 mins of high-quality opus)
+    # P2-M04: Chunk-based size enforcement to prevent OOM DoS
     MAX_AUDIO_SIZE = 15 * 1024 * 1024
-    if file.size and file.size > MAX_AUDIO_SIZE:
+    chunks = []
+    total_size = 0
+    chunk_size = 1024 * 1024 # 1MB chunks
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total_size += len(chunk)
+        if total_size > MAX_AUDIO_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Audio file too large. Maximum size allowed is {MAX_AUDIO_SIZE // (1024 * 1024)}MB."
+            )
+        chunks.append(chunk)
+    audio_content = b"".join(chunks)
+
+    # P2-M04: Validate magic bytes for audio format verification
+    is_wav = audio_content.startswith(b"RIFF")
+    is_mp3 = audio_content.startswith(b"ID3") or audio_content.startswith(b"\xff\xfb") or audio_content.startswith(b"\xff\xf3") or audio_content.startswith(b"\xff\xf2")
+    is_webm = audio_content.startswith(b"\x1a\x45\xdf\xa3")
+    is_ogg = audio_content.startswith(b"OggS")
+    if not (is_wav or is_mp3 or is_webm or is_ogg):
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"Audio file too large. Maximum size allowed is {MAX_AUDIO_SIZE // (1024 * 1024)}MB."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid audio format. Must be a valid WAV, MP3, WebM, or OGG audio file."
         )
 
     rid = (request.headers.get("X-Request-ID") or "").strip()
@@ -1685,7 +1726,7 @@ async def transcribe_interview_audio(
 
     try:
         with open(tmp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            buffer.write(audio_content)
         file.file.close()
         
         file_size = os.path.getsize(tmp_path)
@@ -1709,6 +1750,7 @@ async def transcribe_interview_audio(
 
 
 @router.post("/{interview_id}/upload-video")
+@limiter.limit("20/minute")
 async def upload_interview_video(
     request: Request,
     interview_id: int,
@@ -1744,16 +1786,47 @@ async def upload_interview_video(
     storage_path = f"{interview_id}/{filename}"
     
     try:
-        if file.size and file.size > 150 * 1024 * 1024:
-            raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Video file exceeds 150MB limit.")
-            
-        content = await file.read()
-        logger.info(f"Uploading video for interview {interview_id}: size={len(content)} bytes, type={file.content_type}")
+        # P2-C02: MIME type validation
+        mime_type = file.content_type
+        if not mime_type or mime_type not in ["video/webm", "video/mp4"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid video format. Only video/webm and video/mp4 are accepted."
+            )
+
+        # P2-C02: Chunk-based size enforcement to prevent OOM DoS
+        MAX_SIZE = 150 * 1024 * 1024
+        chunks = []
+        total_size = 0
+        chunk_size = 1024 * 1024 # 1MB chunks
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > MAX_SIZE:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail="Video file exceeds 150MB limit."
+                )
+            chunks.append(chunk)
+        content = b"".join(chunks)
+
+        # Validate magic bytes for video
+        is_webm = content.startswith(b"\x1a\x45\xdf\xa3")
+        is_mp4 = len(content) > 8 and content[4:8] == b"ftyp"
+        if not (is_webm or is_mp4):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid video file content. Must be a valid WebM or MP4 video."
+            )
+
+        logger.info(f"Uploading video for interview {interview_id}: size={len(content)} bytes, type={mime_type}")
         returned_path = upload_file(
             settings.supabase_bucket_videos, 
             storage_path, 
             content, 
-            content_type=file.content_type or "video/webm"
+            content_type=mime_type
         )
         
         # Save cloud path to DB
@@ -1788,9 +1861,8 @@ async def create_monitoring_event(
     if interview_session.id != interview_id:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    # ── SIZE LIMIT ──
-    # Limit frame snapshots to 1MB (standard JPEG at 640x480 is usually <100KB)
-    if event_data.frame_snapshot and len(event_data.frame_snapshot) > 1 * 1024 * 1024:
+    # ── SIZE LIMIT ── (P2-H01: Cap frame size at 500KB)
+    if event_data.frame_snapshot and len(event_data.frame_snapshot) > 500 * 1024 * 1.35: # account for base64 overhead
         logger.warning(f"Large monitoring frame rejected for interview {interview_id}: {len(event_data.frame_snapshot)} chars")
         event_data.frame_snapshot = None # Discard the image but keep the event metadata
 
@@ -1803,6 +1875,14 @@ async def create_monitoring_event(
             # Extract header and base64 string
             header, encoded = event_data.frame_snapshot.split(",", 1)
             image_bytes = base64.b64decode(encoded)
+
+            # Strict 500KB size cap on decoded bytes (P2-H01)
+            if len(image_bytes) > 500 * 1024:
+                raise HTTPException(status_code=400, detail="Image size exceeds 500KB limit.")
+
+            # Magic bytes validation for JPEG or PNG (P2-H01)
+            if not (image_bytes.startswith(b"\xff\xd8\xff") or image_bytes.startswith(b"\x89PNG\r\n\x1a\n")):
+                raise HTTPException(status_code=400, detail="Invalid image content. Only JPEG and PNG are allowed.")
             
             timestamp = int(get_ist_now().timestamp())
             filename = f"monitoring_{interview_id}_{timestamp}_{event_data.event_type}.jpg"

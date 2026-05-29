@@ -345,8 +345,20 @@ export function getSessionDuration(): number {
 
 export function clearSession(): void {
   if (typeof window === 'undefined') return;
+  
   sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(LEGACY_KEY_V3);
+  sessionStorage.removeItem(LEGACY_KEY_V2);
+  sessionStorage.removeItem(LEGACY_KEY_V1);
+  sessionStorage.removeItem(LEGACY_KEY_V0);
+  
   localStorage.removeItem(OFFLINE_CACHE_KEY);
+  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(LEGACY_KEY_V3);
+  localStorage.removeItem(LEGACY_KEY_V2);
+  localStorage.removeItem(LEGACY_KEY_V1);
+  localStorage.removeItem(LEGACY_KEY_V0);
+
   _cachedSession = null;
   if (DEBUG) console.debug('[Session v4] Session cleared.');
 }

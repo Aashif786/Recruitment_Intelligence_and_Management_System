@@ -13,7 +13,7 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    unoptimized: true,
+    unoptimized: false,
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error'] } : false,
@@ -83,10 +83,11 @@ const nextConfig = {
     ]
   },
   async rewrites() {
+    const backendUrl = (process.env.BACKEND_URL || 'http://127.0.0.1:10000').replace(/\/$/, '');
     return [
       {
         source: '/api/((?!generate-pdf|health).*)',
-        destination: 'http://127.0.0.1:10000/api/:1',
+        destination: `${backendUrl}/api/:1`,
       },
     ]
   }

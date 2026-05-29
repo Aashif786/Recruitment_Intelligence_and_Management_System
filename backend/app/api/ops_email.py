@@ -170,23 +170,16 @@ async def email_health_check_v2(current_admin: User = Depends(get_current_admin)
 
 @router.post("/test")
 async def send_test_email(payload: EmailTestRequest, current_admin: User = Depends(get_current_admin)):
-    # Provider override is intentionally minimal: it forces the config path by temporarily masking settings.
     provider = (payload.provider or "").strip().lower() or None
 
     if provider not in (None, "resend", "smtp"):
         raise HTTPException(status_code=400, detail="provider must be 'resend', 'smtp', or omitted")
 
-    # If forcing SMTP, ensure Resend isn't selected by selection logic.
-    if provider == "smtp":
-        original = settings.resend_api_key
-        try:
-            settings.resend_api_key = ""
-            result = await send_email_async(str(payload.to_email), payload.subject, payload.html_body)
-        finally:
-            settings.resend_api_key = original
-        return {"success": bool(result.get("success")), **result}
-
-    # If forcing Resend, just call the normal function (it prefers Resend when configured).
-    result = await send_email_async(str(payload.to_email), payload.subject, payload.html_body)
+    result = await send_email_async(
+        str(payload.to_email),
+        payload.subject,
+        payload.html_body,
+        provider=provider
+    )
     return {"success": bool(result.get("success")), **result}
 

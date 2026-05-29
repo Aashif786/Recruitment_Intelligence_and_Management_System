@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session, joinedload, selectinload, defer, load_only
 from sqlalchemy.orm.exc import ObjectDeletedError
 from app.core.storage import upload_file, get_signed_url, get_public_url
 import os
-import os
 import json
 import logging
 import time
@@ -37,7 +36,6 @@ from app.services.ai_service import parse_resume_with_ai, extract_basic_candidat
 from app.services.email_service import send_application_received_email, send_rejected_email, send_approved_for_interview_email
 import secrets
 from passlib.context import CryptContext
-from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 import re
 import hashlib
@@ -234,7 +232,7 @@ def get_application_failures(
             Application.retry_count > 0,
             Application.status == CandidateState.PERMANENT_FAILURE.value
         )
-    ).order_by(Application.last_attempt_at.desc()).all()
+    ).order_by(Application.last_attempt_at.desc()).limit(100).all()
 
 @router.get("/ranking/{job_id}")
 def get_candidate_ranking(
@@ -541,6 +539,15 @@ async def apply_for_job(
             raise HTTPException(status_code=400, detail="Candidate photo is empty.")
         if len(photo_content) > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="Photo too large. Maximum size is 5MB.")
+            
+        # Validate JPEG/PNG magic bytes
+        is_jpeg = photo_content.startswith(b"\xff\xd8\xff")
+        is_png = photo_content.startswith(b"\x89PNG\r\n\x1a\n")
+        if not (is_jpeg or is_png):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid photo format. Only JPEG and PNG images are allowed."
+            )
 
     # 6. Database Entry (Atomic Transaction)
     # We flush first to get the ID, then upload to storage using that ID as a prefix.
@@ -2109,6 +2116,12 @@ async def bulk_delete_applications(
     """
     if not application_ids:
         return {"message": "No applications provided for deletion"}
+
+    if len(application_ids) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete more than 100 applications at a time."
+        )
 
     # Fetch all applications and validate ownership
     apps = db.query(Application).filter(Application.id.in_(application_ids)).all()

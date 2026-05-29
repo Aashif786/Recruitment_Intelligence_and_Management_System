@@ -147,7 +147,7 @@ def _build_reports_query(
                 )
             )
         except ValueError:
-            pass
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
 
     if to_date:
         try:
@@ -160,7 +160,7 @@ def _build_reports_query(
                 )
             )
         except ValueError:
-            pass
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
 
     effective_score_filter = func.coalesce(InterviewReport.overall_score, Interview.overall_score)
     if score_min is not None:
@@ -347,6 +347,37 @@ def export_interview_reports_csv(
             .all()
         )
 
+        # Log to AuditLog (P2-H06)
+        from app.domain.models import AuditLog
+        ip_addr = request.client.host if request and request.client else "unknown"
+        export_details = {
+            "filters": {
+                "job_id": job_id,
+                "status": status,
+                "experience": experience,
+                "skill": skill,
+                "from_date": from_date,
+                "to_date": to_date,
+                "score_min": score_min,
+                "score_max": score_max,
+                "search": search
+            },
+            "row_count": len(rows),
+            "user_email": current_user.email
+        }
+        
+        audit_entry = AuditLog(
+            user_id=current_user.id,
+            action="PII_EXPORT",
+            resource_type="Application",
+            resource_id=None,
+            details=json.dumps(export_details),
+            ip_address=ip_addr,
+            is_critical=True
+        )
+        db.add(audit_entry)
+        db.commit()
+
         output = io.StringIO()
         output.write("\ufeff")
         writer = csv.writer(output)
@@ -368,6 +399,12 @@ def export_interview_reports_csv(
             except Exception:
                 skills = str(skills_raw) if skills_raw else "N/A"
             writer.writerow([name, dt, role, score, st, exp, skills])
+
+        # Digital Watermark in CSV footer (P2-H06)
+        writer.writerow([])
+        writer.writerow([
+            f"CONFIDENTIAL - Exported by {current_user.email} on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - PII EXPORT AUDITED"
+        ] + [""] * 6)
 
         filename = f"interview_reports_{datetime.now().strftime('%Y%m%d')}.csv"
         return StreamingResponse(

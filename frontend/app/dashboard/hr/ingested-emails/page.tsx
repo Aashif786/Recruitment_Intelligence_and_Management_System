@@ -53,6 +53,7 @@ import {
     Zap,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
+import { useAuth } from '@/app/dashboard/lib/auth-context'
 
 interface IngestedEmail {
     id: number
@@ -96,11 +97,14 @@ export default function IngestedEmailsPage() {
     const [passwordError, setPasswordError] = useState('')
     const [configError, setConfigError] = useState('')
 
-    // Load current settings on mount
+    const { user } = useAuth()
+
+    // Load current settings on mount if admin
     useEffect(() => {
         const loadSettings = async () => {
+            if (user?.role !== 'super_admin') return
             try {
-                const settings = await APIClient.get('/api/settings') as any
+                const settings = await APIClient.get('/api/settings/sensitive') as any
                 if (settings.imap_email) setImapUser(settings.imap_email)
                 if (settings.imap_password) setImapPass(settings.imap_password)
                 setAutoSyncEnabled(!!settings.auto_sync_enabled)
@@ -109,7 +113,7 @@ export default function IngestedEmailsPage() {
             }
         }
         loadSettings()
-    }, [])
+    }, [user])
 
     // Assignment Modal State
     const [selectedResume, setSelectedResume] = useState<IngestedEmail | null>(null)
@@ -319,14 +323,16 @@ export default function IngestedEmailsPage() {
                         </Badge>
                     )}
                     <div className="flex gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowCredentials(!showCredentials)}
-                            className={`gap-2 border-border shadow-sm rounded-xl h-11 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
-                        >
-                            <Settings className="h-4 w-4" />
-                            Configure Mailbox
-                        </Button>
+                        {user?.role === 'super_admin' && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowCredentials(!showCredentials)}
+                                className={`gap-2 border-border shadow-sm rounded-xl h-11 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
+                            >
+                                <Settings className="h-4 w-4" />
+                                Configure Mailbox
+                            </Button>
+                        )}
                         <Button
                             onClick={handleSync}
                             disabled={isSyncing}
@@ -344,7 +350,7 @@ export default function IngestedEmailsPage() {
             </PageHeader>
 
             {/* Credentials Card */}
-            {showCredentials && (
+            {showCredentials && user?.role === 'super_admin' && (
                 <Card className="border-2 border-primary/10 bg-card shadow-xl rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
                     <CardHeader className="border-b border-border/50 pb-6">
                         <div className="flex items-center justify-between">

@@ -117,7 +117,7 @@ def update_role_constraint(conn):
             conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS check_users_role"))
             conn.execute(text("""
                 ALTER TABLE users ADD CONSTRAINT check_users_role 
-                CHECK (role IN ('super_admin', 'hr', 'recruiter', 'pending_hr', 'candidate'))
+                CHECK (role IN ('super_admin', 'hr', 'pending_hr'))
             """))
             logger.info("Migration completed: updated check_users_role constraint")
         else:
@@ -316,7 +316,7 @@ def run_startup_migrations(engine: Engine):
             conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS check_users_role"))
             conn.execute(text("""
                 ALTER TABLE users ADD CONSTRAINT check_users_role 
-                CHECK (role IN ('super_admin', 'hr', 'recruiter', 'pending_hr', 'candidate'))
+                CHECK (role IN ('super_admin', 'hr', 'pending_hr'))
             """))
             conn.commit()
             logger.info("Updated check_users_role constraint")
@@ -409,6 +409,68 @@ def run_startup_migrations(engine: Engine):
             except Exception as exc:
                 _safe_rollback(conn)
                 logger.warning(f"Migration skipped index {constraint_name}: {exc}")
+
+    # 5. Encrypt legacy plaintext values and enforce decryption checks
+    try:
+        encrypt_existing_plaintext_data(engine)
+    except Exception as exc:
+        logger.error(f"Failed to encrypt existing plaintext values: {exc}")
+
+
+def encrypt_existing_plaintext_data(engine: Engine):
+    """
+    Finds all columns in the DB defined with EncryptedText and encrypts them
+    if they contain plaintext data.
+    """
+    from sqlalchemy.orm import Session
+    from app.infrastructure.database import SessionLocal
+    from app.core.encryption import is_encrypted, encrypt_field
+    import app.domain.models as models
+    from sqlalchemy import inspect
+    
+    db = SessionLocal()
+    try:
+        from app.infrastructure.database import Base
+        for mapper in Base.registry.mappers:
+            cls = mapper.class_
+            if not hasattr(cls, '__tablename__'):
+                continue
+            encrypted_cols = []
+            for col in mapper.columns:
+                if hasattr(col.type, '__class__') and col.type.__class__.__name__ == 'EncryptedText':
+                    encrypted_cols.append(col.name)
+            
+            if not encrypted_cols:
+                continue
+                
+            logger.info(f"Checking table '{cls.__tablename__}' for legacy plaintext values in columns: {encrypted_cols}")
+            try:
+                rows = db.query(cls).all()
+                updated_count = 0
+                for row in rows:
+                    needs_update = False
+                    for col_name in encrypted_cols:
+                        val = getattr(row, col_name)
+                        if val and not is_encrypted(val):
+                            logger.info(f"Encrypting legacy plaintext value for {cls.__tablename__}.{col_name} (id={getattr(row, 'id', 'N/A')})")
+                            token = encrypt_field(val)
+                            setattr(row, col_name, token)
+                            needs_update = True
+                    if needs_update:
+                        updated_count += 1
+                if updated_count > 0:
+                    db.commit()
+                    logger.info(f"Successfully migrated {updated_count} rows in '{cls.__tablename__}'")
+            except Exception as table_err:
+                db.rollback()
+                logger.error(f"Error checking/migrating table '{cls.__tablename__}': {table_err}")
+    finally:
+        db.close()
+        
+    # Enforce strict encryption on read after migration is done
+    import app.core.encryption as encryption
+    encryption.ENFORCE_ENCRYPTION = True
+    logger.info("EncryptedText column validation/migration complete. Plaintext read check is now ENFORCED.")
 
 
 def validate_enum_parity(engine: Engine):
