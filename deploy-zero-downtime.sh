@@ -10,6 +10,17 @@ trap cleanup EXIT
 
 echo "🚀 Initiating Zero-Downtime Deployment (Blue/Green)"
 
+# 0. Fix SSH permissions (prevents "Bad owner or permissions on ~/.ssh/config" error)
+echo "🔐 Fixing SSH permissions..."
+if [ -f ~/.ssh/config ]; then
+    chmod 600 ~/.ssh/config
+fi
+if [ -d ~/.ssh ]; then
+    chmod 700 ~/.ssh
+    chmod 600 ~/.ssh/id_* 2>/dev/null || true
+    chmod 644 ~/.ssh/*.pub 2>/dev/null || true
+fi
+
 # 0. Pull latest changes from GitHub
 echo "📥 Syncing code from GitHub..."
 git fetch --all
