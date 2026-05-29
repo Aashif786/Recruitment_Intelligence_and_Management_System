@@ -20,6 +20,11 @@ jobs:
           command_timeout: 40m
           script: |
             set -euo pipefail
+            # Fix SSH permissions before any git operation
+            chmod 700 ~/.ssh 2>/dev/null || true
+            chmod 600 ~/.ssh/config 2>/dev/null || true
+            chmod 600 ~/.ssh/id_* 2>/dev/null || true
+            chmod 644 ~/.ssh/*.pub 2>/dev/null || true
             cd /var/www/rims
             git fetch origin main
             git reset --hard origin/main
