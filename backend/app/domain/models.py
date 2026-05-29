@@ -831,6 +831,10 @@ class InterviewReportVersion(Base):
 
 class AttachmentResume(Base):
     __tablename__ = "attachment_resumes"
+    __table_args__ = (
+        Index('ix_attachment_resumes_duplicate_detection', 'sender_email', 'subject', 'received_at'),
+    )
+    
     id = Column(Integer, primary_key=True, index=True)
     message_id = Column(String(255), unique=True, index=True, nullable=True)
     sender_email = Column(String(255), index=True)
