@@ -257,6 +257,27 @@ def debug_applications(db: Session = Depends(get_db)):
             "error": str(e)
         }
 
+@router.get("/debug/logs")
+def debug_logs():
+    try:
+        from pathlib import Path
+        log_path = Path(__file__).parent.parent.parent / "logs" / "app.log"
+        if not log_path.exists():
+            return {"success": False, "error": f"Log file not found at {log_path}"}
+        with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+            last_lines = lines[-100:]
+        return {
+            "success": True,
+            "log_path": str(log_path),
+            "lines": last_lines
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 @router.get("/failures", response_model=list[ApplicationResponse])
 def get_application_failures(
     db: Session = Depends(get_db),
