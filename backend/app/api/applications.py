@@ -243,7 +243,7 @@ def debug_applications(db: Session = Depends(get_db)):
                 "total": res.get("total"),
                 "items_count": len(res.get("items", [])),
                 "error_hint": res.get("error_hint"),
-                "items_preview": [{k: v for k, v in item.items() if k in ["id", "candidate_name", "status"]} for item in res.get("items", [])][:3]
+                "items_preview": [{"id": item.id, "candidate_name": item.candidate_name, "status": item.status} for item in res.get("items", [])][:3]
             },
             "counts": {
                 "applications": db.query(Application).count(),
