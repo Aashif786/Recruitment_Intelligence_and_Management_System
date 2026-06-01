@@ -16,7 +16,7 @@ class User(Base):
     __tablename__ = "users"
     __table_args__ = (
         CheckConstraint(
-            "role IN ('super_admin', 'hr', 'pending_hr')",
+            "role IN ('super_admin', 'hr', 'pending_hr', 'candidate')",
             name='check_users_role',
         ),
         CheckConstraint("approval_status IN ('pending', 'approved', 'rejected')", name='check_users_approval_status'),

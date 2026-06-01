@@ -203,9 +203,10 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
 
         email_ids = messages[0].split()
         
-        # Process 10 most recent emails
-        if len(email_ids) > 10:
-            email_ids = email_ids[-10:]
+        # Process 50 most recent emails (increased from 10 to avoid missing new emails
+        # when the mailbox already has many older messages)
+        if len(email_ids) > 50:
+            email_ids = email_ids[-50:]
             
         saved_count = 0
         logger.info(f"Scanning {len(email_ids)} emails for resume attachments...")

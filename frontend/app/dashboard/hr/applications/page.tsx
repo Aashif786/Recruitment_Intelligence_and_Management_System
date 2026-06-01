@@ -92,7 +92,9 @@ export default function HRApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [jobIdFilter, setJobIdFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  // Initialize to today (YYYY-MM-DD) — was previously empty, meaning the TO DATE filter
+  // showed today visually (via defaultValue) but never actually sent the filter to the API.
+  const [dateTo, setDateTo] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -334,14 +336,13 @@ export default function HRApplicationsPage() {
             />
           </div>
 
-          {/* Date To Filter */}
           <div className="w-full sm:w-[170px]">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">To Date</label>
             <input
               type="date"
               min={dateFrom || "2020-01-01"}
               max={new Date().toLocaleDateString('en-CA')}
-              defaultValue={new Date().toLocaleDateString('en-CA')}
+              value={dateTo}
               className="w-full px-3 h-11 bg-background border-2 border-input rounded-xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-foreground cursor-pointer"
               onChange={(e) => setDateTo(e.target.value)}
             />
@@ -393,7 +394,7 @@ export default function HRApplicationsPage() {
                 onClick={() => {
                     setSearchTerm("");
                     setDateFrom("");
-                    setDateTo("");
+                    setDateTo(new Date().toLocaleDateString('en-CA'));
                     setStatusFilter("all");
                     setJobIdFilter("all");
                     setApplicationsPage(1);

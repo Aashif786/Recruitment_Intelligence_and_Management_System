@@ -150,20 +150,20 @@ export default function IngestedEmailsPage() {
         refreshInterval: 60000 // refresh every minute
     })
 
-    const allItems = data?.items ?? []
-    
-    // Apply client-side filter to ensure UI matches filter selection
-    const filteredItems = useMemo(() => {
-        if (statusFilter === 'mapped') {
-            return allItems.filter(item => !!item.application_id)
-        } else if (statusFilter === 'unmapped') {
-            return allItems.filter(item => !item.application_id)
-        }
-        return allItems
-    }, [allItems, statusFilter])
+    // Items are already server-filtered; no need for additional client-side filtering
+    // (a previous client-side filter was causing Bugs 8 & 9 by double-filtering results)
+    const filteredItems = data?.items ?? []
 
     const totalCount = data?.total ?? 0;
     const totalPages = data?.pages ?? 0;
+
+    // Global stats come embedded in every listing response via global_stats field.
+    // This ensures stats cards always reflect accurate numbers regardless of
+    // the active filter (fixes Bugs 4, 5, and 7).
+    const globalStats = (data as any)?.global_stats ?? null
+    const statTotalIngested = globalStats?.total_ingested ?? totalCount
+    const statAutoMapped = globalStats?.auto_mapped ?? 0
+    const statPending = globalStats?.pending_assignment ?? 0
 
     // Save IMAP Settings
     const handleSaveSettings = async () => {
@@ -208,26 +208,35 @@ export default function IngestedEmailsPage() {
         } catch (err: any) {
             console.error('Save settings error:', err)
             toast.dismiss(toastId)
-            const detail = err.response?.data?.detail || ''
+            // APIClient throws a plain Error with the message string — not an axios-style
+            // object with .response.data. We read err.message directly.
+            const errMsg: string = err?.message || 'Settings could not be saved. Please try again.'
 
-            // Parse Pydantic 422 validation errors
-            if (err.response?.status === 422 && Array.isArray(err.response?.data?.detail)) {
-                const errors = err.response.data.detail
-                for (const e of errors) {
-                    const field = e.loc?.[e.loc.length - 1] || ''
-                    const msg = e.msg?.replace('Value error, ', '') || 'Invalid value'
-                    if (field === 'imap_email') setEmailError(msg)
-                    else if (field === 'imap_password') setPasswordError(msg)
-                    else setConfigError(msg)
-                }
+            if (
+                errMsg.includes('Invalid email') ||
+                errMsg.includes('email format') ||
+                errMsg.includes('imap_email')
+            ) {
+                setEmailError(errMsg.replace('Value error, ', ''))
                 toast.error('Please fix the validation errors below.', { id: toastId })
-            } else if (typeof detail === 'string' && detail.includes('Authentication failed')) {
-                // IMAP auth failure from our _verify_imap_credentials
-                setConfigError(detail)
+            } else if (
+                errMsg.includes('App Password') ||
+                errMsg.includes('imap_password') ||
+                errMsg.includes('too short')
+            ) {
+                setPasswordError(errMsg.replace('Value error, ', ''))
+                toast.error('Please fix the validation errors below.', { id: toastId })
+            } else if (
+                errMsg.includes('Authentication failed') ||
+                errMsg.includes('AUTHENTICATIONFAILED') ||
+                errMsg.includes('Invalid credentials')
+            ) {
+                // IMAP auth failure returned as HTTP 400 — credentials were NOT saved
+                setConfigError(errMsg)
                 toast.error('Mailbox authentication failed. Credentials were not saved.', { id: toastId })
             } else {
-                setConfigError(detail || 'Settings could not be saved. Please try again.')
-                toast.error(detail || 'Settings could not be saved. Please try again.', { id: toastId })
+                setConfigError(errMsg)
+                toast.error(errMsg, { id: toastId })
             }
         } finally {
             setIsSavingSettings(false)
@@ -433,7 +442,7 @@ export default function IngestedEmailsPage() {
                 </Card>
             )}
 
-            {/* Quick Metrics */}
+            {/* Quick Metrics — always show real counts from global_stats regardless of active filter */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="border border-border/60 shadow-sm rounded-2xl bg-card">
                     <CardContent className="p-6 flex items-center gap-4">
@@ -443,7 +452,7 @@ export default function IngestedEmailsPage() {
                         <div>
                             <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Total Ingested</div>
                             <div className="text-2xl font-black text-foreground mt-0.5 tabular-nums">
-                                {isLoading ? '...' : totalCount}
+                                {isLoading ? '...' : statTotalIngested}
                             </div>
                         </div>
                     </CardContent>
@@ -457,7 +466,7 @@ export default function IngestedEmailsPage() {
                         <div>
                             <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Auto-Mapped</div>
                             <div className="text-2xl font-black text-foreground mt-0.5 tabular-nums">
-                                {isLoading ? '...' : (statusFilter === 'mapped' ? totalCount : '—')}
+                                {isLoading ? '...' : statAutoMapped}
                             </div>
                         </div>
                     </CardContent>
@@ -471,7 +480,7 @@ export default function IngestedEmailsPage() {
                         <div>
                             <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Pending Assignment</div>
                             <div className="text-2xl font-black text-foreground mt-0.5 tabular-nums">
-                                {isLoading ? '...' : (statusFilter === 'unmapped' ? totalCount : '—')}
+                                {isLoading ? '...' : statPending}
                             </div>
                         </div>
                     </CardContent>

@@ -39,7 +39,7 @@ from passlib.context import CryptContext
 from sqlalchemy.exc import IntegrityError
 import re
 import hashlib
-
+ 
 from typing import Optional, List, Union
 
 logger = logging.getLogger(__name__)
@@ -1304,6 +1304,44 @@ async def ingest_email_resumes(req: EmailIngestRequest, background_tasks: Backgr
         "processing_triggered": True
     }
 
+@router.get("/ingested-emails/stats")
+def get_ingested_emails_stats(
+    current_user: User = Depends(get_current_hr),
+    db: Session = Depends(get_db)
+):
+    """
+    Return accurate global counts for the email inbox stats cards:
+    total ingested, auto-mapped (has application), and pending assignment.
+    Declared before /ingested-emails/{resume_id} to avoid route-parameter collision.
+    """
+    items = db.query(AttachmentResume).all()
+    auto_mapped = 0
+    pending = 0
+    for item in items:
+        s = item.sender_email or ""
+        m = re.search(r'<([^>]+)>', s)
+        remail = m.group(1).lower().strip() if m else s.lower().strip()
+        matched_app = None
+        if item.file_url:
+            bp = item.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
+            matched_app = db.query(Application).filter(
+                Application.resume_file_path.like(f"%{bp}%")
+            ).first()
+        if not matched_app and remail:
+            matched_app = db.query(Application).filter(
+                Application.candidate_email.ilike(remail)
+            ).order_by(Application.applied_at.desc()).first()
+        if matched_app:
+            auto_mapped += 1
+        else:
+            pending += 1
+    return {
+        "total_ingested": len(items),
+        "auto_mapped": auto_mapped,
+        "pending_assignment": pending,
+    }
+
+
 @router.get("/ingested-emails")
 def get_ingested_emails(
     limit: int = 10,
@@ -1329,6 +1367,12 @@ def get_ingested_emails(
     items = query.order_by(AttachmentResume.id.desc()).all()
     
     results = []
+    # Helper to calculate stats
+    all_items = db.query(AttachmentResume).all()
+    total_ingested = len(all_items)
+    auto_mapped_count = 0
+    pending_count = 0
+
     for item in items:
         # Extract candidate's raw email from sender email
         sender_str = item.sender_email or ""
@@ -1396,6 +1440,21 @@ def get_ingested_emails(
             "job_code": app.job.job_id if app and app.job else None,
             "is_duplicate": is_duplicate
         })
+
+    # Calculate global stats (for the UI cards)
+    for item in all_items:
+        sender_str = item.sender_email or ""
+        m = re.search(r'<([^>]+)>', sender_str)
+        remail = m.group(1).lower().strip() if m else sender_str.lower().strip()
+        app_match = None
+        if item.file_url:
+            bp = item.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
+            app_match = db.query(Application).filter(Application.resume_file_path.like(f"%{bp}%")).first()
+        if not app_match and remail:
+            app_match = db.query(Application).filter(Application.candidate_email.ilike(remail)).order_by(Application.applied_at.desc()).first()
+        
+        if app_match: auto_mapped_count += 1
+        else: pending_count += 1
         
     # Python-level filter to match UI's status filter accurately
     if processed is not None:
@@ -1412,11 +1471,18 @@ def get_ingested_emails(
         "total": total,
         "page": (skip // limit) + 1,
         "size": limit,
-        "pages": (total + limit - 1) // limit
+        "pages": (total + limit - 1) // limit,
+        "global_stats": {
+            "total_ingested": total_ingested,
+            "auto_mapped": auto_mapped_count,
+            "pending_assignment": pending_count,
+        },
     }
+
 
 class AssignResumeRequest(BaseModel):
     job_id: int
+
 
 @router.post("/ingested-emails/{resume_id}/assign")
 async def assign_ingested_email(

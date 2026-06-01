@@ -158,8 +158,10 @@ def update_settings(
                     "IMAP credential verification failed for %s: %s",
                     email_to_test, result["error"]
                 )
+                # Use HTTP 400 (not 422) so the frontend can distinguish an IMAP
+                # authentication failure from a Pydantic schema validation error.
                 raise HTTPException(
-                    status_code=422,
+                    status_code=400,
                     detail=result["error"]
                 )
     # ──────────────────────────────────────────────────────────────────

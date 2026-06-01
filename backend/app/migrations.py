@@ -87,6 +87,9 @@ _REQUIRED_COLUMNS = [
     # Email inbox edge cases fix - retry tracking
     ("attachment_resumes", "retry_count", "INTEGER DEFAULT 0"),
     ("attachment_resumes", "last_error", "TEXT"),
+    # OTP brute-force protection (added after initial schema)
+    ("users", "otp_attempt_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("users", "otp_locked_until", "TIMESTAMP WITH TIME ZONE"),
 ]
 
 
@@ -110,14 +113,14 @@ def column_exists(conn, table_name: str, column_name: str) -> bool:
 
 
 def update_role_constraint(conn):
-    """Safely update the role constraint to include 'pending_hr' and 'super_admin'."""
+    """Safely update the role constraint to include 'pending_hr', 'super_admin' and 'candidate'."""
     try:
         # Check if we are on PostgreSQL
         if "postgresql" in str(conn.engine.url):
             conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS check_users_role"))
             conn.execute(text("""
                 ALTER TABLE users ADD CONSTRAINT check_users_role 
-                CHECK (role IN ('super_admin', 'hr', 'pending_hr'))
+                CHECK (role IN ('super_admin', 'hr', 'pending_hr', 'candidate'))
             """))
             logger.info("Migration completed: updated check_users_role constraint")
         else:
@@ -257,39 +260,97 @@ def run_startup_migrations(engine: Engine):
             logger.warning(f"Failed to create global_settings table: {e}")
 
         # 1.1 Extract Offers and Onboarding (Issue 5.1 Migration)
+        # IDEMPOTENT: checks whether legacy offer columns still exist in `applications`
+        # before attempting the data-copy. On subsequent deploys the columns are already
+        # gone, so this block is a no-op (safe to run every startup).
         if "postgresql" in str(conn.engine.url):
             try:
-                # Insert missing Offer records for all Applications
-                conn.execute(text("""
-                    INSERT INTO offers (application_id, offer_sent, offer_sent_date, offer_approval_status, offer_approved_by, offer_approved_at, offer_response_status, offer_response_date, offer_token, offer_short_id, offer_token_expiry, offer_token_used, offer_template_snapshot, offer_pdf_path, offer_accepted_ip, offer_accepted_user_agent, offer_email_status, offer_email_retry_count, reminder_sent_at)
-                    SELECT id, offer_sent, offer_sent_date, offer_approval_status, offer_approved_by, offer_approved_at, offer_response_status, offer_response_date, offer_token, offer_short_id, offer_token_expiry, offer_token_used, offer_template_snapshot, offer_pdf_path, offer_accepted_ip, offer_accepted_user_agent, offer_email_status, offer_email_retry_count, reminder_sent_at
-                    FROM applications
-                    ON CONFLICT (application_id) DO NOTHING
-                """))
-                
-                # Insert missing Onboarding records for all Applications
-                conn.execute(text("""
-                    INSERT INTO onboardings (application_id, joining_date, employee_id, id_card_url, onboarded_at)
-                    SELECT id, joining_date, employee_id, id_card_url, onboarded_at
-                    FROM applications
-                    ON CONFLICT (application_id) DO NOTHING
-                """))
-                
-                # Drop columns from applications
-                cols_to_drop = [
-                    "offer_sent", "offer_sent_date", "offer_approval_status", "offer_approved_by", "offer_approved_at",
-                    "offer_response_status", "offer_response_date", "offer_token", "offer_short_id", "offer_token_expiry",
-                    "offer_token_used", "offer_template_snapshot", "offer_pdf_path", "offer_accepted_ip", "offer_accepted_user_agent",
-                    "offer_email_status", "offer_email_retry_count", "reminder_sent_at",
-                    "joining_date", "employee_id", "id_card_url", "onboarded_at", "onboarding_approval_status"
-                ]
-                for col in cols_to_drop:
-                    conn.execute(text(f"ALTER TABLE applications DROP COLUMN IF EXISTS {col}"))
-                conn.commit()
-                logger.info("Migration completed: 5.1 Application table normalization successful")
+                # Only run the data-copy if the legacy `offer_sent` column is still
+                # present in `applications` (i.e. the migration hasn't run yet).
+                if column_exists(conn, "applications", "offer_sent"):
+                    logger.info("Migration 5.1: legacy offer columns found in applications — running normalization.")
+                    
+                    offer_cols = [
+                        ("offer_sent", "FALSE::boolean"),
+                        ("offer_sent_date", "NULL::timestamp"),
+                        ("offer_approval_status", "'pending'::varchar(20)"),
+                        ("offer_approved_by", "NULL::integer"),
+                        ("offer_approved_at", "NULL::timestamp"),
+                        ("offer_response_status", "'pending'::varchar(20)"),
+                        ("offer_response_date", "NULL::timestamp"),
+                        ("offer_token", "NULL::varchar(100)"),
+                        ("offer_short_id", "NULL::varchar(20)"),
+                        ("offer_token_expiry", "NULL::timestamp with time zone"),
+                        ("offer_token_used", "FALSE::boolean"),
+                        ("offer_template_snapshot", "NULL::text"),
+                        ("offer_pdf_path", "NULL::varchar(500)"),
+                        ("offer_accepted_ip", "NULL::varchar(50)"),
+                        ("offer_accepted_user_agent", "NULL::text"),
+                        ("offer_email_status", "'pending'::varchar(20)"),
+                        ("offer_email_retry_count", "0::integer"),
+                        ("reminder_sent_at", "NULL::timestamp"),
+                    ]
+                    
+                    select_exprs = ["id"]
+                    for col, default_sql in offer_cols:
+                        if column_exists(conn, "applications", col):
+                            select_exprs.append(col)
+                        else:
+                            select_exprs.append(f"{default_sql} as {col}")
+                    
+                    cols_list = ", ".join([col for col, _ in offer_cols])
+                    select_list = ", ".join(select_exprs)
+                    
+                    # Insert missing Offer records for all Applications
+                    conn.execute(text(f"""
+                        INSERT INTO offers (application_id, {cols_list})
+                        SELECT {select_list}
+                        FROM applications
+                        ON CONFLICT (application_id) DO NOTHING
+                    """))
+
+                    # Insert missing Onboarding records for all Applications
+                    if column_exists(conn, "applications", "joining_date"):
+                        emp_col = "employee_id" if column_exists(conn, "applications", "employee_id") else "NULL::varchar(50) as employee_id"
+                        card_col = "id_card_url" if column_exists(conn, "applications", "id_card_url") else "NULL::varchar(500) as id_card_url"
+                        onb_col = "onboarded_at" if column_exists(conn, "applications", "onboarded_at") else "NULL::timestamp as onboarded_at"
+                        
+                        conn.execute(text(f"""
+                            INSERT INTO onboardings (application_id, joining_date, employee_id, id_card_url, onboarded_at)
+                            SELECT id, joining_date, {emp_col}, {card_col}, {onb_col}
+                            FROM applications
+                            ON CONFLICT (application_id) DO NOTHING
+                        """))
+
+                    # Drop legacy columns from applications
+                    cols_to_drop = [
+                        "offer_sent", "offer_sent_date", "offer_approval_status", "offer_approved_by", "offer_approved_at",
+                        "offer_response_status", "offer_response_date", "offer_token", "offer_short_id", "offer_token_expiry",
+                        "offer_token_used", "offer_template_snapshot", "offer_pdf_path", "offer_accepted_ip", "offer_accepted_user_agent",
+                        "offer_email_status", "offer_email_retry_count", "reminder_sent_at",
+                        "joining_date", "employee_id", "id_card_url", "onboarded_at", "onboarding_approval_status"
+                    ]
+                    for col in cols_to_drop:
+                        conn.execute(text(f"ALTER TABLE applications DROP COLUMN IF EXISTS {col}"))
+                    conn.commit()
+                    logger.info("Migration completed: 5.1 Application table normalization successful")
+                else:
+                    logger.debug("Migration 5.1: skipped (already applied — offer columns not in applications).")
             except Exception as e:
                 _safe_rollback(conn)
                 logger.error(f"Migration error during 5.1 table normalization: {e}")
+
+        # 1.2 Ensure offers.offer_preview_count exists (added to model after initial SQL schema)
+        if "postgresql" in str(conn.engine.url):
+            try:
+                conn.execute(text(
+                    "ALTER TABLE offers ADD COLUMN IF NOT EXISTS offer_preview_count INTEGER NOT NULL DEFAULT 0"
+                ))
+                conn.commit()
+                logger.debug("Ensured offers.offer_preview_count column exists")
+            except Exception as e:
+                _safe_rollback(conn)
+                logger.warning(f"Failed to add offers.offer_preview_count: {e}")
 
         # 1e. (question_sets table is created in step 0 above)
 
@@ -316,7 +377,7 @@ def run_startup_migrations(engine: Engine):
             conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS check_users_role"))
             conn.execute(text("""
                 ALTER TABLE users ADD CONSTRAINT check_users_role 
-                CHECK (role IN ('super_admin', 'hr', 'pending_hr'))
+                CHECK (role IN ('super_admin', 'hr', 'pending_hr', 'candidate'))
             """))
             conn.commit()
             logger.info("Updated check_users_role constraint")
