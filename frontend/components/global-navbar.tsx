@@ -40,6 +40,26 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
 
   const NavContent = () => (
     <div className="flex flex-col md:flex-row items-start md:items-center gap-4 p-4 md:p-0">
+      {!isDashboard && (
+        <div className="flex items-center gap-4 font-semibold text-sm">
+          {!isHome && (
+            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
+              Home
+            </Link>
+          )}
+          {!isJobs && (
+            <Link href="/jobs" className="text-muted-foreground hover:text-foreground transition-colors">
+              Browse Roles
+            </Link>
+          )}
+          {!isAuth && (
+            <Link href="/auth/login?role=hr" className="text-muted-foreground hover:text-foreground transition-colors">
+              HR Portal
+            </Link>
+          )}
+        </div>
+      )}
+
       <ModeToggle className="text-muted-foreground hover:text-foreground hover:bg-accent hidden md:flex" />
 
       {isDashboard ? (

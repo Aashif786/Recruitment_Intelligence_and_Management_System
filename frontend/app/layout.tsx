@@ -18,14 +18,21 @@ export async function generateMetadata(): Promise<Metadata> {
   const canonicalUrl = siteUrl.endsWith('/calrims') ? `${siteUrl}/` : `${siteUrl}/calrims/`;
 
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'),
+    metadataBase: new URL(siteUrl),
     title: branding.seoTitleDefault,
     description: branding.seoDescriptionDefault,
     openGraph: {
       title: branding.seoTitleDefault,
       description: branding.seoDescriptionDefault,
-      images: [branding.logoUrl],
+      images: [`${siteUrl}/logo.png`],
       type: 'website',
+      url: canonicalUrl,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: branding.seoTitleDefault,
+      description: branding.seoDescriptionDefault,
+      images: [`${siteUrl}/logo.png`],
     },
     alternates: {
       canonical: canonicalUrl,

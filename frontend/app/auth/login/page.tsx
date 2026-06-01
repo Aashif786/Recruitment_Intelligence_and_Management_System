@@ -197,7 +197,11 @@ function LoginContent() {
 
             <div className="space-y-2 mb-10">
               <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Sign In</h2>
-              <p className="text-muted-foreground">Log into your secure administrative portal.</p>
+              <p className="text-muted-foreground">
+                {searchParams.get('role') === 'hr' 
+                  ? 'Log into your secure administrative portal.' 
+                  : 'Log into your candidate portal.'}
+              </p>
             </div>
           </motion.div>
 
