@@ -134,6 +134,15 @@ export default function HRApplicationsPage() {
   const totalCount = paginatedData?.total || 0;
   const isLoading = isSwrLoading;
 
+
+
+
+
+
+
+
+
+  
   useEffect(() => {
     if (error) {
       console.error("[Applications Page] SWR Fetching Error:", error);
