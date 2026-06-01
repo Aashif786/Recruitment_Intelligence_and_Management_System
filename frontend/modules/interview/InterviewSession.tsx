@@ -680,11 +680,17 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         activeStreamRef.current = stream;
-        if (sessionVideoRef.current) sessionVideoRef.current.srcObject = stream;
+        
+        // Ensure stream is bound to all relevant video elements
+        if (sessionVideoRef.current) {
+          sessionVideoRef.current.srcObject = stream;
+          sessionVideoRef.current.play().catch(e => console.warn("Preview video play error:", e));
+        }
         if (floatingVideoRef.current) {
           floatingVideoRef.current.srcObject = stream;
-          floatingVideoRef.current.play().catch(e => console.error("Error playing floating video:", e));
+          floatingVideoRef.current.play().catch(e => console.warn("Floating video play error:", e));
         }
+
         cameraInitializedRef.current = true;
         setIsCameraConnected(true);
         setIsDeviceTestSuccess(true);

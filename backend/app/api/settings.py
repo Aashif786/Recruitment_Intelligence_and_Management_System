@@ -22,6 +22,12 @@ def ensure_global_settings_table(db: Session) -> None:
 
 def _verify_imap_credentials(email: str, password: str) -> dict:
     """Test IMAP connection to Gmail. Returns {"ok": True} or {"ok": False, "error": "..."}."""
+    import re
+    # 1. Basic format validation before attempting connection
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not email or not re.match(email_pattern, email.strip()):
+        return {"ok": False, "error": "Invalid email format. Please enter a valid email address (e.g. user@gmail.com)."}
+
     try:
         mail = imaplib.IMAP4_SSL("imap.gmail.com", 993, timeout=15)
         try:

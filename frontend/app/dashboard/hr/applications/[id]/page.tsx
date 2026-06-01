@@ -89,6 +89,14 @@ export default function HRApplicationDetailPage() {
     const applicationId = params.id as string
     const { data: application, error: appError, isLoading: appLoading, mutate: mutateApp } = useSWR<any>(`/api/applications/${applicationId}`, (url: string) => fetcher<any>(url))
 
+    // Handle unauthorized access explicitly
+    useEffect(() => {
+        if (appError?.status === 401 || appError?.status === 403) {
+            toast.error("You are not authorized to view this application. Redirecting to login...")
+            router.push('/auth/login?expired=true')
+        }
+    }, [appError, router])
+
     const { data: interviewReport, error: reportError, isLoading: reportLoading, mutate: mutateReport } = useSWR(
         (application?.interview?.status === 'completed' || 
          application?.interview?.status === 'terminated' || 

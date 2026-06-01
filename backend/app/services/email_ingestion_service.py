@@ -255,12 +255,15 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                     logger.info(f"Skipping duplicate email (Message-ID): {subject} from {raw_email}")
                     continue
                 
-                # Secondary duplicate check - composite key
+                # Secondary duplicate check - more specific composite key
                 if not existing and subject and raw_email:
+                    # Include Message-ID in the search if it exists, or check for exact received_at timestamp
+                    # to allow multiple emails from the same sender with same subject on the same day
+                    # (e.g. if they sent multiple versions or applied for multiple roles)
                     existing = db.query(AttachmentResume).filter(
                         AttachmentResume.subject == subject,
                         AttachmentResume.sender_email.ilike(f"%{raw_email}%"),
-                        func.date(AttachmentResume.received_at) == received_at.date()
+                        AttachmentResume.received_at == received_at
                     ).first()
                     
                     if existing:

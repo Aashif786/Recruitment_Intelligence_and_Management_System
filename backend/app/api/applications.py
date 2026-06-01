@@ -1313,33 +1313,31 @@ def get_ingested_emails_stats(
     """
     Return accurate global counts for the email inbox stats cards:
     total ingested, auto-mapped (has application), and pending assignment.
-    Declared before /ingested-emails/{resume_id} to avoid route-parameter collision.
     """
-    items = db.query(AttachmentResume).all()
-    auto_mapped = 0
-    pending = 0
-    for item in items:
-        s = item.sender_email or ""
-        m = re.search(r'<([^>]+)>', s)
-        remail = m.group(1).lower().strip() if m else s.lower().strip()
-        matched_app = None
-        if item.file_url:
-            bp = item.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
-            matched_app = db.query(Application).filter(
-                Application.resume_file_path.like(f"%{bp}%")
-            ).first()
-        if not matched_app and remail:
-            matched_app = db.query(Application).filter(
-                Application.candidate_email.ilike(remail)
-            ).order_by(Application.applied_at.desc()).first()
-        if matched_app:
-            auto_mapped += 1
-        else:
-            pending += 1
+    from sqlalchemy import func
+    # Use a more efficient query to get counts without fetching all items
+    # 1. Total Ingested
+    total_ingested = db.query(func.count(AttachmentResume.id)).scalar() or 0
+    
+    # 2. Auto-Mapped (Inferred by joining with Applications)
+    # This is an approximation of the dynamic logic below but much faster for stats
+    auto_mapped = db.query(func.count(AttachmentResume.id)).filter(
+        or_(
+            AttachmentResume.processed == True,
+            # If not marked processed, try to find matching applications by path or email
+            db.query(Application).filter(
+                or_(
+                    Application.resume_file_path.like(func.concat('%', AttachmentResume.file_url, '%')),
+                    Application.candidate_email.ilike(AttachmentResume.sender_email)
+                )
+            ).exists()
+        )
+    ).scalar() or 0
+    
     return {
-        "total_ingested": len(items),
+        "total_ingested": total_ingested,
         "auto_mapped": auto_mapped,
-        "pending_assignment": pending,
+        "pending_assignment": max(0, total_ingested - auto_mapped),
     }
 
 
@@ -1368,19 +1366,14 @@ def get_ingested_emails(
     items = query.order_by(AttachmentResume.id.desc()).all()
     
     results = []
-    # Helper to calculate stats
-    all_items = db.query(AttachmentResume).all()
-    total_ingested = len(all_items)
-    auto_mapped_count = 0
-    pending_count = 0
-
+    
     for item in items:
         # Extract candidate's raw email from sender email
         sender_str = item.sender_email or ""
         match = re.search(r'<([^>]+)>', sender_str)
         raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
 
-        # Match application strictly by unique Supabase storage path first to prevent generic filename collisions
+        # Match application strictly by unique Supabase storage path first
         app = None
         bucket_path = None
         if item.file_url:
@@ -1389,33 +1382,11 @@ def get_ingested_emails(
                 Application.resume_file_path.like(f"%{bucket_path}%")
             ).first()
             
-        # Fallback to matching strictly by candidate's email and job code/most recent application (prevents generic filename collisions)
+        # Fallback to matching strictly by candidate's email
         if not app and raw_email:
-            # Check subject and email body for target Job Code (e.g. JOB-C1HWQZ)
-            combined_text = f"{item.subject or ''} {item.email_body or ''}"
-            job_code_match = re.search(r'JOB-[A-Z0-9]{6}', combined_text, re.IGNORECASE)
-            
-            if job_code_match:
-                extracted_code = job_code_match.group(0).upper().strip()
-                from app.domain.models import Job
-                app = db.query(Application).join(Job).filter(
-                    Application.candidate_email.ilike(raw_email),
-                    Job.job_id == extracted_code,
-                    or_(
-                        Application.resume_file_path.is_(None),
-                        Application.resume_file_path.like(f"%{bucket_path}%") if bucket_path else False
-                    )
-                ).order_by(Application.applied_at.desc()).first()
-                
-            if not app:
-                # Safe fallback: find candidate's most recent application across the platform
-                app = db.query(Application).filter(
-                    Application.candidate_email.ilike(raw_email),
-                    or_(
-                        Application.resume_file_path.is_(None),
-                        Application.resume_file_path.like(f"%{bucket_path}%") if bucket_path else False
-                    )
-                ).order_by(Application.applied_at.desc()).first()
+            app = db.query(Application).filter(
+                Application.candidate_email.ilike(raw_email)
+            ).order_by(Application.applied_at.desc()).first()
 
         candidate_email_to_check = app.candidate_email if app else raw_email
         
@@ -1435,34 +1406,22 @@ def get_ingested_emails(
             "file_name": item.file_name,
             "file_url": item.file_url,
             "received_at": item.received_at.replace(tzinfo=timezone.utc) if item.received_at else None,
-            "processed": item.processed,
+            "processed": item.processed or (app is not None),
             "application_id": app.id if app else None,
             "job_title": app.job.title if app and app.job else None,
             "job_code": app.job.job_id if app and app.job else None,
             "is_duplicate": is_duplicate
         })
 
-    # Calculate global stats (for the UI cards)
-    for item in all_items:
-        sender_str = item.sender_email or ""
-        m = re.search(r'<([^>]+)>', sender_str)
-        remail = m.group(1).lower().strip() if m else sender_str.lower().strip()
-        app_match = None
-        if item.file_url:
-            bp = item.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
-            app_match = db.query(Application).filter(Application.resume_file_path.like(f"%{bp}%")).first()
-        if not app_match and remail:
-            app_match = db.query(Application).filter(Application.candidate_email.ilike(remail)).order_by(Application.applied_at.desc()).first()
-        
-        if app_match: auto_mapped_count += 1
-        else: pending_count += 1
-        
+    # Use the same stats logic as get_ingested_emails_stats for consistency
+    stats = get_ingested_emails_stats(current_user, db)
+    
     # Python-level filter to match UI's status filter accurately
     if processed is not None:
         if processed:
-            results = [r for r in results if r["application_id"] is not None]
+            results = [r for r in results if r["application_id"] is not None or r["processed"]]
         else:
-            results = [r for r in results if r["application_id"] is None]
+            results = [r for r in results if r["application_id"] is None and not r["processed"]]
 
     total = len(results)
     paginated_items = results[skip : skip + limit]
