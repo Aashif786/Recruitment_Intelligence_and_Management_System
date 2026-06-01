@@ -412,7 +412,7 @@ async def apply_for_job(
             .filter(
                 Application.job_id == job_id,
                 or_(
-                    (Application.candidate_email == candidate_email) if candidate_email else False,
+                    (Application.candidate_email.ilike(candidate_email)) if candidate_email else False,
                     (Application.candidate_phone_hash == candidate_phone_hash) if candidate_phone_hash else False
                 )
             )
@@ -442,7 +442,7 @@ async def apply_for_job(
     existing_app = db.query(Application).filter(
         Application.job_id == job_id,
         or_(
-            (Application.candidate_email == candidate_email) if candidate_email else False,
+            (Application.candidate_email.ilike(candidate_email)) if candidate_email else False,
             (Application.candidate_phone_hash == candidate_phone_hash) if candidate_phone_hash else False,
         ),
     ).first()
@@ -1039,7 +1039,7 @@ def has_applied_for_job(
         .filter(
             Application.job_id == job_id,
             or_(
-                (Application.candidate_email == candidate_email) if candidate_email else False,
+                (Application.candidate_email.ilike(candidate_email)) if candidate_email else False,
                 (Application.candidate_phone_hash == candidate_phone_hash) if candidate_phone_hash else False,
             ),
         )
@@ -1265,18 +1265,43 @@ from app.services.email_ingestion_service import fetch_resume_attachments, run_b
 from pydantic import BaseModel
 
 class EmailIngestRequest(BaseModel):
-    imap_user: str
-    imap_pass: str
+    # BUG-001 Fix: Credentials are no longer accepted in the request body.
+    # The server reads IMAP credentials exclusively from the encrypted GlobalSettings table.
+    trigger: bool = True
 
 from app.domain.models import AttachmentResume
 
 @router.post("/ingest-emails")
-async def ingest_email_resumes(req: EmailIngestRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+@limiter.limit("2/minute")  # BUG-004 Fix: Rate limit to prevent IMAP connection flooding
+async def ingest_email_resumes(
+    request: Request,
+    req: EmailIngestRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_hr),
+    db: Session = Depends(get_db)
+):
     """
-    Trigger manual email ingestion via IMAP and map/analyze them immediately
+    Trigger manual email ingestion via IMAP and map/analyze them immediately.
+    BUG-001 Fix: IMAP credentials are read server-side from GlobalSettings, never from the request body.
     """
+    # Read IMAP credentials from server-side settings (never from request body)
+    from app.domain.models import GlobalSettings
+    settings_records = db.query(GlobalSettings).filter(
+        GlobalSettings.key.in_(["imap_email", "imap_password"])
+    ).all()
+    settings_dict = {s.key: s.value for s in settings_records}
+
+    imap_email = settings_dict.get("imap_email") or settings.imap_email or ""
+    imap_password = settings_dict.get("imap_password") or settings.imap_password or ""
+
+    if not imap_email or not imap_password:
+        raise HTTPException(
+            status_code=400,
+            detail="IMAP credentials not configured. Please save mailbox settings first."
+        )
+
     # Phase 1: Rapid Fetch (Synchronous but optimized)
-    result = fetch_resume_attachments(db, req.imap_user, req.imap_pass)
+    result = fetch_resume_attachments(db, imap_email, imap_password)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
     
@@ -1391,7 +1416,8 @@ class AssignResumeRequest(BaseModel):
 async def assign_ingested_email(
     resume_id: int,
     req: AssignResumeRequest,
-    current_user: User = Depends(get_current_hr),
+    # BUG-014 Fix: Only super_admin can assign ingested resumes to prevent IDOR
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     """

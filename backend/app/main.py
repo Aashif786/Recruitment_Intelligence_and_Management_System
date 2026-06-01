@@ -78,13 +78,15 @@ logger = logging.getLogger(__name__)
 settings.validate_config()
 
 # Schema creation: guarded to primary worker only in multi-process deployments.
-# Production deployments should prefer Alembic migrations ('alembic upgrade head').
+# BUG-038 Fix: create_all() is disabled in production to prevent accidental schema
+# mutations. Production deployments must use 'alembic upgrade head' instead.
 if os.environ.get("WORKER_ID", "0") == "0":
-    Base.metadata.create_all(bind=engine)
-    if settings.env == "production":
+    if settings.env != "production":
+        Base.metadata.create_all(bind=engine)
+    else:
         logger.info(
-            "Runtime Base.metadata.create_all() executed. "
-            "Consider using Alembic migrations for production schema changes."
+            "Production mode: Skipping Base.metadata.create_all(). "
+            "Run 'alembic upgrade head' to apply schema changes."
         )
 
 # Migration safety: Ensure message_id exists in attachment_resumes
@@ -114,15 +116,33 @@ if os.environ.get("WORKER_ID", "0") == "0":
 from app.infrastructure.database import SessionLocal
 
 def bootstrap_super_admin():
+    """Idempotently create the super_admin account defined in env config.
+    
+    BUG-016 Fix: Uses SELECT FOR UPDATE to prevent race conditions in multi-worker
+    deployments, and only promotes an existing email user if their email exactly
+    matches SUPER_ADMIN_EMAIL (never auto-promotes arbitrary accounts).
+    """
     if not settings.super_admin_email or not settings.super_admin_password:
         return
+    configured_email = settings.super_admin_email.lower().strip()
     try:
         with SessionLocal() as db:
+            from sqlalchemy import text as _text
+            # BUG-016 Fix: Lock the row to prevent concurrent promotion races.
+            db.execute(_text("SELECT pg_advisory_xact_lock(1919191919)"))
+
             existing_admin = db.query(User).filter(User.role == "super_admin").first()
             if existing_admin:
                 return
-            existing_email_user = db.query(User).filter(User.email == settings.super_admin_email.lower()).first()
+            existing_email_user = db.query(User).filter(User.email == configured_email).first()
             if existing_email_user:
+                # BUG-016 Fix: Only promote accounts that match the configured email exactly.
+                # Never promote untrusted/unverified accounts that were registered normally.
+                if existing_email_user.email != configured_email:
+                    logger.error(
+                        f"BUG-016: Refusing super_admin promotion for mismatched email: {existing_email_user.email}"
+                    )
+                    return
                 existing_email_user.role = "super_admin"
                 existing_email_user.is_verified = True
                 existing_email_user.is_active = True
@@ -130,7 +150,7 @@ def bootstrap_super_admin():
                 db.commit()
                 return
             super_admin = User(
-                email=settings.super_admin_email.lower(),
+                email=configured_email,
                 full_name=settings.super_admin_full_name.strip() or "Super Admin",
                 password_hash=hash_password(settings.super_admin_password),
                 role="super_admin",
@@ -156,8 +176,17 @@ async def _imap_polling_loop():
 
     Runs only on the primary worker (WORKER_ID=0) to prevent duplicate
     processing when multiple gunicorn workers are active.
+    
+    BUG-007 Fix: Exponential backoff circuit breaker — after 3 consecutive
+    failures, sleep is increased up to 30 minutes to avoid hammering a broken
+    IMAP server. On success, the backoff counter resets to zero.
     """
+    _consecutive_failures = 0
+    _max_backoff_seconds = 1800  # 30 minutes cap
+    _base_sleep_seconds = 60     # Normal poll interval
+    
     while True:
+        db = None
         try:
             db = SessionLocal()
 
@@ -179,20 +208,36 @@ async def _imap_polling_loop():
 
                 from app.services.email_ingestion_service import run_batch_resume_processing
                 await run_batch_resume_processing(db)
-
-            db.close()
             
-            # Record success timestamp
+            # Record success timestamp and reset circuit breaker
             app.state.imap_last_success = time.time()
             app.state.imap_last_error = None
+            _consecutive_failures = 0
+            sleep_seconds = _base_sleep_seconds
         except Exception as e:
-            logger.error(f"IMAP Polling Error: {e}")
+            _consecutive_failures += 1
+            logger.error(f"IMAP Polling Error (failure #{_consecutive_failures}): {e}")
             # Record error
             app.state.imap_last_error = str(e)
             app.state.imap_last_error_time = time.time()
+            # BUG-007: Exponential backoff after repeated failures
+            sleep_seconds = min(
+                _base_sleep_seconds * (2 ** (_consecutive_failures - 1)),
+                _max_backoff_seconds
+            )
+            if _consecutive_failures >= 3:
+                logger.warning(
+                    f"[IMAP CIRCUIT BREAKER] {_consecutive_failures} consecutive failures. "
+                    f"Backing off for {sleep_seconds}s before next attempt."
+                )
+        finally:
+            if db is not None:
+                try:
+                    db.close()
+                except Exception:
+                    pass
 
-        # Sleep 60 seconds to avoid getting blocked by Google IMAP limits.
-        await asyncio.sleep(60)
+        await asyncio.sleep(sleep_seconds)
 
 
 @asynccontextmanager
@@ -257,7 +302,10 @@ app.add_exception_handler(RateLimitExceeded, cors_aware_rate_limit_handler)
 
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
+# BUG-028 Fix: Restrict trusted_hosts to the actual reverse proxy IP/host.
+# Using "*" or "0.0.0.0" allows X-Forwarded-For spoofing from any client.
+_trusted_proxy = os.environ.get("TRUSTED_PROXY_HOST", "127.0.0.1")
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy)
 
 from app.core.middleware import PerformanceLoggingMiddleware, SecurityHeadersMiddleware
 app.add_middleware(SecurityHeadersMiddleware)

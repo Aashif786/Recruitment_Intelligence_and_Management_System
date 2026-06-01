@@ -30,6 +30,10 @@ class User(Base):
     profile_image_url = Column(String(500), nullable=True)
     otp_code = Column(String(255), nullable=True)
     otp_expiry = Column(DateTime(timezone=True), nullable=True, index=True)
+    # BUG-012 Fix: Per-account login lockout fields.
+    # After 10 consecutive failed logins the account is locked for 15 minutes.
+    login_attempt_count = Column(Integer, default=0, nullable=False, server_default="0")
+    login_locked_until = Column(DateTime(timezone=False), nullable=True)
     created_at = Column(DateTime, default=get_ist_now, server_default=func.now())
     updated_at = Column(DateTime, default=get_ist_now, server_default=func.now(), onupdate=get_ist_now)
 

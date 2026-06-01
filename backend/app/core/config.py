@@ -45,6 +45,7 @@ class Settings(BaseSettings):
 
     # Encryption
     encryption_key: str = ""
+    enforce_encryption: bool = False
 
     # Internal lists for rotation
     @property

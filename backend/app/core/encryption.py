@@ -104,6 +104,14 @@ def decrypt_field(ciphertext: str) -> str:
     
     # Backward compatibility: if it doesn't look like a Fernet token, assume it's plain text
     if not is_encrypted(ciphertext):
+        from app.core.config import get_settings
+        if get_settings().enforce_encryption:
+            logger.critical(
+                f"SECURITY CRITICAL: Unencrypted sensitive database column detected. "
+                f"Plaintext preview: '{ciphertext[:20]}...'. "
+                "Returning plaintext blocked under strict ENFORCE_ENCRYPTION policy."
+            )
+            raise ValueError("Decryption blocked: Enforce encryption is active but data is not encrypted.")
         return ciphertext
     
     try:

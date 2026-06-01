@@ -19,17 +19,40 @@ APPROVALID_INTERVIEW_STATUSES = {"not_started", "in_progress", "completed", "can
 APPROVED_STAFF_ROLES = {"super_admin", "hr"}
 PENDING_STAFF_ROLE = "pending_hr"
 
+def _pre_hash_password(password: str) -> bytes:
+    """BUG-009 Fix: Pre-hash long passwords with SHA-256 before bcrypt to prevent
+    BCrypt's silent 72-byte truncation from creating a security vulnerability.
+    
+    Passwords longer than 72 bytes are SHA-256 hashed to a 64-character hex
+    string, then bcrypt hashes that. Short passwords (<= 64 bytes) are passed
+    through unchanged to maintain backward compatibility with existing hashes.
+    
+    Security: This means two passwords with the same first 72 bytes but different
+    suffixes will now correctly produce DIFFERENT hashes.
+    """
+    import hashlib
+    encoded = password.encode("utf-8")
+    if len(encoded) > 64:
+        return hashlib.sha256(encoded).hexdigest().encode("ascii")  # 64 ASCII bytes — safe for bcrypt
+    return encoded  # Short passwords: pass through unchanged for backward compat
+
+
 def hash_password(password: str) -> str:
-    """Hash password using bcrypt"""
-    return pwd_context.hash(password)
+    """Hash password using bcrypt with SHA-256 pre-hashing for long passwords."""
+    pre_hashed = _pre_hash_password(password)
+    return pwd_context.hash(pre_hashed)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password against hash. Truncate to 72 bytes for bcrypt compatibility."""
+    """Verify password against hash.
+    
+    BUG-009 Fix: Uses SHA-256 pre-hashing for passwords > 64 bytes to prevent
+    BCrypt 72-byte truncation from silently accepting truncated passwords.
+    Backward compatible: short passwords are passed through unchanged.
+    """
     if not plain_password:
         return False
-    # BCrypt has a 72-byte limit; passlib with newer bcrypt drivers may raise ValueError
-    # if this is exceeded. Since bcrypt ignores bytes beyond 72, we truncate manually.
-    return pwd_context.verify(plain_password[:72], hashed_password)
+    pre_hashed = _pre_hash_password(plain_password)
+    return pwd_context.verify(pre_hashed, hashed_password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create JWT access token"""
@@ -111,6 +134,38 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+    # BUG-010 Fix: Fail closed when Redis blocklist is unavailable.
+    # Checks if the current token has been blocklisted (user logged out).
+    if settings.redis_url:
+        from app.core.redis_store import get_redis_client
+        import hashlib
+        r = get_redis_client()
+        if not r:
+            logger.error("[BUG-010 Fix] Redis is configured but client is unavailable. Failing closed.")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service temporarily offline.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        try:
+            token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+            if r.get(f"blocklist:{token_hash}"):
+                logger.warning(f"[BUG-010 Fix] Blocked token attempted access: {token_hash[:10]}...")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has been blacklisted (logged out).",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        except Exception as e:
+            if isinstance(e, HTTPException):
+                raise e
+            logger.error(f"[BUG-010 Fix] Redis error during blocklist check (failing closed): {e}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service temporarily offline.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
     try:
         payload = verify_token(token)
         sub = payload.get("sub")
@@ -125,10 +180,10 @@ def get_current_user(
             )
         
         user_id = int(sub)
-        logger.info(f"[Auth] Validating user_id={user_id} with role '{role}'")
+        logger.debug(f"[Auth] Validating user_id={user_id} with role '{role}'")  # BUG-035: downgraded INFO→DEBUG
         user = db.query(User).filter(User.id == user_id).first()
         if user is None:
-            logger.warning(f"[Auth] User {user_id} not found in database")
+            logger.warning(f"[Auth] User not found (id redacted for PII safety)")  # BUG-035: no user_id in logs
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
@@ -139,14 +194,14 @@ def get_current_user(
         set_db_identity(db, user.id)
 
         if user.role != role:
-            logger.warning(f"[Auth] Role mismatch for user {user_id}: token={role}, db={user.role}")
+            logger.warning(f"[Auth] Role mismatch for user (id redacted): token={role}, db={user.role}")  # BUG-035
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token role no longer matches this account",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        logger.info(f"[Auth] User {user_id} authenticated successfully as '{user.role}'")
+        logger.debug(f"[Auth] User authenticated successfully as '{user.role}'")  # BUG-035: downgraded INFO→DEBUG
 
         if user.role in APPROVED_STAFF_ROLES:
             ensure_approved_staff(user)

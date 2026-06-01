@@ -84,7 +84,10 @@ async def check_job_status(job_id: str):
     """Polling endpoint for async AI generation tasks"""
     job = get_job(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        return JSONResponse(
+            status_code=404,
+            content={"success": False, "data": None, "error": "Job not found"}
+        )
     return job
 
 async def background_generate_questions(interview_id: int, job_id_db: int, application_id: int, ai_job_id: str):

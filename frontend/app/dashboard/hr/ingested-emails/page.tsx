@@ -87,19 +87,22 @@ export default function IngestedEmailsPage() {
     const [isAssigning, setIsAssigning] = useState(false)
     const [isSavingSettings, setIsSavingSettings] = useState(false)
     
-    // IMAP Sync credentials
+    // IMAP Sync credentials (write-only — password is never read back from server)
     const [imapUser, setImapUser] = useState('')
-    const [imapPass, setImapPass] = useState('')
+    const [imapPass, setImapPass] = useState('') // write-only, never populated from server
+    const [imapConfigured, setImapConfigured] = useState(false)
     const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
     const [showCredentials, setShowCredentials] = useState(false)
 
-    // Load current settings on mount
+    // Load current settings on mount — only fetch safe, non-sensitive metadata
     useEffect(() => {
         const loadSettings = async () => {
             try {
                 const settings = await APIClient.get('/api/settings') as any
+                // BUG-002 Fix: Only load email address (safe) and configured flag.
+                // Password is NEVER loaded into state — write-only.
                 if (settings.imap_email) setImapUser(settings.imap_email)
-                if (settings.imap_password) setImapPass(settings.imap_password)
+                setImapConfigured(!!settings.imap_configured)
                 setAutoSyncEnabled(!!settings.auto_sync_enabled)
             } catch (err) {
                 console.error('Failed to load settings:', err)
@@ -152,8 +155,13 @@ export default function IngestedEmailsPage() {
 
     // Save IMAP Settings
     const handleSaveSettings = async () => {
-        if (!imapUser.trim() || !imapPass.trim()) {
-            toast.error('Please enter both IMAP Email and App Password')
+        if (!imapUser.trim()) {
+            toast.error('Please enter the IMAP Email address')
+            return
+        }
+        // Only require password if it's a new setup (not yet configured)
+        if (!imapConfigured && !imapPass.trim()) {
+            toast.error('Please enter the Gmail App Password')
             return
         }
 
@@ -161,13 +169,19 @@ export default function IngestedEmailsPage() {
         const toastId = toast.loading('Saving recruiter mailbox configuration...')
 
         try {
-            await APIClient.post('/api/settings', {
+            const payload: Record<string, unknown> = {
                 imap_email: imapUser.trim(),
-                imap_password: imapPass.trim(),
                 auto_sync_enabled: autoSyncEnabled
-            })
+            }
+            // Only include password if user typed a new one (write-only — never re-send masked value)
+            if (imapPass.trim()) {
+                payload.imap_password = imapPass.trim()
+            }
+            await APIClient.post('/api/settings', payload)
 
             toast.success('Configuration saved! Auto-sync will now run in the background.', { id: toastId })
+            setImapConfigured(true)
+            setImapPass('') // Clear password field after save
             setShowCredentials(false)
         } catch (err: any) {
             console.error('Save settings error:', err)
@@ -178,9 +192,12 @@ export default function IngestedEmailsPage() {
     }
 
     // Trigger Manual Email Ingestion via API
+    // BUG-001 Fix: Credentials are NOT sent in the request body.
+    // The backend reads IMAP credentials exclusively from server-side GlobalSettings.
     const handleSync = async () => {
-        if (!imapUser.trim() || !imapPass.trim()) {
-            toast.error('Please enter both IMAP Email and App Password')
+        if (!imapConfigured) {
+            toast.error('Please configure your mailbox settings first before syncing.')
+            setShowCredentials(true)
             return
         }
 
@@ -189,8 +206,7 @@ export default function IngestedEmailsPage() {
 
         try {
             const res = (await APIClient.post('/api/applications/ingest-emails', {
-                imap_user: imapUser.trim(),
-                imap_pass: imapPass.trim()
+                trigger: true
             })) as any
 
             if (res.saved_count > 0) {
@@ -330,14 +346,17 @@ export default function IngestedEmailsPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="imap_pass" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Gmail App Password</Label>
+                                <Label htmlFor="imap_pass" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                                    Gmail App Password {imapConfigured && <span className="text-emerald-500 normal-case font-semibold tracking-normal">(configured — leave blank to keep current)</span>}
+                                </Label>
                                 <Input
                                     id="imap_pass"
                                     type="password"
                                     value={imapPass}
                                     onChange={e => setImapPass(e.target.value)}
                                     className="h-12 bg-background border-2 border-input rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium"
-                                    placeholder="xxxx xxxx xxxx xxxx"
+                                    placeholder={imapConfigured ? '••••••••••••••••' : 'xxxx xxxx xxxx xxxx'}
+                                    autoComplete="new-password"
                                 />
                             </div>
                         </div>

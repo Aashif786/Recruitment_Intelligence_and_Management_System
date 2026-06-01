@@ -64,21 +64,29 @@ def _send_via_smtp(to_email: str, subject: str, html_body: str, attachments: lis
     """Core SMTP sending logic using Gmail with a single attempt."""
     # Local development helper: log HTML preview and reroute mock emails to developer's inbox
     if getattr(settings, "env", "development") == "development":
+        # BUG-033 Fix: Write only safe metadata to disk (NO body/HTML).
+        # The previous implementation wrote the full HTML body, which could include
+        # OTPs, candidate PII, offer letter content, and interview links.
         try:
             import time
             debug_dir = os.path.join(str(settings.base_dir), "debug_emails")
             os.makedirs(debug_dir, exist_ok=True)
             safe_subject = "".join(c for c in subject if c.isalnum() or c in (" ", "-", "_")).rstrip()
             safe_subject = safe_subject.replace(" ", "_")[:50]
-            filename = f"email_{int(time.time())}_{safe_subject}.html"
+            filename = f"email_meta_{int(time.time())}_{safe_subject}.txt"
             filepath = os.path.join(debug_dir, filename)
             
+            from app.core.observability import safe_hash
             with open(filepath, "w", encoding="utf-8") as f:
-                f.write(f"<!--\nTo: {to_email}\nSubject: {subject}\n-->\n")
-                f.write(html_body)
-            logger.info(f"[DEV EMAIL LOGGED] HTML preview saved locally to: {filepath}")
+                f.write(f"[DEV EMAIL LOG - METADATA ONLY]\n")
+                f.write(f"To (hashed): {safe_hash((to_email or '').lower().strip())}\n")
+                f.write(f"Subject: {subject}\n")
+                f.write(f"Timestamp: {time.time()}\n")
+                f.write(f"Body: [REDACTED - not logged to prevent PII/credential exposure]\n")
+            logger.info(f"[DEV EMAIL LOGGED] Metadata saved to: {filepath} (body omitted)")
         except Exception as dev_err:
             logger.warning(f"[DEV EMAIL LOGGING FAILED] {dev_err}")
+
 
         # Reroute mock/test domain recipients to developer's real configured inbox (SMTP_USER/SMTP_FROM)
         mock_suffixes = [

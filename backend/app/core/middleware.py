@@ -68,7 +68,10 @@ class SecurityHeadersMiddleware:
                 set_header(b"referrer-policy", b"strict-origin-when-cross-origin")
                 set_header(b"strict-transport-security", b"max-age=31536000; includeSubDomains")
                 set_header(b"content-security-policy",
-                           b"default-src 'self'; script-src 'self' 'unsafe-inline'; "
+                           # BUG-026 Fix: Removed 'unsafe-inline' from script-src.
+                           # This was a CSP bypass that allowed arbitrary inline script execution.
+                           # If inline scripts are needed, use nonce-based CSP instead.
+                           b"default-src 'self'; script-src 'self'; "
                            b"img-src 'self' data: blob:; connect-src 'self'; "
                            b"frame-ancestors 'none'; object-src 'none'")
 

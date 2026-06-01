@@ -23,17 +23,16 @@ settings = get_settings()
 from app.core.rate_limiter import limiter
 
 @router.get("/debug/data-health")
-def data_health(request: Request, db: Session = Depends(get_db)):
-    """Phase 9: Enhanced Safety & Monitoring Debugging Endpoint - Admin only"""
+# BUG-030 Fix: Enforce admin auth via FastAPI Depends, not manual try/except.
+# The old pattern could be bypassed if get_current_user returned normally but get_current_admin raised.
+def data_health(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),  # BUG-030: always requires super_admin
+):
+    """Phase 9: Enhanced Safety & Monitoring Debugging Endpoint - Super Admin only"""
     if settings.env == "production":
         raise HTTPException(status_code=404, detail="Not Found")
-        
-    from app.core.auth import get_current_admin
-    try:
-        user = get_current_user(request, db)
-        get_current_admin(user)
-    except HTTPException:
-        raise HTTPException(status_code=403, detail="Admin access required")
     
     from sqlalchemy import func, or_
     from app.domain.models import Application, Job, User, Interview
@@ -189,23 +188,64 @@ def verify_otp(request: Request, verification_data: UserVerifyOTP, db: Session =
 @limiter.limit("30/minute")
 def login(request: Request, response: Response, credentials: UserLogin, db: Session = Depends(get_db)):
     """Login and set secure JWT HttpOnly cookie"""
+    from sqlalchemy import update as sa_update
     credentials.email = credentials.email.lower().strip()
     user = db.query(User).filter(User.email == credentials.email).first()
 
     if not user:
-        logger.warning(f"Login failed: User {credentials.email} not found")
+        logger.warning("Login failed: User not found (email redacted)")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
 
-    logger.info(f"Login attempt: User={credentials.email}")
+    # BUG-012 Fix: Per-account lockout after 10 consecutive failures (15-minute window).
+    login_attempt_count = getattr(user, 'login_attempt_count', 0) or 0
+    login_locked_until = getattr(user, 'login_locked_until', None)
+    if login_locked_until:
+        lock_time = to_naive_ist(login_locked_until) if hasattr(login_locked_until, 'tzinfo') else login_locked_until
+        if get_ist_now() < lock_time:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Account temporarily locked due to too many failed login attempts. Try again later."
+            )
+        else:
+            # Lock expired — reset counter atomically
+            db.execute(
+                sa_update(User)
+                .where(User.id == user.id)
+                .values(login_attempt_count=0, login_locked_until=None)
+            )
+            db.commit()
+            user.login_attempt_count = 0
+
+    logger.debug("Login attempt for user (email redacted)")
     if not verify_password(credentials.password, user.password_hash):
-        logger.warning(f"Login failed: Password mismatch for user {credentials.email}")
+        # BUG-012: Atomically increment failure counter, lock after 10 failures
+        new_count = (user.login_attempt_count or 0) + 1
+        lock_until = None
+        if new_count >= 10:
+            lock_until = get_ist_now() + timedelta(minutes=15)
+            logger.warning(f"Account locked after {new_count} failed login attempts.")
+        db.execute(
+            sa_update(User)
+            .where(User.id == user.id)
+            .values(login_attempt_count=new_count, login_locked_until=lock_until)
+        )
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
+
+    # Success: reset lockout counter
+    if (user.login_attempt_count or 0) > 0:
+        db.execute(
+            sa_update(User)
+            .where(User.id == user.id)
+            .values(login_attempt_count=0, login_locked_until=None)
+        )
+        db.commit()
 
     if not user.is_verified:
         raise HTTPException(
@@ -236,6 +276,8 @@ def login(request: Request, response: Response, credentials: UserLogin, db: Sess
         key="access_token",
         value=access_token,
         httponly=True,
+        # BUG-029 Fix: Always set samesite=strict, not only in production.
+        # samesite=lax in development still sends cookies on cross-site navigations.
         samesite="strict",
         secure=settings.env == "production"
         # Removed max_age and expires: Browser will delete cookie on close
@@ -363,10 +405,63 @@ def reject_hr_user(request: Request, user_id: int, current_admin: User = Depends
 
 
 @router.post("/logout")
-def logout(response: Response):
-    """Clear the authentication cookie"""
+def logout(request: Request, response: Response):
+    """Clear both authentication cookies (access_token and hr_token).
+    BUG-013 Fix: hr_token was not cleared on logout, leaving HR sessions active.
+    BUG-010 Fix: Adds the token to Redis blocklist to prevent reuse.
+    """
+    # Extract token to blocklist before deleting cookies
+    token = request.cookies.get("access_token") or request.cookies.get("hr_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+
+    if token:
+        # Try to blocklist the token if Redis is configured
+        if settings.redis_url:
+            from app.core.redis_store import get_redis_client
+            from app.core.auth import verify_token
+            import hashlib
+            
+            r = get_redis_client()
+            if not r:
+                logger.error("[BUG-010 Fix] Redis configured but unavailable on logout. Failing closed.")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily offline.",
+                )
+            try:
+                # Safely decode token to get expiration
+                payload = verify_token(token)
+                exp = payload.get("exp")
+                if exp:
+                    now = int(get_ist_now().timestamp())
+                    ttl = int(exp - now)
+                    if ttl > 0:
+                        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+                        r.setex(f"blocklist:{token_hash}", ttl, "1")
+                        logger.info(f"[BUG-010 Fix] Token successfully blocklisted for {ttl}s: {token_hash[:10]}...")
+            except HTTPException:
+                # Token already expired/invalid: skip blocklisting
+                pass
+            except Exception as e:
+                logger.error(f"[BUG-010 Fix] Redis blocklist error during logout (failing closed): {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily offline.",
+                )
+
+    # Clear primary access_token cookie
     response.delete_cookie(
         key="access_token",
+        httponly=True,
+        samesite="strict",
+        secure=settings.env == "production"
+    )
+    # BUG-013 Fix: Also clear hr_token (set during HR interview-module operations)
+    response.delete_cookie(
+        key="hr_token",
         httponly=True,
         samesite="strict",
         secure=settings.env == "production"

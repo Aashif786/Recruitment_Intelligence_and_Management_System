@@ -118,6 +118,9 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                     email_body = payload.decode()
                             except:
                                 pass
+                        # BUG-003 Fix: Truncate email body to 2000 chars to prevent PII accumulation.
+                        # Only the subject line is needed for job code matching.
+                        email_body = email_body[:2000] if email_body else ""
 
                         # Extract and process attachments
                         found_resume = False
@@ -141,9 +144,25 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                             
                                         file_data = part.get_payload(decode=True)
                                         if file_data:
+                                            # BUG-018 Fix: Validate magic bytes before accepting attachment.
+                                            # This prevents storing HTML/JS files renamed to .pdf/.doc.
+                                            ext_lower = filename.lower()
+                                            magic_valid = True
+                                            if ext_lower.endswith(".pdf") and not file_data.startswith(b"%PDF"):
+                                                logger.warning(f"Rejecting attachment '{filename}': invalid PDF magic bytes.")
+                                                magic_valid = False
+                                            elif ext_lower.endswith(".docx") and not file_data.startswith(b"PK\x03\x04"):
+                                                logger.warning(f"Rejecting attachment '{filename}': invalid DOCX magic bytes.")
+                                                magic_valid = False
+                                            elif ext_lower.endswith(".doc") and not file_data.startswith(b"\xd0\xcf\x11\xe0"):
+                                                logger.warning(f"Rejecting attachment '{filename}': invalid DOC magic bytes.")
+                                                magic_valid = False
+                                            if not magic_valid:
+                                                continue
+
                                             # Save to Supabase Storage Bucket
                                             import time
-                                            from app.core.storage import upload_file, get_public_url
+                                            from app.core.storage import upload_file, get_signed_url, delete_file
                                             
                                             safe_sender = raw_email.split("@")[0].replace(".", "_")
                                             safe_filename = re.sub(r'[^\w\.-]', '_', filename)
@@ -153,7 +172,20 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                             
                                             file_url = None
                                             if upload_res:
-                                                file_url = get_public_url('MAIL_ATTACHMENTS', storage_path)
+                                                # BUG-019 Fix: Use signed URLs (expiring) instead of public URLs.
+                                                # This prevents unauthenticated access to candidate resumes.
+                                                file_url = get_signed_url('MAIL_ATTACHMENTS', storage_path, expires_in=86400)
+                                            
+                                            if not file_url:
+                                                # BUG-006 Fix: Delete orphaned file when URL fetch fails.
+                                                if upload_res:
+                                                    try:
+                                                        delete_file('MAIL_ATTACHMENTS', storage_path)
+                                                        logger.warning(f"Deleted orphaned file {storage_path} after signed URL failure.")
+                                                    except Exception as del_err:
+                                                        logger.error(f"Failed to delete orphaned file {storage_path}: {del_err}")
+                                                logger.error(f"Failed to get signed URL for {filename}. Skipping.")
+                                                continue
                                             
                                             new_resume = AttachmentResume(
                                                 message_id=msg_id,
@@ -227,30 +259,32 @@ async def run_batch_resume_processing(db: Session):
             target_job = None
             subject_str = resume.subject or ""
             body_str = resume.email_body or ""
-            combined_text_raw = f"{subject_str} {body_str}"
-            combined_text_lower = combined_text_raw.lower()
-            
-            # Pattern A: Match Job Code (e.g., JOB-BVFUPH)
-            job_code_match = re.search(r'JOB-[A-Z0-9]{6}', combined_text_raw, re.IGNORECASE)
+
+            # BUG-005 Fix: Pattern A — Match Job Code ONLY in subject line (not body).
+            # Matching in body allowed attackers to inject any job code in email text.
+            job_code_match = re.search(r'JOB-[A-Z0-9]{6}', subject_str, re.IGNORECASE)
             if job_code_match:
                 extracted_code = job_code_match.group(0).upper().strip()
                 target_job = db.query(Job).filter(Job.job_id == extracted_code, Job.status == 'open').first()
                 if target_job:
                     logger.info(f"Successfully mapped emailed resume {resume.id} to Job Code {extracted_code}")
             
-            # Pattern B: Match numeric Job ID (e.g. "job id: 3", "job id - 3", "job id 3")
+            # Pattern B: Match numeric Job ID in subject line only
             if not target_job:
-                numeric_id_match = re.search(r'job\s*(?:id|code)?\s*[:\-\#]?\s*([0-9]+)', combined_text_lower)
+                subject_lower = subject_str.lower()
+                numeric_id_match = re.search(r'job\s*(?:id|code)?\s*[:\-\#]?\s*([0-9]+)', subject_lower)
                 if numeric_id_match:
                     extracted_id = int(numeric_id_match.group(1).strip())
                     target_job = db.query(Job).filter(Job.id == extracted_id, Job.status == 'open').first()
                     if target_job:
                         logger.info(f"Successfully mapped emailed resume {resume.id} to Job ID {extracted_id}")
             
-            # Pattern C: Fallback to matching Role Title in the email text
+            # Pattern C: Fallback to matching exact Role Title in the subject line only
+            # Require at least 3 characters to avoid false matches on generic words
             if not target_job:
                 for job in open_jobs:
-                    if job.title.lower() in combined_text_lower:
+                    job_title_lower = job.title.lower().strip()
+                    if len(job_title_lower) >= 3 and job_title_lower in subject_str.lower():
                         target_job = job
                         logger.info(f"Successfully mapped emailed resume {resume.id} to Job Title '{job.title}'")
                         break

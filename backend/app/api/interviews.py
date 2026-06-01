@@ -61,6 +61,10 @@ from app.core.ephemeral_result_cache import cache_get as _idem_cache_get, cache_
 
 
 
+STAGE_APTITUDE = "aptitude"
+STAGE_FIRST_LEVEL = "first_level"
+STAGE_COMPLETED = "completed"
+
 # --- Imported Refactored Services ---
 from app.services.interview_generation_service import _load_questions_from_repo_set, check_job_status, background_generate_questions, _set_interview_status, _determine_initial_stage, _enforce_stage, _question_count_for_stage, _generate_aptitude_questions, _generate_first_level_questions, _generate_fallback_questions_direct
 from app.services.interview_evaluation_service import evaluate_answer_task
@@ -341,6 +345,19 @@ async def access_interview(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail="An internal error occurred while accessing the interview. Please try again later."
         )
+
+
+@router.get("/jobs/{job_id}")
+async def check_job_status(job_id: str):
+    """Polling endpoint for async AI generation tasks"""
+    from app.services.job_queue import get_job
+    job = get_job(job_id)
+    if not job:
+        return JSONResponse(
+            status_code=404,
+            content={"success": False, "data": None, "error": "Job not found"}
+        )
+    return job
 
 
 @router.post("/{interview_id}/generate-test-token")

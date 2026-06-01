@@ -245,7 +245,7 @@ def get_onboarding_candidates(
 ):
     """Fetch candidates in onboarding pipeline."""
     from sqlalchemy.orm import joinedload
-    from app.domain.models import Job
+    from app.domain.models import Job, Onboarding
     
     query = db.query(Application).filter(
         Application.status.in_(["hired", "pending_approval", "offer_sent", "accepted", "onboarded"])
@@ -256,22 +256,32 @@ def get_onboarding_candidates(
         # Join Job to filter by ownership
         query = query.join(Application.job)
         query = query.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
-    # Super Admin sees all.
-    # Super Admin sees all.
     
     total = query.count()
     candidates = query.options(
         joinedload(Application.job),
-        joinedload(Application.hr)
+        joinedload(Application.hr),
+        joinedload(Application.onboarding)
     ).all()
     
-    # Populate Ownership Context (Architecture Rule 3)
+    items = []
     for c in candidates:
-        c.assigned_hr_id = c.hr_id
-        c.assigned_hr_name = c.hr.full_name if c.hr else "Unknown"
-        c.is_owner = (c.hr_id == current_user.id)
+        items.append({
+            "id": c.id,
+            "candidate_name": c.candidate_name,
+            "candidate_email": c.candidate_email,
+            "status": c.status,
+            "joining_date": c.joining_date.isoformat() if c.joining_date else None,
+            "employee_id": c.employee_id,
+            "id_card_url": c.id_card_url,
+            "onboarded_at": c.onboarded_at.isoformat() if c.onboarded_at else None,
+            "is_owner": (c.hr_id == current_user.id),
+            "assigned_hr_id": c.hr_id,
+            "assigned_hr_name": c.hr.full_name if c.hr else "Unknown",
+            "job_title": c.job.title if c.job else "Unknown Role",
+        })
         
-    return {"items": candidates, "total": total}
+    return {"items": items, "total": total}
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, UploadFile, File, Query
 
