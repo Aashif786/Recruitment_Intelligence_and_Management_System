@@ -88,6 +88,7 @@ _REQUIRED_COLUMNS = [
     # Email inbox edge cases fix - retry tracking
     ("attachment_resumes", "retry_count", "INTEGER DEFAULT 0"),
     ("attachment_resumes", "last_error", "TEXT"),
+    ("attachment_resumes", "mapping_failed", "BOOLEAN DEFAULT FALSE"),
     # OTP brute-force protection (added after initial schema)
     ("users", "otp_attempt_count", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "otp_locked_until", "TIMESTAMP WITH TIME ZONE"),

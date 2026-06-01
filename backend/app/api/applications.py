@@ -1451,7 +1451,7 @@ def get_ingested_emails_stats(
     auto_mapped = 0
     for item in items:
         app_found, is_processed = _resolve_resume_mapping(item, db, app_paths, app_emails)
-        if app_found or is_processed:
+        if app_found or (is_processed and not getattr(item, 'mapping_failed', False)):
             auto_mapped += 1
                 
     return {
@@ -1573,6 +1573,7 @@ def get_ingested_emails(
             "file_url": fresh_file_url,
             "received_at": item.received_at.replace(tzinfo=timezone.utc) if item.received_at else None,
             "processed": is_processed or (app_obj is not None),
+            "mapping_failed": getattr(item, 'mapping_failed', False),
             "application_id": app_obj.id if app_obj else None,
             "job_title": app_obj.job.title if app_obj and app_obj.job else None,
             "job_code": app_obj.job.job_id if app_obj and app_obj.job else None,
@@ -1582,25 +1583,25 @@ def get_ingested_emails(
     # BUG-G Fix: Compute stats inline from the results we already have in memory
     # instead of calling get_ingested_emails_stats() which runs a second full table scan.
     total_ingested = db.query(AttachmentResume).count()
-    auto_mapped_count = sum(1 for r in results if r["application_id"] is not None or r["processed"])
+    auto_mapped_count = sum(1 for r in results if r["application_id"] is not None or (r["processed"] and not r["mapping_failed"]))
     # Stats must reflect ALL records, not just the filtered/searched subset
     all_items_for_stats = results if not search else db.query(AttachmentResume).all()
     if search:
         # For search results, global stats still need full counts — use pre-built sets
         all_results_app_found = [
-            _resolve_resume_mapping(i, db, app_paths_set, app_emails_set)
+            (i, _resolve_resume_mapping(i, db, app_paths_set, app_emails_set))
             for i in all_items_for_stats
         ]
-        auto_mapped_global = sum(1 for (af, ip) in all_results_app_found if af or ip)
+        auto_mapped_global = sum(1 for (i, (af, ip)) in all_results_app_found if af or (ip and not getattr(i, 'mapping_failed', False)))
     else:
         auto_mapped_global = auto_mapped_count
 
     # Python-level filter to match UI's status filter accurately
     if processed is not None:
         if processed:
-            results = [r for r in results if r["application_id"] is not None or r["processed"]]
+            results = [r for r in results if r["application_id"] is not None or (r["processed"] and not r["mapping_failed"])]
         else:
-            results = [r for r in results if r["application_id"] is None and not r["processed"]]
+            results = [r for r in results if r["application_id"] is None and (not r["processed"] or r["mapping_failed"])]
 
     total = len(results)
     paginated_items = results[skip: skip + limit]
@@ -1760,6 +1761,7 @@ async def assign_ingested_email(
     
     db.add(new_application)
     resume.processed = True
+    resume.mapping_failed = False
     db.commit()
     db.refresh(new_application)
     

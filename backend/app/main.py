@@ -159,24 +159,75 @@ from app.core.encryption import decrypt_field
 async def _imap_polling_loop():
     """Background coroutine that polls the IMAP inbox for resume attachments.
 
-    Runs only on the primary worker (WORKER_ID=0) to prevent duplicate
-    processing when multiple gunicorn workers are active.
+    Uses a database-backed distributed lock to ensure only one worker runs
+    the ingestion loop at any given time, eliminating the worker age check
+    which causes stalls on worker crashes.
     
     BUG-007 Fix: Exponential backoff circuit breaker — after 3 consecutive
     failures, sleep is increased up to 30 minutes to avoid hammering a broken
     IMAP server. On success, the backoff counter resets to zero.
     """
+    import uuid
     _consecutive_failures = 0
     _max_backoff_seconds = 1800  # 30 minutes cap
     _base_sleep_seconds = 60     # Normal poll interval
     
+    polling_instance_id = str(uuid.uuid4())
+    
     while True:
         db = None
+        lock_acquired = False
+        lock_token = None
+        sleep_seconds = _base_sleep_seconds
         try:
             db = SessionLocal()
 
-            # Fetch global settings from DB
+            # Ensure lock key exists in global_settings
             from app.domain.models import GlobalSettings
+            lock_record = db.query(GlobalSettings).filter(GlobalSettings.key == "imap_polling_lock").first()
+            if not lock_record:
+                try:
+                    lock_record = GlobalSettings(key="imap_polling_lock", value="")
+                    db.add(lock_record)
+                    db.commit()
+                except Exception:
+                    db.rollback()
+
+            # Acquire lock via SELECT FOR UPDATE inside a transaction block
+            db.begin()
+            lock_record = db.query(GlobalSettings).filter(GlobalSettings.key == "imap_polling_lock").with_for_update().first()
+            
+            now_epoch = time.time()
+            is_locked = False
+            
+            if lock_record and lock_record.value:
+                try:
+                    val_parts = lock_record.value.split(":")
+                    if len(val_parts) == 2:
+                        val_instance, val_time_str = val_parts
+                        locked_time = float(val_time_str)
+                        # Lock expires after 5 minutes
+                        if now_epoch - locked_time < 300:
+                            is_locked = True
+                except ValueError:
+                    pass
+
+            if is_locked:
+                db.rollback()
+                db.close()
+                await asyncio.sleep(sleep_seconds)
+                continue
+
+            # Acquire the lock
+            lock_token = f"{polling_instance_id}:{now_epoch}"
+            if lock_record:
+                lock_record.value = lock_token
+                db.commit()
+                lock_acquired = True
+            else:
+                db.rollback()
+
+            # Fetch global settings from DB
             settings_records = db.query(GlobalSettings).all()
             settings_dict = {s.key: s.value for s in settings_records}
 
@@ -217,6 +268,21 @@ async def _imap_polling_loop():
                     f"Backing off for {sleep_seconds}s before next attempt."
                 )
         finally:
+            if lock_acquired and db is not None:
+                try:
+                    # Release lock: verify token matches before clearing to prevent overwrites
+                    lock_record = db.query(GlobalSettings).filter(GlobalSettings.key == "imap_polling_lock").with_for_update().first()
+                    if lock_record and lock_record.value == lock_token:
+                        lock_record.value = ""
+                        db.commit()
+                    else:
+                        db.rollback()
+                except Exception as rel_err:
+                    logger.error(f"Failed to release IMAP polling lock: {rel_err}")
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
             if db is not None:
                 try:
                     db.close()
@@ -229,13 +295,9 @@ async def _imap_polling_loop():
 @asynccontextmanager
 async def lifespan(app):
     """Application lifespan: manages background tasks on startup/shutdown."""
-    # Startup — only the primary worker starts the IMAP polling loop.
-    polling_task = None
-    if os.environ.get("WORKER_ID", "0") == "0":
-        polling_task = asyncio.create_task(_imap_polling_loop())
-        logger.info("IMAP polling loop started (primary worker only).")
-    else:
-        logger.info("IMAP polling loop skipped (non-primary worker).")
+    # Startup — start IMAP polling loop on all workers; database lock handles concurrency.
+    polling_task = asyncio.create_task(_imap_polling_loop())
+    logger.info("IMAP polling loop task spawned on this worker.")
 
     yield  # ── Application runs here ──
 

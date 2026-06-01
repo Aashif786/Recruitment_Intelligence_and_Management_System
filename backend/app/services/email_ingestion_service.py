@@ -197,7 +197,7 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
             return {"success": False, "error": f"Could not access inbox. Status: {status}"}
         
         # Search for emails
-        status, messages = mail.search(None, 'ALL')
+        status, messages = mail.search(None, 'UNSEEN')
         if status != "OK":
             return {"success": False, "error": "Could not search inbox."}
 
@@ -537,6 +537,7 @@ async def run_batch_resume_processing(db: Session):
             if not target_job:
                 logger.warning(f"Could not map resume {resume.id} from {resume.sender_email} to any open job.")
                 resume.processed = True
+                resume.mapping_failed = True
                 db.commit()
                 continue
 
@@ -545,6 +546,7 @@ async def run_batch_resume_processing(db: Session):
             if not target_job or target_job.status != 'open':
                 logger.warning(f"Job {target_job.id if target_job else 'N/A'} is no longer open. Skipping.")
                 resume.processed = True
+                resume.mapping_failed = True
                 db.commit()
                 continue
 
