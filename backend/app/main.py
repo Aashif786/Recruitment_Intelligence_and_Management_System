@@ -156,6 +156,60 @@ from app.core.standardized_route import StandardizedAPIRoute
 from app.services.email_ingestion_service import fetch_resume_attachments
 from app.core.encryption import decrypt_field
 
+async def _sweep_stuck_applications(db):
+    """Scan for applications stuck in 'parsing' or 'pending' for > 15 minutes,
+    increment retry count and trigger background re-parse, or mark as permanent failure.
+    """
+    try:
+        from datetime import datetime, timedelta
+        from app.domain.models import Application
+        from app.api.applications import process_application_background
+        from app.services.state_machine import CandidateState
+        from sqlalchemy import or_, and_
+
+        cutoff = datetime.utcnow() - timedelta(minutes=15)
+        stuck_apps = db.query(Application).filter(
+            Application.resume_status.in_(["parsing", "pending"]),
+            or_(
+                Application.parsing_started_at < cutoff,
+                and_(Application.parsing_started_at == None, Application.applied_at < cutoff)
+            )
+        ).all()
+
+        if not stuck_apps:
+            return
+
+        logger.info(f"[SWEEPER] Found {len(stuck_apps)} stuck applications. Attempting self-healing/retry.")
+
+        for app in stuck_apps:
+            retries = app.retry_count or 0
+            if retries < 3:
+                logger.warning(f"[SWEEPER] Application #{app.id} is stuck. Resetting and retrying background parsing (attempt {retries + 1}).")
+                app.resume_status = "parsing"
+                app.parsing_started_at = datetime.utcnow()
+                app.retry_count = retries + 1
+                db.commit()
+
+                # Trigger parsing asynchronously in the background
+                asyncio.create_task(
+                    process_application_background(
+                        app.id,
+                        app.job_id,
+                        app.resume_file_path,
+                        app.candidate_email,
+                        app.candidate_name
+                    )
+                )
+            else:
+                logger.error(f"[SWEEPER] Application #{app.id} has exceeded maximum retries. Marking as permanent failure.")
+                app.resume_status = "failed"
+                app.status = CandidateState.PERMANENT_FAILURE.value
+                app.failure_reason = "[PERMANENT_FAILURE]: Ingestion/Parsing timed out repeatedly."
+                db.commit()
+    except Exception as e:
+        logger.error(f"[SWEEPER] Error during stuck applications recovery sweep: {e}", exc_info=True)
+
+
 async def _imap_polling_loop():
     """Background coroutine that polls the IMAP inbox for resume attachments.
 
@@ -226,6 +280,12 @@ async def _imap_polling_loop():
                 lock_acquired = True
             else:
                 db.rollback()
+
+            # Run stuck applications sweep
+            try:
+                await _sweep_stuck_applications(db)
+            except Exception as sweep_err:
+                logger.error(f"Failed to run stuck applications recovery sweep: {sweep_err}")
 
             # Fetch global settings from DB
             settings_records = db.query(GlobalSettings).all()

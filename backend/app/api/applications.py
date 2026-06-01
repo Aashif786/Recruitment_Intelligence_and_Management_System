@@ -648,6 +648,21 @@ async def apply_for_job(
             logger.error(f"[EMAIL][FAILED] Application email for App #{getattr(new_application, 'id', 'UNKNOWN')}: {str(e)}")
 
 
+    except IntegrityError as e:
+        db.rollback()
+        logger.warning(f"Duplicate application integrity violation: {e}")
+        from app.core.storage import delete_file
+        try:
+            if resume_storage_path:
+                delete_file(settings.supabase_bucket_resumes, resume_storage_path)
+            if photo_storage_path:
+                delete_file(settings.supabase_bucket_id_photos, photo_storage_path)
+        except Exception as del_err:
+            logger.warning(f"Failed to clean up files on IntegrityError: {del_err}")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already applied for this job."
+        )
     except Exception as e:
         db.rollback()
         logger.error(f"Application submission failed: {e}")
@@ -658,8 +673,8 @@ async def apply_for_job(
                 delete_file(settings.supabase_bucket_resumes, resume_storage_path)
             if photo_storage_path and new_application.candidate_photo_path:
                 delete_file(settings.supabase_bucket_id_photos, photo_storage_path)
-        except Exception as e:
-            logger.warning(f"Failed to clean up files for application: {e}")
+        except Exception as cleanup_err:
+            logger.warning(f"Failed to clean up files for application: {cleanup_err}")
         raise HTTPException(status_code=500, detail="Failed to submit application securely.")
 
     background_tasks.add_task(
@@ -1785,6 +1800,7 @@ async def assign_ingested_email(
 @router.get("/{application_id}", response_model=ApplicationDetailResponse)
 def get_application(
     application_id: int,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
@@ -1814,20 +1830,12 @@ def get_application(
             db.commit()
             db.refresh(application)
             
-            import threading
-            import asyncio
-            def run_healing():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    loop.run_until_complete(retry_application_background(application_id, application.job_id, application.resume_file_path))
-                except Exception as ex:
-                    logger.error(f"Error in self-healing thread: {ex}")
-                finally:
-                    loop.close()
-                    
-            t = threading.Thread(target=run_healing)
-            t.start()
+            background_tasks.add_task(
+                retry_application_background,
+                application_id,
+                application.job_id,
+                application.resume_file_path
+            )
     
     # Sanitize paths
     if application.candidate_photo_path and ":" in application.candidate_photo_path:
@@ -2335,6 +2343,12 @@ async def delete_application(
         raise HTTPException(status_code=404, detail="Application not found")
     validate_hr_ownership(app, current_user, resource_name="application")
 
+    # Fetch file paths before deletion
+    resume_path = app.resume_file_path
+    photo_path = app.candidate_photo_path
+    id_card_path = getattr(app, 'id_card_url', None)
+    video_path = app.interview.video_recording_path if app.interview else None
+
     try:
         # Explicitly delete ResumeExtraction to prevent ForeignKeyViolation
         # (Table missing ON DELETE CASCADE and relationship has passive_deletes=True)
@@ -2343,6 +2357,18 @@ async def delete_application(
         
         db.delete(app)
         db.commit()
+
+        # Delete cloud files after successful commit
+        from app.core.storage import delete_file
+        if resume_path:
+            delete_file(settings.supabase_bucket_resumes, resume_path)
+        if photo_path:
+            delete_file(settings.supabase_bucket_id_photos, photo_path)
+        if id_card_path:
+            delete_file(settings.supabase_bucket_id_cards, id_card_path)
+        if video_path:
+            delete_file(settings.supabase_bucket_videos, video_path)
+
     except Exception as e:
         db.rollback()
         logger.error(f"Error deleting application {application_id}: {e}")
@@ -2378,6 +2404,19 @@ async def bulk_delete_applications(
     for app in apps:
         validate_hr_ownership(app, current_user, resource_name="application")
 
+    # Collect all file paths before deletion
+    file_deletions = []
+    for app in apps:
+        if app.resume_file_path:
+            file_deletions.append((settings.supabase_bucket_resumes, app.resume_file_path))
+        if app.candidate_photo_path:
+            file_deletions.append((settings.supabase_bucket_id_photos, app.candidate_photo_path))
+        id_card = getattr(app, 'id_card_url', None)
+        if id_card:
+            file_deletions.append((settings.supabase_bucket_id_cards, id_card))
+        if app.interview and app.interview.video_recording_path:
+            file_deletions.append((settings.supabase_bucket_videos, app.interview.video_recording_path))
+
     try:
         from app.domain.models import ResumeExtraction
         # Delete associated data first
@@ -2387,6 +2426,15 @@ async def bulk_delete_applications(
         db.query(Application).filter(Application.id.in_(application_ids)).delete(synchronize_session=False)
         
         db.commit()
+
+        # Delete cloud files after successful commit
+        from app.core.storage import delete_file
+        for bucket, path in file_deletions:
+            try:
+                delete_file(bucket, path)
+            except Exception as f_err:
+                logger.warning(f"Bulk delete: failed to remove cloud file {bucket}/{path}: {f_err}")
+
     except Exception as e:
         db.rollback()
         logger.error(f"Error in bulk delete: {e}")
