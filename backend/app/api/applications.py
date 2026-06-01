@@ -228,9 +228,14 @@ def debug_applications(db: Session = Depends(get_db)):
         db_url = settings.database_url
         if "@" in db_url:
             db_url = db_url.split("@")[-1]
+        
+        test_secret = '5ff829b387f2b50f516a5326b52ad798312cd6c7709226e4ad9b21f254ee8019'
+        secret_matches = (settings.jwt_secret == test_secret)
+
         return {
             "success": True,
             "database_host": db_url,
+            "jwt_secret_matches": secret_matches,
             "counts": {
                 "applications": db.query(Application).count(),
                 "jobs": db.query(Job).count(),
