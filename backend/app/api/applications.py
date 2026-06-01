@@ -233,7 +233,24 @@ def debug_applications(db: Session = Depends(get_db)):
         secret_matches = (settings.jwt_secret == test_secret)
 
         users_list = db.query(User).all()
-        users_preview = [{"id": usr.id, "email": usr.email, "role": usr.role, "is_active": usr.is_active, "approval_status": usr.approval_status} for usr in users_list]
+        users_preview = []
+        for usr in users_list:
+            job_count = db.query(Job).filter(Job.hr_id == usr.id).count()
+            app_count = db.query(Application).outerjoin(Job).filter(
+                or_(
+                    Application.hr_id == usr.id,
+                    Job.hr_id == usr.id
+                )
+            ).count()
+            users_preview.append({
+                "id": usr.id,
+                "email": usr.email,
+                "role": usr.role,
+                "is_active": usr.is_active,
+                "approval_status": usr.approval_status,
+                "jobs_owned": job_count,
+                "apps_visible": app_count
+            })
 
         # Let's find an active super_admin or admin to test get_hr_applications
         test_user = next((usr for usr in users_list if usr.role.lower() in ["super_admin", "admin"]), None)
