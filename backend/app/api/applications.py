@@ -1544,15 +1544,24 @@ async def assign_ingested_email(
     if not job:
         raise HTTPException(status_code=404, detail="Target open job not found")
         
-    # Extract sender details
+    # ── Resolve candidate details ──────────────────────────────────
     sender_str = resume.sender_email or ""
+    # 1. Try to extract name from "Name <email@addr.com>" format
     name_match = re.search(r'^([^<]+)', sender_str)
     candidate_name = name_match.group(1).strip() if name_match else "Emailed Candidate"
-    if not candidate_name or candidate_name.lower() == "emailed candidate":
-        email_match = re.search(r'<([^>]+)>', sender_str)
-        raw_email = email_match.group(1).lower().strip() if email_match else sender_str.lower().strip()
     
-    # Check for disposable email
+    # 2. Extract raw email address
+    email_match = re.search(r'<([^>]+)>', sender_str)
+    raw_email = email_match.group(1).lower().strip() if email_match else sender_str.lower().strip()
+    
+    # 3. Handle cases where name is missing or placeholder
+    if not candidate_name or candidate_name.lower() == "emailed candidate":
+        if raw_email:
+            candidate_name = raw_email.split('@')[0].replace('.', ' ').title()
+        else:
+            candidate_name = "Emailed Candidate"
+
+    # 4. Check for disposable email
     is_disposable = False
     if raw_email:
         try:
@@ -1566,12 +1575,8 @@ async def assign_ingested_email(
                 is_disposable = True
         except Exception:
             pass
-        candidate_name = raw_email.split('@')[0].replace('.', ' ').title()
-    else:
-        email_match = re.search(r'<([^>]+)>', sender_str)
-        raw_email = email_match.group(1).lower().strip() if email_match else sender_str.lower().strip()
         
-    # Extract phone if present
+    # ── Resolve phone details (from body) ──────────────────────────
     body_lower = (resume.email_body or "").lower()
     phone_matches = re.findall(r'[\+\(]?[1-9][0-9 .\-\(\)]{8,}[0-9]', body_lower)
     candidate_phone_normalized = None
@@ -1585,42 +1590,55 @@ async def assign_ingested_email(
             candidate_phone_normalized = norm_p
             candidate_phone_hash = compute_phone_hash(norm_p)
 
-    # Check duplicate application for this job
+    # ── Duplicate check ────────────────────────────────────────────
     from sqlalchemy import or_
-    filters = [Application.candidate_email == raw_email]
+    filters = []
+    if raw_email:
+        filters.append(Application.candidate_email.ilike(raw_email))
     if candidate_phone_hash:
         filters.append(Application.candidate_phone_hash == candidate_phone_hash)
         
-    existing_app = db.query(Application).filter(
-        Application.job_id == job.id,
-        or_(*filters)
-    ).first()
-    if existing_app:
-        raise HTTPException(status_code=400, detail="Candidate already has an application for this job")
-        
-
+    if filters:
+        existing_app = db.query(Application).filter(
+            Application.job_id == job.id,
+            or_(*filters)
+        ).first()
+        if existing_app:
+            raise HTTPException(status_code=400, detail="Candidate already has an application for this job")
             
-    # Storage path
+    # ── Storage & Content ──────────────────────────────────────────
+    # Resolve the correct bucket and relative path
     resume_file_path = None
-    if resume.file_url and "/MAIL_ATTACHMENTS/" in resume.file_url:
-        bucket_path = resume.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
-        resume_file_path = f"MAIL_ATTACHMENTS/{bucket_path}"
+    if resume.file_url:
+        path_id = _extract_storage_path_identifier(resume.file_url)
+        if path_id:
+            # Re-prepend bucket if we stripped it, to maintain database consistency
+            if not path_id.startswith("MAIL_ATTACHMENTS/"):
+                resume_file_path = f"MAIL_ATTACHMENTS/{path_id}"
+            else:
+                resume_file_path = path_id
         
-    # Download file for hash
+    # Download file to generate accurate hash
     content = b""
     if resume.file_url:
-        import requests
+        from app.core.storage import download_file
         try:
-            response = requests.get(resume.file_url)
-            if response.status_code == 200:
-                content = response.content
+            # Try cloud download first
+            content = download_file('MAIL_ATTACHMENTS', resume.file_url)
+            
+            # Fallback to direct HTTP if it looks like a full URL
+            if not content and resume.file_url.startswith("http"):
+                import requests
+                resp = requests.get(resume.file_url, timeout=10)
+                if resp.status_code == 200:
+                    content = resp.content
         except Exception as e:
-            logger.error(f"Failed to download resume file from URL: {e}")
+            logger.error(f"Failed to download resume for assignment: {e}")
             
     import hashlib
-    resume_hash = hashlib.sha256(content).hexdigest() if content else "dummy_hash_" + str(resume.id)
+    resume_hash = hashlib.sha256(content).hexdigest() if content else f"manual_hash_{resume.id}_{int(time.time())}"
     
-    # Create application
+    # ── Create Application ─────────────────────────────────────────
     new_application = Application(
         job_id=job.id,
         hr_id=job.hr_id,
