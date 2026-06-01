@@ -275,7 +275,9 @@ def debug_applications(db: Session = Depends(get_db)):
             "counts": {
                 "applications": db.query(Application).count(),
                 "jobs": db.query(Job).count(),
-                "users": db.query(User).count()
+                "users": db.query(User).count(),
+                "min_applied_at": db.query(func.min(Application.applied_at)).scalar(),
+                "max_applied_at": db.query(func.max(Application.applied_at)).scalar()
             },
             "users": users_preview
         }
