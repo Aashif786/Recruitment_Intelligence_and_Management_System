@@ -161,26 +161,30 @@ def update_settings(
     if imap_email_new or imap_password_new:
         # Resolve the full pair: use new value if provided, else fall back to DB
         existing_records = {s.key: s.value for s in db.query(GlobalSettings).all()}
-        email_to_test = (imap_email_new or existing_records.get("imap_email", "")).strip()
+        
+        # Strip whitespace to prevent accidental validation failures
+        email_to_test = (imap_email_new if imap_email_new is not None else existing_records.get("imap_email", "")).strip()
         
         # If new password provided, use it. Otherwise, use existing one from DB (and decrypt it)
-        if imap_password_new:
+        if imap_password_new is not None:
             password_to_test = imap_password_new.strip()
         else:
             raw_pass = existing_records.get("imap_password", "")
             password_to_test = decrypt_field(raw_pass).strip()
         
-        if email_to_test and password_to_test:
-            result = _verify_imap_credentials(email_to_test, password_to_test)
-            if not result["ok"]:
-                logger.warning(
-                    "IMAP credential verification failed for %s: %s",
-                    email_to_test, result["error"]
-                )
-                raise HTTPException(
-                    status_code=400,
-                    detail=result["error"]
-                )
+        # CRITICAL: Always verify if either field is being updated. 
+        # Even if one is empty, _verify_imap_credentials should catch it.
+        logger.info(f"Verifying IMAP credentials for: {email_to_test}")
+        result = _verify_imap_credentials(email_to_test, password_to_test)
+        if not result["ok"]:
+            logger.warning(
+                "IMAP credential verification failed for %s: %s",
+                email_to_test, result["error"]
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=result["error"]
+            )
     # ──────────────────────────────────────────────────────────────────
     
     for key, value in data.items():

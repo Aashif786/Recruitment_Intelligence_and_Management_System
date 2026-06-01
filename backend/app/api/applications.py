@@ -1331,6 +1331,25 @@ async def ingest_email_resumes(
         "processing_triggered": True
     }
 
+def _extract_storage_path_identifier(path: str) -> Optional[str]:
+    """
+    Extract a unique identifier from a storage path or URL.
+    Works for both 'resumes' and 'MAIL_ATTACHMENTS' buckets.
+    """
+    if not path:
+        return None
+    # 1. Remove query parameters
+    path = path.split("?")[0]
+    # 2. Extract the part after the bucket name if present
+    for marker in ["/MAIL_ATTACHMENTS/", "/resumes/"]:
+        if marker in path:
+            return path.split(marker)[-1]
+    # 3. Handle relative paths (e.g., '123/resume_abc.pdf' or 'ingested/xyz.pdf')
+    # If it starts with MAIL_ATTACHMENTS/, strip it
+    if path.startswith("MAIL_ATTACHMENTS/"):
+        return path.replace("MAIL_ATTACHMENTS/", "", 1)
+    return path
+
 @router.get("/ingested-emails/stats")
 def get_ingested_emails_stats(
     current_user: User = Depends(get_current_hr),
@@ -1340,26 +1359,42 @@ def get_ingested_emails_stats(
     Return accurate global counts for the email inbox stats cards:
     total ingested, auto-mapped (has application), and pending assignment.
     """
-    from sqlalchemy import func
-    # Use a more efficient query to get counts without fetching all items
-    # 1. Total Ingested
-    total_ingested = db.query(func.count(AttachmentResume.id)).scalar() or 0
+    items = db.query(AttachmentResume).all()
+    total_ingested = len(items)
     
-    # 2. Auto-Mapped (Inferred by joining with Applications)
-    # This is an approximation of the dynamic logic below but much faster for stats
-    auto_mapped = db.query(func.count(AttachmentResume.id)).filter(
-        or_(
-            AttachmentResume.processed == True,
-            # If not marked processed, try to find matching applications by path or email
-            db.query(Application).filter(
-                or_(
-                    Application.resume_file_path.like(func.concat('%', AttachmentResume.file_url, '%')),
-                    Application.candidate_email.ilike(AttachmentResume.sender_email)
-                )
-            ).exists()
-        )
-    ).scalar() or 0
+    # Pre-fetch application mapping data for efficient lookups
+    applications_data = db.query(Application.resume_file_path, Application.candidate_email).all()
     
+    # Store in sets for O(1) lookups
+    app_paths = {
+        _extract_storage_path_identifier(a.resume_file_path) 
+        for a in applications_data if a.resume_file_path
+    }
+    app_emails = {a.candidate_email.lower().strip() for a in applications_data if a.candidate_email}
+    
+    auto_mapped = 0
+    for item in items:
+        # 1. Explicitly marked as processed (manual assignment sets this)
+        if item.processed:
+            auto_mapped += 1
+            continue
+            
+        # 2. Match by unique storage path identifier
+        if item.file_url:
+            path_id = _extract_storage_path_identifier(item.file_url)
+            if path_id and path_id in app_paths:
+                auto_mapped += 1
+                continue
+
+        # 3. Match by candidate email (extracted from sender string)
+        sender_str = item.sender_email or ""
+        match = re.search(r'<([^>]+)>', sender_str)
+        raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
+        
+        if raw_email in app_emails:
+            auto_mapped += 1
+            continue
+                
     return {
         "total_ingested": total_ingested,
         "auto_mapped": auto_mapped,
@@ -1399,14 +1434,15 @@ def get_ingested_emails(
         match = re.search(r'<([^>]+)>', sender_str)
         raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
 
-        # Match application strictly by unique Supabase storage path first
+        # Match application strictly by unique identifier extracted from path
         app = None
-        bucket_path = None
         if item.file_url:
-            bucket_path = item.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
-            app = db.query(Application).filter(
-                Application.resume_file_path.like(f"%{bucket_path}%")
-            ).first()
+            path_id = _extract_storage_path_identifier(item.file_url)
+            if path_id:
+                # Search for application with matching relative path
+                app = db.query(Application).filter(
+                    Application.resume_file_path.like(f"%{path_id}%")
+                ).first()
             
         # Fallback to matching strictly by candidate's email
         if not app and raw_email:
