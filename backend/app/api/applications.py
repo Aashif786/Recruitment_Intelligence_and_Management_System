@@ -232,24 +232,35 @@ def debug_applications(db: Session = Depends(get_db)):
         test_secret = '5ff829b387f2b50f516a5326b52ad798312cd6c7709226e4ad9b21f254ee8019'
         secret_matches = (settings.jwt_secret == test_secret)
 
-        u = db.query(User).filter(User.id == 26).first()
-        res = get_hr_applications(current_user=u, db=db, to_date='2026-06-01', limit=10, skip=0)
+        users_list = db.query(User).all()
+        users_preview = [{"id": usr.id, "email": usr.email, "role": usr.role, "is_active": usr.is_active, "approval_status": usr.approval_status} for usr in users_list]
+
+        # Let's find an active super_admin or admin to test get_hr_applications
+        test_user = next((usr for usr in users_list if usr.role.lower() in ["super_admin", "admin"]), None)
+        if not test_user and users_list:
+            test_user = users_list[0]
+            
+        res = None
+        if test_user:
+            res = get_hr_applications(current_user=test_user, db=db, to_date='2026-06-01', limit=10, skip=0)
 
         return {
             "success": True,
             "database_host": db_url,
             "jwt_secret_matches": secret_matches,
+            "test_user_id": test_user.id if test_user else None,
             "get_hr_applications_test": {
-                "total": res.get("total"),
-                "items_count": len(res.get("items", [])),
-                "error_hint": res.get("error_hint"),
-                "items_preview": [{"id": item.id, "candidate_name": item.candidate_name, "status": item.status} for item in res.get("items", [])][:3]
+                "total": res.get("total") if res else 0,
+                "items_count": len(res.get("items", [])) if res else 0,
+                "error_hint": res.get("error_hint") if res else None,
+                "items_preview": [{"id": item.id, "candidate_name": item.candidate_name, "status": item.status} for item in res.get("items", [])][:3] if res else []
             },
             "counts": {
                 "applications": db.query(Application).count(),
                 "jobs": db.query(Job).count(),
                 "users": db.query(User).count()
-            }
+            },
+            "users": users_preview
         }
     except Exception as e:
         return {
