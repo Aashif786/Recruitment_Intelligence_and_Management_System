@@ -329,6 +329,7 @@ async def apply_for_job(
 
     # Non-blocking flag for obviously fake/test domains (H-domain hygiene)
     suspicious_email_domain = None
+    is_disposable = False # Initialize to avoid UnboundLocalError
     if candidate_email:
         try:
             # Expanded list of disposable email domains (C-23)

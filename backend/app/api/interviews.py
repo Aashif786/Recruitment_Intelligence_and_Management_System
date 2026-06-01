@@ -1,6 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request, BackgroundTasks, Body
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse, RedirectResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload, load_only
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone, timedelta
@@ -202,15 +203,13 @@ async def access_interview(
         # 4. Atomic Initialization Logic (if first access)
         if not interview.is_used:
             # Atomic update to prevent race conditions
-            # Use raw SQL for the update to ensure atomicity and get the updated row back
-            current_time_str = current_time.strftime('%Y-%m-%d %H:%M:%S')
+            # We use rowcount to verify if we successfully "claimed" this interview
             result = db.execute(
-                text("UPDATE interviews SET is_used=true, status='in_progress', used_at=:used_at WHERE id=:id AND is_used=false RETURNING *"),
+                text("UPDATE interviews SET is_used=true, status='in_progress', used_at=:used_at WHERE id=:id AND is_used=false"),
                 {"used_at": current_time, "id": interview.id}
             )
-            updated_row = result.fetchone()
             
-            if not updated_row:
+            if result.rowcount == 0:
                 # If no row was updated, it means another request already set is_used=true
                 db.rollback()
                 raise HTTPException(
@@ -218,7 +217,7 @@ async def access_interview(
                     detail="This interview session is already being initialized by another request."
                 )
             
-            # Refresh the interview object with the new state
+            # Refresh the interview object with the new state from DB
             db.refresh(interview)
             
             # Handle relationship resilience for orphaned data

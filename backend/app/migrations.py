@@ -8,6 +8,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
 from app.domain.constants import CandidateState
+from app.infrastructure.database import Base
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,8 @@ _REQUIRED_COLUMNS = [
     # OTP brute-force protection (added after initial schema)
     ("users", "otp_attempt_count", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "otp_locked_until", "TIMESTAMP WITH TIME ZONE"),
+    # Disposable email detection
+    ("applications", "is_disposable_email", "BOOLEAN DEFAULT FALSE"),
 ]
 
 
