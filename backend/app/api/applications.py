@@ -220,6 +220,29 @@ from fastapi import Request
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
+@router.get("/debug")
+def debug_applications(db: Session = Depends(get_db)):
+    try:
+        from app.core.config import get_settings
+        settings = get_settings()
+        db_url = settings.database_url
+        if "@" in db_url:
+            db_url = db_url.split("@")[-1]
+        return {
+            "success": True,
+            "database_host": db_url,
+            "counts": {
+                "applications": db.query(Application).count(),
+                "jobs": db.query(Job).count(),
+                "users": db.query(User).count()
+            }
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 @router.get("/failures", response_model=list[ApplicationResponse])
 def get_application_failures(
     db: Session = Depends(get_db),
