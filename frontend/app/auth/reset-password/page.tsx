@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Lock, ArrowRight, Loader2, ArrowLeft, KeyRound } from 'lucide-react'
-import { API_BASE_URL } from '@/lib/config'
+import { getApiBaseUrl } from '@/lib/config'
 
 export default function ResetPasswordPage() {
     const router = useRouter()
@@ -47,7 +47,7 @@ export default function ResetPasswordPage() {
         setIsSubmitting(true)
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+            const response = await fetch(`${getApiBaseUrl()}/api/auth/reset-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp, new_password: newPassword }),

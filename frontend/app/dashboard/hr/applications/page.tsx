@@ -27,7 +27,7 @@ import useSWR from "swr";
 import { fetcher } from "@/app/dashboard/lib/swr-fetcher";
 import { performMutation } from "@/app/dashboard/lib/swr-utils";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/config";
+import { getApiBaseUrl } from "@/lib/config";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useApplicationsMutate } from "./hooks/use-applications-mutate";
@@ -464,7 +464,7 @@ export default function HRApplicationsPage() {
                   <Avatar className="h-12 w-12 border border-border/50 shadow-sm shrink-0">
                     <AvatarImage 
                       src={app.photo_url 
-                        || (app.candidate_photo_path ? (app.candidate_photo_path.startsWith('http') ? app.candidate_photo_path : `${API_BASE_URL}/${app.candidate_photo_path.replace(/\\/g, "/")}`) : undefined)}
+                        || (app.candidate_photo_path ? (app.candidate_photo_path.startsWith('http') ? app.candidate_photo_path : `${getApiBaseUrl()}/${app.candidate_photo_path.replace(/\\/g, "/")}`) : undefined)}
                       alt={app.candidate_name || 'Candidate'}
                       className="object-cover"
                     />
