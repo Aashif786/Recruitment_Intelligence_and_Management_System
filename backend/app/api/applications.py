@@ -1341,13 +1341,19 @@ def _extract_storage_path_identifier(path: str) -> Optional[str]:
     # 1. Remove query parameters
     path = path.split("?")[0]
     # 2. Extract the part after the bucket name if present
-    for marker in ["/MAIL_ATTACHMENTS/", "/resumes/"]:
-        if marker in path:
-            return path.split(marker)[-1].strip("/")
+    # We include the bucket prefix to avoid collisions between different buckets
+    if "/MAIL_ATTACHMENTS/" in path:
+        return "MAIL_ATTACHMENTS/" + path.split("/MAIL_ATTACHMENTS/")[-1].strip("/")
+    if "/resumes/" in path:
+        return "resumes/" + path.split("/resumes/")[-1].strip("/")
+    
     # 3. Handle relative paths
     if path.startswith("MAIL_ATTACHMENTS/"):
-        return path.replace("MAIL_ATTACHMENTS/", "", 1).strip("/")
-    return path.strip("/")
+        return path.strip("/")
+    if path.startswith("resumes/"):
+        return path.strip("/")
+        
+    return None # Don't return generic paths
 
 def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: set = None, app_emails_set: set = None):
     """
@@ -1366,14 +1372,19 @@ def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: 
 
     # 1. Match by unique storage path identifier (most accurate)
     path_id = _extract_storage_path_identifier(item.file_url)
-    if path_id and len(path_id) > 5: # Avoid matching on empty or too-short paths
+    if path_id:
         if app_paths_set is not None:
             if path_id in app_paths_set:
-                # For stats (where we have the set), we don't return the full app object
                 return True, True
         else:
-            # For the list (where we need the full app object)
-            app = db.query(Application).filter(Application.resume_file_path.like(f"%{path_id}%")).first()
+            # For the list, we need the full app object
+            # Use a more precise match on the path identifier
+            app = db.query(Application).filter(
+                or_(
+                    Application.resume_file_path == path_id,
+                    Application.resume_file_path.like(f"%{path_id}%")
+                )
+            ).first()
             if app:
                 return app, True
 
@@ -1383,7 +1394,10 @@ def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: 
             if raw_email in app_emails_set:
                 return True, True
         else:
-            app = db.query(Application).filter(Application.candidate_email.ilike(raw_email)).order_by(Application.applied_at.desc()).first()
+            # Use trim and lower to match the set building logic
+            app = db.query(Application).filter(
+                func.trim(func.lower(Application.candidate_email)) == raw_email
+            ).order_by(Application.applied_at.desc()).first()
             if app:
                 return app, True
 
