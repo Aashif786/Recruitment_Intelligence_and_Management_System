@@ -382,7 +382,7 @@ export default function BatchAnalysisPage() {
             )}
 
             {/* Live Count Badge */}
-            {liveCount !== null && (
+            {hasFilters && liveCount !== null && (
               <div className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm font-medium ${
                 liveCount === 0
                   ? 'bg-destructive/10 border-destructive/20 text-destructive'

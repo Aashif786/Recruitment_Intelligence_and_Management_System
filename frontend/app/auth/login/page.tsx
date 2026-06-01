@@ -11,6 +11,7 @@ import { cn } from '@/app/dashboard/lib/utils'
 import { getSessionData } from '@/lib/session-store'
 import useSWR from 'swr'
 import { APIClient } from '@/app/dashboard/lib/api-client'
+import { useBranding } from '@/lib/branding-client'
 
 function LoginContent() {
   const router = useRouter()
@@ -24,9 +25,10 @@ function LoginContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const hasSubmitted = React.useRef(false)
 
-  const { data: settings } = useSWR('/api/settings', (url) => APIClient.get(url)) as { data: any }
-  const companyLogo = settings?.company_logo_url || "/calrims/logo-dark.png"
-  const companyName = settings?.company_name || "RIMS"
+  const { branding } = useBranding()
+  const companyLogo = branding.logoUrl
+  const companyName = branding.companyName
+  const productName = branding.productName
 
   useEffect(() => {
     if (searchParams.get('expired') === 'true') {
@@ -103,7 +105,7 @@ function LoginContent() {
     <div className="h-[calc(100vh-4rem)] flex-1 w-full flex flex-col lg:flex-row bg-background selection:bg-primary/20 relative overflow-hidden">
 
       {/* LEFT COLUMN: Hero Imagery (Hidden on Mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-950">
+      <div className="hidden lg:flex lg:flex-col lg:justify-between lg:w-1/2 relative overflow-hidden bg-slate-950 p-12">
         {/* The generated AI/HR image */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -114,7 +116,7 @@ function LoginContent() {
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/60 to-transparent" />
 
         {/* Content overlaid on image (Top Left Corner) */}
-        <div className="absolute top-10 left-12 z-20">
+        <div className="z-20">
           <div className="flex flex-col gap-5 w-full max-w-[55rem]">
             <h2 className="text-4xl lg:text-[2.75rem] font-light uppercase tracking-[0.15em] leading-[1.3] text-white/90">
               Recruitment Intelligence & <br /> Management System
@@ -128,7 +130,7 @@ function LoginContent() {
         </div>
 
         {/* Content overlaid on image (Bottom) */}
-        <div className="relative z-10 p-12 mt-auto flex flex-col justify-end h-full w-full max-w-2xl text-slate-100">
+        <div className="relative z-10 mt-8 flex flex-col justify-end w-full max-w-2xl text-slate-100">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -195,7 +197,11 @@ function LoginContent() {
 
             <div className="space-y-2 mb-10">
               <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Sign In</h2>
-              <p className="text-muted-foreground">Log into your secure administrative portal.</p>
+              <p className="text-muted-foreground">
+                {searchParams.get('role') === 'hr' 
+                  ? 'Log into your secure administrative portal.' 
+                  : 'Log into your candidate portal.'}
+              </p>
             </div>
           </motion.div>
 

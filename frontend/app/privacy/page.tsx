@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getBrandingServer } from "@/lib/branding-server";
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const branding = await getBrandingServer();
   return (
     <div className="min-h-screen bg-background text-foreground py-20 px-6">
       <div className="max-w-3xl mx-auto space-y-8">
@@ -15,7 +17,7 @@ export default function PrivacyPage() {
         <div className="prose prose-slate dark:prose-invert max-w-none">
           <p>Last updated: {new Date().toLocaleDateString()}</p>
           <p>
-            At CALRIMS, we are committed to protecting your privacy and ensuring the security of your personal data.
+            At {branding.productName}, we are committed to protecting your privacy and ensuring the security of your personal data.
           </p>
           <h2>1. Information We Collect</h2>
           <p>

@@ -7,14 +7,17 @@ from typing import Optional
 
 from app.infrastructure.database import get_db
 from app.domain.models import InterviewIssue, Interview, Application
-from app.core.auth import verify_password
+from app.core.auth import verify_password, pwd_context
 from app.core.observability import get_request_id, log_json, safe_hash
 from app.core.idempotency import is_duplicate_request
 from app.core.config import get_settings
-
+from app.domain.schemas import SupportTicketCreate
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+# Constant-time dummy hash for timing side-channel mitigation
+DUMMY_HASH = pwd_context.hash("__dummy__")
 
 router = APIRouter(prefix="/api/support", tags=["Support"])
 from app.core.rate_limiter import limiter
@@ -64,7 +67,7 @@ def _check_support_rate_limit(key: str) -> Optional[int]:
 
 @router.post("/ticket")
 @limiter.limit("60/minute")
-def create_support_ticket(payload: dict, request: Request, db: Session = Depends(get_db)):
+def create_support_ticket(payload: SupportTicketCreate, request: Request, db: Session = Depends(get_db)):
     """
     Candidate support portal ticket endpoint (non-breaking add).
 
@@ -76,14 +79,11 @@ def create_support_ticket(payload: dict, request: Request, db: Session = Depends
       description
     }
     """
-    email = str(payload.get("email") or "").lower().strip()
-    # Backward compatible with existing frontend variants
-    access_key = str(payload.get("access_key") or payload.get("key") or "").strip()
-    grievance_type = str(payload.get("grievance_type") or "").strip()
-    description = str(payload.get("description") or "").strip()
+    email = payload.email.lower().strip()
+    access_key = payload.access_key.strip()
+    grievance_type = payload.grievance_type.strip()
+    description = payload.description.strip()
 
-    if not email or not access_key or not grievance_type or not description:
-        raise HTTPException(status_code=400, detail="All fields are required.")
     if len(description) < 10:
         raise HTTPException(status_code=400, detail="Please provide a short description (minimum 10 characters).")
     if len(description) > 5000:
@@ -131,29 +131,44 @@ def create_support_ticket(payload: dict, request: Request, db: Session = Depends
         Offer.offer_token == access_key  # Candidates use their offer token as key
     ).first()
 
-    if not application:
-        # Find all interviews for this email to verify if the access key belongs to one
-        interviews = (
-            db.query(Interview)
-            .join(Application)
-            .filter(Application.candidate_email == email)
-            .options(
-                joinedload(Interview.application).joinedload(Application.job),
-                joinedload(Interview.report),
-            )
-            .order_by(Interview.created_at.desc())
-            .all()
+    # Find all interviews for this email to verify if the access key belongs to one
+    interviews = (
+        db.query(Interview)
+        .join(Application)
+        .filter(Application.candidate_email == email)
+        .options(
+            joinedload(Interview.application).joinedload(Application.job),
+            joinedload(Interview.report),
         )
-        
-        # Cap the slow bcrypt verification loop to at most top 5 most recent interviews to prevent high latency
-        for inv in interviews[:5]:
-            try:
-                if inv.access_key_hash and verify_password(access_key, inv.access_key_hash):
+        .order_by(Interview.created_at.desc())
+        .all()
+    )
+    
+    # Cap the slow bcrypt verification loop to at most top 5 most recent interviews to prevent high latency.
+    # To mitigate timing side channels, we always perform exactly 5 password verification attempts using DUMMY_HASH.
+    match_found = False
+    num_checks = 0
+    
+    # If we already found the application (via offer_token), we still run the bcrypt checks on dummy to remain constant-time.
+    for inv in interviews[:5]:
+        try:
+            num_checks += 1
+            # If application is already found or we matched, verify using the dummy hash to prevent timing difference
+            hash_to_verify = inv.access_key_hash if (not application and not match_found) else DUMMY_HASH
+            if hash_to_verify and verify_password(access_key, hash_to_verify):
+                if not application and not match_found:
                     interview = inv
                     application = inv.application
-                    break
-            except Exception:
-                continue
+                    match_found = True
+        except Exception:
+            continue
+            
+    # Pad the remaining checks up to 5
+    for _ in range(num_checks, 5):
+        try:
+            verify_password(access_key, DUMMY_HASH)
+        except Exception:
+            pass
         
     if not application and not interview:
         log_json(

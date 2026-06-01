@@ -32,7 +32,9 @@ class Settings(BaseSettings):
 
     # JWT
     jwt_secret: str = ""
+    interview_jwt_secret: str = "" # Isolated key for interview candidate sessions
     jwt_algorithm: str = "HS256"
+    pdf_generation_secret: str = "" # Secret for authorizing internal PDF service calls
     jwt_expiration_minutes: int = 120
     jwt_refresh_expiration_days: int = 7
 
@@ -99,6 +101,7 @@ class Settings(BaseSettings):
     
     # Company branding
     company_name: str = "Company"
+    hr_allowed_domains: str = ""
 
     # Server
     host: str = "127.0.0.1"
@@ -174,6 +177,18 @@ class Settings(BaseSettings):
                  logging.getLogger(__name__).warning(
                     f"CRITICAL CONFIG WARNING: frontend_base_url set to '{self.frontend_base_url}' while ENV=production."
                 )
+
+        # Check LinkedIn posting config (P2-L05)
+        if self.enable_linkedin_posting:
+            from urllib.parse import urlparse
+            parsed_front = urlparse(self.frontend_base_url)
+            is_valid_https = parsed_front.scheme == "https" and bool(parsed_front.netloc)
+            if not self.frontend_base_url or not is_valid_https:
+                logging.getLogger(__name__).critical(
+                    "CRITICAL CONFIG ERROR: enable_linkedin_posting is True, but frontend_base_url "
+                    f"('{self.frontend_base_url}') is not a valid absolute HTTPS URL. Disabling LinkedIn posting."
+                )
+                object.__setattr__(self, "enable_linkedin_posting", False)
 
         explicit = os.environ.get("WS_ENFORCE_INTERVIEW_JWT")
         if explicit is not None:

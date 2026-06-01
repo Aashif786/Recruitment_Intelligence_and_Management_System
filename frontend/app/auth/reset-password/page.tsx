@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Lock, ArrowRight, Loader2, ArrowLeft, KeyRound } from 'lucide-react'
+import { getApiBaseUrl } from '@/lib/config'
 
 export default function ResetPasswordPage() {
     const router = useRouter()
@@ -46,7 +47,7 @@ export default function ResetPasswordPage() {
         setIsSubmitting(true)
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:10000'}/api/auth/reset-password`, {
+            const response = await fetch(`${getApiBaseUrl()}/api/auth/reset-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp, new_password: newPassword }),
@@ -55,7 +56,7 @@ export default function ResetPasswordPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || data.detail || 'Failed to reset password')
+                throw new Error(data.error || data.detail || 'Unable to reset your password. Please check the code and try again.')
             }
 
             setSuccess(true)
@@ -113,7 +114,7 @@ export default function ResetPasswordPage() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-muted-foreground text-foreground"
-                                placeholder="Email"
+                                placeholder="you@company.com"
                                 disabled={!!searchParams.get('email') || isSubmitting}
                             />
                         </div>
@@ -166,7 +167,7 @@ export default function ResetPasswordPage() {
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Resetting...
+                                    Updating...
                                 </>
                             ) : (
                                 <>

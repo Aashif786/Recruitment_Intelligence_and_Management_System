@@ -13,7 +13,7 @@ import useSWR from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
 import { useRouter } from 'next/navigation'
 import { Checkbox } from "@/components/ui/checkbox"
-import { API_BASE_URL } from "@/lib/config"
+import { getApiBaseUrl } from "@/lib/config"
 import { performMutation } from "@/app/dashboard/lib/swr-utils"
 
 type Application = {
@@ -194,10 +194,16 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                 <h3 className="font-bold">Status</h3>
                 <p>{fetchError || (error as Error).message}</p>
                 <div className="mt-2 text-sm text-gray-700">
-                    <p>Debugging Check:</p>
+                    <p>Check:</p>
                     <ul className="list-disc pl-5">
-                        <li>Ensure you are logged in as <strong>hr@example.com</strong> (Password: password123)</li>
-                        <li>Applications are only visible to the HR user who posted the job.</li>
+                        <li>Applications are only visible to the HR user who owns the job.</li>
+                        <li>Confirm you are signed in with an HR account that has access to this job.</li>
+                        {process.env.NODE_ENV === "development" && (
+                            <li className="text-muted-foreground">
+                                Dev only: seed users may use <strong>hr@company.com</strong> if configured via{" "}
+                                <code className="text-xs">SUPER_ADMIN_*</code> in backend <code className="text-xs">.env</code>.
+                            </li>
+                        )}
                     </ul>
                 </div>
             </div>
@@ -311,7 +317,7 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                                             <div className="flex items-start space-x-2.5 flex-1 min-w-0">
                                                 <Avatar className="h-8 w-8 border-2 border-background shadow-sm shrink-0">
                                                     <AvatarImage 
-                                                        src={app.candidate.photo_url || (app.candidate.candidate_photo_path ? (app.candidate.candidate_photo_path.startsWith('http') ? app.candidate.candidate_photo_path : `${API_BASE_URL}/${app.candidate.candidate_photo_path.replace(/\\/g, '/')}`) : undefined)}
+                                                        src={app.candidate.photo_url || (app.candidate.candidate_photo_path ? (app.candidate.candidate_photo_path.startsWith('http') ? app.candidate.candidate_photo_path : `${getApiBaseUrl()}/${app.candidate.candidate_photo_path.replace(/\\/g, '/')}`) : undefined)}
                                                         alt={app.candidate.full_name}
                                                         className="object-cover"
                                                     />

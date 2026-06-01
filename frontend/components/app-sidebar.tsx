@@ -42,6 +42,7 @@ import { Badge } from '@/components/ui/badge'
 import useSWR from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
 import { APIClient } from '@/app/dashboard/lib/api-client'
+import { useBranding } from '@/lib/branding-client'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { user, logout } = useAuth()
@@ -74,8 +75,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const pendingCount = pendingApps?.count ?? 0
     const ticketCount = ticketData?.count || 0
 
-    const { data: settings } = useSWR('/api/settings', (url) => APIClient.get(url)) as { data: any }
-    const companyLogo = settings?.company_logo_url || null
+    const { branding } = useBranding()
+    const companyLogo = branding.logoUrl || null
 
 
 

@@ -7,7 +7,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ArrowRight, Globe, Users, Zap, Shield, Star, Award } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
+import { useBranding } from '@/lib/branding-client'
+
 export default function CompanyPage() {
+    const { branding } = useBranding()
     return (
         <div className="min-h-screen bg-background font-sans">
 
@@ -76,7 +79,7 @@ export default function CompanyPage() {
             {/* Generic Footer */}
             <footer className="border-t border-border py-12 bg-card">
                 <div className="max-w-7xl mx-auto px-6 text-center text-muted-foreground text-sm">
-                    <p>© {new Date().getFullYear()} Caldim Tech. All rights reserved.</p>
+                    <p>© {new Date().getFullYear()} {branding.companyName}. All rights reserved.</p>
                 </div>
             </footer>
         </div>

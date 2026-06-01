@@ -1,5 +1,5 @@
 // API Client - Last Updated: 2026-04-10
-import { API_BASE_URL } from '@/lib/config'
+import { getApiBaseUrl } from '@/lib/config'
 import { toast } from 'sonner'
 
 const MUTATION_REVALIDATION_PREFIXES = [
@@ -43,7 +43,8 @@ export class APIClient {
       normalized.startsWith('/api/onboarding/') ||
       normalized === '/api/applications/apply' ||
       normalized === '/api/applications/extract-basic-info' ||
-      normalized === '/api/support/ticket'
+      normalized === '/api/support/ticket' ||
+      normalized === '/api/settings/branding'
     )
   }
 
@@ -87,7 +88,7 @@ export class APIClient {
   }
 
   static async get<T>(endpoint: string): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`
+    const url = `${getApiBaseUrl()}${endpoint}`
     const response = await this.fetchWithRetry(url, {
       method: 'GET',
       headers: this.getHeaders(false, endpoint),
@@ -97,7 +98,7 @@ export class APIClient {
   }
 
   static async post<T>(endpoint: string, data: any, requestId?: string): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`
+    const url = `${getApiBaseUrl()}${endpoint}`
     const headers = this.getHeaders(false, endpoint)
     headers['X-Request-ID'] = requestId ?? this.createRequestId()
     const response = await this.fetchWithRetry(url, {
@@ -114,7 +115,7 @@ export class APIClient {
   }
 
   static async postMultipart<T>(endpoint: string, formData: FormData, requestId?: string, timeoutMs?: number): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`
+    const url = `${getApiBaseUrl()}${endpoint}`
     const headers = this.getHeaders(true, endpoint)
     headers['X-Request-ID'] = requestId ?? this.createRequestId()
     const response = await this.fetchWithRetry(url, {
@@ -131,7 +132,7 @@ export class APIClient {
   }
 
   static async put<T>(endpoint: string, data: any): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`
+    const url = `${getApiBaseUrl()}${endpoint}`
     const headers = this.getHeaders(false, endpoint)
     headers['X-Request-ID'] = this.createRequestId()
     const response = await this.fetchWithRetry(url, {
@@ -144,7 +145,7 @@ export class APIClient {
   }
 
   static async delete(endpoint: string): Promise<void> {
-    const url = `${API_BASE_URL}${endpoint}`
+    const url = `${getApiBaseUrl()}${endpoint}`
     const headers = this.getHeaders(false, endpoint)
     headers['X-Request-ID'] = this.createRequestId()
     const response = await this.fetchWithRetry(url, {
@@ -156,7 +157,7 @@ export class APIClient {
   }
 
   static async downloadFile(endpoint: string, filename: string): Promise<void> {
-    const url = `${API_BASE_URL}${endpoint}`
+    const url = `${getApiBaseUrl()}${endpoint}`
     const response = await this.fetchWithRetry(url, {
       method: 'GET',
       headers: this.getHeaders(false, endpoint),
@@ -215,10 +216,10 @@ export class APIClient {
       if (response.status === 401 && typeof window !== 'undefined') {
         const currentPath = window.location.pathname
         // Only redirect if NOT already on an auth/public page (prevents loop)
-        const isAuthPage = currentPath.includes('/auth/') ||
-          currentPath.includes('/calrims') ||
-          currentPath.includes('/interview') ||
-          currentPath === '/'
+        const cleanPath = currentPath.replace(/^\/calrims/, '') || '/'
+        const isAuthPage = cleanPath.includes('/auth/') ||
+          cleanPath.includes('/interview') ||
+          cleanPath === '/'
         if (!isAuthPage) {
           // Debounce: only redirect once every 3s to prevent looping
           const lastRedirect = parseInt(sessionStorage.getItem('_auth_redirect_ts') || '0')

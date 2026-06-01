@@ -225,100 +225,7 @@ async def _send_via_resend(to_email: str, subject: str, html_body: str) -> dict:
         )
         return {"success": False, "error": str(e)}
 
-async def send_email_async(to_email: str, subject: str, html_body: str, attachments: list = None) -> dict:
-    """Async wrapper for the SMTP sender with up to 2 retries (3 total attempts)."""
-    # Attachments: keep SMTP path for now (Resend implementation is HTML-only).
-    if attachments:
-        loop = asyncio.get_running_loop()
-        max_retries = 2
-        last_error = "Unknown error"
-
-        for attempt in range(max_retries + 1):
-            result = await loop.run_in_executor(
-                None,
-                _send_via_smtp,
-                to_email,
-                subject,
-                html_body,
-                attachments,
-            )
-            if result["success"]:
-                return {**result, "provider": "smtp"}
-
-            if result.get("deferred"):
-                return {
-                    "success": False,
-                    "provider": "smtp",
-                    "deferred": True,
-                    "error": result.get("error") or "Deferred due to SMTP quota",
-                }
-
-            last_error = result["error"]
-            if attempt < max_retries:
-                wait_time = (attempt + 1) * 2  # Exponential-ish backoff: 2s, 4s
-                logger.warning(f"Retrying SMTP email to {to_email} in {wait_time}s (Attempt {attempt + 1}/{max_retries})...")
-                await asyncio.sleep(wait_time)
-
-        return {"success": False, "provider": "smtp", "error": f"Failed after {max_retries + 1} attempts: {last_error}", "deferred": False}
-
-    # No attachments:
-    # Resend is explicit opt-in and only used when BOTH RESEND_API_KEY and RESEND_FROM are set.
-    resend_api_key = (getattr(settings, "resend_api_key", "") or "").strip()
-    resend_from = (getattr(settings, "resend_from", "") or "").strip()
-    if resend_api_key and resend_from:
-        smtp_configured = bool(settings.smtp_host and settings.smtp_user and settings.smtp_password)
-
-        # Retry Resend up to 3 times with 5 second delay
-        resend_max_retries = 2
-        resend_last_error = "Unknown error"
-        for resend_attempt in range(resend_max_retries + 1):
-            result = await _send_via_resend(to_email, subject, html_body)
-            if result["success"]:
-                return {**result, "provider": "resend"}
-            resend_last_error = result["error"]
-            if resend_attempt < resend_max_retries:
-                await asyncio.sleep(5)
-
-        last_error = resend_last_error
-
-        if smtp_configured:
-            logger.warning(
-                f"[EMAIL FALLBACK TO SMTP] Resend failed for {to_email} ({last_error}); falling back to SMTP."
-            )
-            loop = asyncio.get_running_loop()
-            max_smtp_retries = 2
-            smtp_last_error = "Unknown error"
-            try:
-                for smtp_attempt in range(max_smtp_retries + 1):
-                    smtp_result = await loop.run_in_executor(
-                        None,
-                        _send_via_smtp,
-                        to_email,
-                        subject,
-                        html_body,
-                        None,
-                    )
-                    if smtp_result["success"]:
-                        return {**smtp_result, "provider": "smtp"}
-                    if smtp_result.get("deferred"):
-                        return {
-                            "success": False,
-                            "provider": "smtp",
-                            "deferred": True,
-                            "error": smtp_result.get("error") or "Deferred due to SMTP quota",
-                        }
-                    smtp_last_error = smtp_result["error"]
-                    if smtp_attempt < max_smtp_retries:
-                        wait_time = (smtp_attempt + 1) * 2
-                        await asyncio.sleep(wait_time)
-            except Exception as e:
-                # Never crash request flow due to email issues.
-                logger.error(f"[EMAIL FALLBACK TO SMTP] SMTP fallback crashed: {e}", exc_info=True)
-            return {"success": False, "provider": "smtp", "error": f"Failed after SMTP fallback: {smtp_last_error}", "deferred": False}
-
-        return {"success": False, "provider": "resend", "error": f"Failed after Resend attempt: {last_error}", "deferred": False}
-
-    # Fallback: SMTP (original behavior).
+async def _send_via_smtp_helper(to_email: str, subject: str, html_body: str, attachments: list = None) -> dict:
     loop = asyncio.get_running_loop()
     max_retries = 2
     last_error = "Unknown error"
@@ -351,6 +258,47 @@ async def send_email_async(to_email: str, subject: str, html_body: str, attachme
 
     return {"success": False, "provider": "smtp", "error": f"Failed after {max_retries + 1} attempts: {last_error}", "deferred": False}
 
+
+async def _send_via_resend_helper(to_email: str, subject: str, html_body: str) -> dict:
+    # Retry Resend up to 3 times with 5 second delay
+    resend_max_retries = 2
+    resend_last_error = "Unknown error"
+    for resend_attempt in range(resend_max_retries + 1):
+        result = await _send_via_resend(to_email, subject, html_body)
+        if result["success"]:
+            return {**result, "provider": "resend"}
+        resend_last_error = result["error"]
+        if resend_attempt < resend_max_retries:
+            await asyncio.sleep(5)
+
+    last_error = resend_last_error
+    smtp_configured = bool(settings.smtp_host and settings.smtp_user and settings.smtp_password)
+    if smtp_configured:
+        logger.warning(
+            f"[EMAIL FALLBACK TO SMTP] Resend failed for {to_email} ({last_error}); falling back to SMTP."
+        )
+        return await _send_via_smtp_helper(to_email, subject, html_body, None)
+
+    return {"success": False, "provider": "resend", "error": f"Failed after Resend attempt: {last_error}", "deferred": False}
+
+
+async def send_email_async(to_email: str, subject: str, html_body: str, attachments: list = None, provider: Optional[str] = None) -> dict:
+    """Async wrapper for SMTP / Resend selection with fallback and retries."""
+    if provider == "smtp":
+        return await _send_via_smtp_helper(to_email, subject, html_body, attachments)
+    elif provider == "resend":
+        return await _send_via_resend_helper(to_email, subject, html_body)
+        
+    if attachments:
+        return await _send_via_smtp_helper(to_email, subject, html_body, attachments)
+
+    resend_api_key = (getattr(settings, "resend_api_key", "") or "").strip()
+    resend_from = (getattr(settings, "resend_from", "") or "").strip()
+    if resend_api_key and resend_from:
+        return await _send_via_resend_helper(to_email, subject, html_body)
+
+    return await _send_via_smtp_helper(to_email, subject, html_body, attachments)
+
 async def execute_email_with_retries(
     to_email: str, 
     subject: str, 
@@ -376,7 +324,8 @@ async def execute_email_with_retries(
                     update(Application)
                     .where(and_(
                         Application.id == application.id,
-                        Application.email_status != 'processing'
+                        Application.email_status != 'processing',
+                        Application.email_status != 'sent'
                     ))
                     .values(email_status='processing')
                 )
@@ -799,6 +748,72 @@ async def send_onboarding_reminder_email(to_email: str, candidate_name: str, joi
     </body></html>
     """
     return await execute_email_with_retries(to_email, subject, body, event_type="ONBOARDING_REMINDER")
+
+async def send_onboarding_summary_email(to_email: str, candidates_list: list):
+    """
+    Send a consolidated summary email to super admins / HR listing all candidates
+    joining in the next 7 days.
+
+    candidates_list: list of dicts with keys: name, job_title, joining_date (str)
+    """
+    if not candidates_list:
+        return True
+
+    subject = f"📅 Upcoming Joinings — Next 7 Days ({len(candidates_list)} candidate{'s' if len(candidates_list) != 1 else ''})"
+
+    rows_html = "".join(
+        f"""
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <td style="padding:10px 14px; font-weight:600; color:#111827;">{c['name']}</td>
+          <td style="padding:10px 14px; color:#374151;">{c['job_title']}</td>
+          <td style="padding:10px 14px; color:#059669; font-weight:600;">{c['joining_date']}</td>
+        </tr>
+        """
+        for c in candidates_list
+    )
+
+    body = f"""
+    <html>
+    <body style="font-family:'Segoe UI',sans-serif; color:#111827; background:#f9fafb; margin:0; padding:0;">
+      <div style="max-width:600px; margin:32px auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%); padding:28px 32px;">
+          <h1 style="margin:0; font-size:22px; color:#ffffff; font-weight:700;">📅 Upcoming Joinings — Next 7 Days</h1>
+          <p style="margin:8px 0 0 0; color:#bfdbfe; font-size:14px;">
+            {len(candidates_list)} candidate{'s are' if len(candidates_list) != 1 else ' is'} scheduled to join in the next 7 days.
+            Please ensure all preparations (IT access, workspace, credentials) are completed well in advance.
+          </p>
+        </div>
+
+        <!-- Table -->
+        <div style="padding:24px 32px;">
+          <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <thead>
+              <tr style="background:#f3f4f6;">
+                <th style="padding:10px 14px; text-align:left; color:#6b7280; font-weight:600; text-transform:uppercase; font-size:12px; border-bottom:2px solid #e5e7eb;">Candidate</th>
+                <th style="padding:10px 14px; text-align:left; color:#6b7280; font-weight:600; text-transform:uppercase; font-size:12px; border-bottom:2px solid #e5e7eb;">Role / Position</th>
+                <th style="padding:10px 14px; text-align:left; color:#6b7280; font-weight:600; text-transform:uppercase; font-size:12px; border-bottom:2px solid #e5e7eb;">Joining Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows_html}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:20px 32px; background:#f9fafb; border-top:1px solid #e5e7eb;">
+          <p style="margin:0; font-size:13px; color:#9ca3af;">
+            This is an automated daily summary from the Recruitment & Onboarding Management System.
+            Please do not reply to this email.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    return await execute_email_with_retries(to_email, subject, body, event_type="ONBOARDING_SUMMARY")
 
 async def send_joining_confirmation_email(to_email: str, candidate_name: str, job_title: str, candidate_photo_url: str):
     subject = f"Joining Confirmation: {candidate_name}"

@@ -20,26 +20,10 @@ if os.getenv("BACKEND_START_MODE") not in ["script", "docker"]:
     print("Use start.ps1 to run the backend")
     sys.exit(1)
 
-# ── Environment Version Guard ──────────────────────────────────────────────
-try:
-    import psycopg2
-    import PIL.Image
-except ImportError as e:
-    if "psycopg2._psycopg" in str(e) or "_imaging" in str(e):
-        print("\n" + "!"*80)
-        print("CRITICAL: Python Version Mismatch Detected in Environment!")
-        print(f"Error: {str(e)}")
-        print("\nYour virtual environment contains packages compiled for a different Python version.")
-        print("ACTION REQUIRED: Run '.\\start.ps1 repair' in the backend directory.")
-        print("!"*80 + "\n")
-        sys.exit(1)
-# ──────────────────────────────────────────────────────────────────────────────
-
 from fastapi import FastAPI, HTTPException, status, Request as FastAPIRequest
 from fastapi.routing import APIRoute
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Callable, Any
@@ -170,6 +154,7 @@ from app.core.standardized_route import StandardizedAPIRoute
 
 # ── IMAP Email Polling Background Task ─────────────────────────────────────
 from app.services.email_ingestion_service import fetch_resume_attachments
+from app.core.encryption import decrypt_field
 
 async def _imap_polling_loop():
     """Background coroutine that polls the IMAP inbox for resume attachments.
@@ -199,7 +184,8 @@ async def _imap_polling_loop():
 
             if auto_sync_enabled:
                 imap_email = settings_dict.get("imap_email") or settings.imap_email or ''
-                imap_password = settings_dict.get("imap_password") or settings.imap_password or ''
+                raw_pass = settings_dict.get("imap_password") or settings.imap_password or ''
+                imap_password = decrypt_field(raw_pass).strip()
 
                 if imap_email and imap_password:
                     fetch_resume_attachments(db, imap_email, imap_password)
@@ -267,7 +253,7 @@ app = FastAPI(
     title="HR Recruitment System API",
     description="AI-powered automated recruitment platform",
     version="1.0.0",
-    redirect_slashes=True,
+    redirect_slashes=False,
     lifespan=lifespan,
     docs_url="/docs" if settings.env != "production" else None,
     redoc_url="/redoc" if settings.env != "production" else None,
@@ -303,9 +289,15 @@ app.add_exception_handler(RateLimitExceeded, cors_aware_rate_limit_handler)
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 # BUG-028 Fix: Restrict trusted_hosts to the actual reverse proxy IP/host.
-# Using "*" or "0.0.0.0" allows X-Forwarded-For spoofing from any client.
-_trusted_proxy = os.environ.get("TRUSTED_PROXY_HOST", "127.0.0.1")
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy)
+# Using "*" or broad CIDR ranges allows X-Forwarded-For spoofing from arbitrary clients.
+# We fetch this dynamically from environment variables for production security.
+_trusted_proxies_env = os.environ.get("TRUSTED_PROXY_HOST")
+if _trusted_proxies_env:
+    trusted_proxy_hosts = [ip.strip() for ip in _trusted_proxies_env.split(",") if ip.strip()]
+else:
+    # Safe default: loopback only
+    trusted_proxy_hosts = ["127.0.0.1"]
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_proxy_hosts)
 
 from app.core.middleware import PerformanceLoggingMiddleware, SecurityHeadersMiddleware
 app.add_middleware(SecurityHeadersMiddleware)

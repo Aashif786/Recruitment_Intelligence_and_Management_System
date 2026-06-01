@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, or_
-from app.domain.models import Job, Application, Interview, InterviewReport, User
+from app.domain.models import Job, Application, Interview, InterviewReport, User, Offer
 from typing import Dict, Any, List
 
 class AnalyticsService:

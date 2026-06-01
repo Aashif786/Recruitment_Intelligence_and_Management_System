@@ -15,7 +15,10 @@ from app.core.timezone import get_ist_now
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
-        CheckConstraint("role IN ('super_admin', 'hr', 'pending_hr', 'candidate')", name='check_users_role'),
+        CheckConstraint(
+            "role IN ('super_admin', 'hr', 'pending_hr', 'candidate')",
+            name='check_users_role',
+        ),
         CheckConstraint("approval_status IN ('pending', 'approved', 'rejected')", name='check_users_approval_status'),
     )
 
@@ -34,6 +37,8 @@ class User(Base):
     # After 10 consecutive failed logins the account is locked for 15 minutes.
     login_attempt_count = Column(Integer, default=0, nullable=False, server_default="0")
     login_locked_until = Column(DateTime(timezone=False), nullable=True)
+    otp_attempt_count = Column(Integer, default=0, nullable=False)
+    otp_locked_until = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime, default=get_ist_now, server_default=func.now())
     updated_at = Column(DateTime, default=get_ist_now, server_default=func.now(), onupdate=get_ist_now)
 
@@ -115,6 +120,9 @@ class Application(Base):
     candidate_phone = Column(EncryptedText)
     candidate_phone_hash = Column(String(64), nullable=True, index=True)
     # plain digits for easier debugging/validation
+    # TODO: Issue M-07: candidate_phone_normalized stores candidate phone numbers in plain text.
+    # In the future, this column should be removed or encrypted to avoid PII leak.
+    # We keep it for now due to database constraint requirements, but log a warning at startup.
     candidate_phone_normalized = Column(String(50), nullable=True, index=True)
     # Original user-provided phone value (encrypted) for auditing/debugging.
     # The normalized digits-only value is still stored in `candidate_phone`.
@@ -123,6 +131,7 @@ class Application(Base):
     resume_file_name = Column(String(255))
     resume_hash = Column(String(64), nullable=True, index=True) # SHA256 of content
     candidate_photo_path = Column(String(500), nullable=True)
+    is_disposable_email = Column(Boolean, default=False)
     status = Column(String(50), default='applied', index=True)
     # Resume AI pipeline: pending → parsing → parsed | failed
     resume_status = Column(String(32), default='pending', index=True)
@@ -149,6 +158,8 @@ class Application(Base):
     last_attempt_at = Column(DateTime)
     background_task_id = Column(String(100))
     scoring_metadata = Column(JSON, nullable=True) # JSON string of weights/logic
+    email_status = Column(String(20), default='pending')
+    email_sent_at = Column(DateTime, nullable=True)
 
     # Relationships
     job = relationship("Job", back_populates="applications")
@@ -350,6 +361,7 @@ class Offer(Base):
     offer_email_status = Column(String(20), default='pending')
     offer_email_retry_count = Column(Integer, default=0)
     reminder_sent_at = Column(DateTime)
+    offer_preview_count = Column(Integer, default=0, nullable=False)
     
     application = relationship("Application", back_populates="offer")
     approver = relationship("User", foreign_keys=[offer_approved_by])
@@ -785,7 +797,7 @@ class GlobalSettings(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     key = Column(String(100), unique=True, nullable=False, index=True)
-    value = Column(Text, nullable=False)
+    value = Column(EncryptedText, nullable=False)
     created_at = Column(DateTime, default=get_ist_now)
     updated_at = Column(DateTime, default=get_ist_now, onupdate=get_ist_now)
 
@@ -830,6 +842,10 @@ class InterviewReportVersion(Base):
 
 class AttachmentResume(Base):
     __tablename__ = "attachment_resumes"
+    __table_args__ = (
+        Index('ix_attachment_resumes_duplicate_detection', 'sender_email', 'subject', 'received_at'),
+    )
+    
     id = Column(Integer, primary_key=True, index=True)
     message_id = Column(String(255), unique=True, index=True, nullable=True)
     sender_email = Column(String(255), index=True)
@@ -841,4 +857,6 @@ class AttachmentResume(Base):
     mime_type = Column(String(100))
     received_at = Column(DateTime, default=get_ist_now)
     processed = Column(Boolean, default=False)
+    retry_count = Column(Integer, default=0)
+    last_error = Column(Text, nullable=True) # Store error messages for debugging
 

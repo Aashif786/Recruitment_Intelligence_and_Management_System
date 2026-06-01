@@ -8,6 +8,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
 from app.domain.constants import CandidateState
+from app.infrastructure.database import Base
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,14 @@ _REQUIRED_COLUMNS = [
     ("jobs", "aptitude_repo_set_id", "INTEGER"),
     ("jobs", "technical_repo_set_id", "INTEGER"),
     ("jobs", "behavioural_repo_set_id", "INTEGER"),
+    # Email inbox edge cases fix - retry tracking
+    ("attachment_resumes", "retry_count", "INTEGER DEFAULT 0"),
+    ("attachment_resumes", "last_error", "TEXT"),
+    # OTP brute-force protection (added after initial schema)
+    ("users", "otp_attempt_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("users", "otp_locked_until", "TIMESTAMP WITH TIME ZONE"),
+    # Disposable email detection
+    ("applications", "is_disposable_email", "BOOLEAN DEFAULT FALSE"),
 ]
 
 
@@ -107,14 +116,14 @@ def column_exists(conn, table_name: str, column_name: str) -> bool:
 
 
 def update_role_constraint(conn):
-    """Safely update the role constraint to include 'pending_hr' and 'super_admin'."""
+    """Safely update the role constraint to include 'pending_hr', 'super_admin' and 'candidate'."""
     try:
         # Check if we are on PostgreSQL
         if "postgresql" in str(conn.engine.url):
             conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS check_users_role"))
             conn.execute(text("""
                 ALTER TABLE users ADD CONSTRAINT check_users_role 
-                CHECK (role IN ('super_admin', 'hr', 'recruiter', 'pending_hr', 'candidate'))
+                CHECK (role IN ('super_admin', 'hr', 'pending_hr', 'candidate'))
             """))
             logger.info("Migration completed: updated check_users_role constraint")
         else:
@@ -254,39 +263,97 @@ def run_startup_migrations(engine: Engine):
             logger.warning(f"Failed to create global_settings table: {e}")
 
         # 1.1 Extract Offers and Onboarding (Issue 5.1 Migration)
+        # IDEMPOTENT: checks whether legacy offer columns still exist in `applications`
+        # before attempting the data-copy. On subsequent deploys the columns are already
+        # gone, so this block is a no-op (safe to run every startup).
         if "postgresql" in str(conn.engine.url):
             try:
-                # Insert missing Offer records for all Applications
-                conn.execute(text("""
-                    INSERT INTO offers (application_id, offer_sent, offer_sent_date, offer_approval_status, offer_approved_by, offer_approved_at, offer_response_status, offer_response_date, offer_token, offer_short_id, offer_token_expiry, offer_token_used, offer_template_snapshot, offer_pdf_path, offer_accepted_ip, offer_accepted_user_agent, offer_email_status, offer_email_retry_count, reminder_sent_at)
-                    SELECT id, offer_sent, offer_sent_date, offer_approval_status, offer_approved_by, offer_approved_at, offer_response_status, offer_response_date, offer_token, offer_short_id, offer_token_expiry, offer_token_used, offer_template_snapshot, offer_pdf_path, offer_accepted_ip, offer_accepted_user_agent, offer_email_status, offer_email_retry_count, reminder_sent_at
-                    FROM applications
-                    ON CONFLICT (application_id) DO NOTHING
-                """))
-                
-                # Insert missing Onboarding records for all Applications
-                conn.execute(text("""
-                    INSERT INTO onboardings (application_id, joining_date, employee_id, id_card_url, onboarded_at)
-                    SELECT id, joining_date, employee_id, id_card_url, onboarded_at
-                    FROM applications
-                    ON CONFLICT (application_id) DO NOTHING
-                """))
-                
-                # Drop columns from applications
-                cols_to_drop = [
-                    "offer_sent", "offer_sent_date", "offer_approval_status", "offer_approved_by", "offer_approved_at",
-                    "offer_response_status", "offer_response_date", "offer_token", "offer_short_id", "offer_token_expiry",
-                    "offer_token_used", "offer_template_snapshot", "offer_pdf_path", "offer_accepted_ip", "offer_accepted_user_agent",
-                    "offer_email_status", "offer_email_retry_count", "reminder_sent_at",
-                    "joining_date", "employee_id", "id_card_url", "onboarded_at", "onboarding_approval_status"
-                ]
-                for col in cols_to_drop:
-                    conn.execute(text(f"ALTER TABLE applications DROP COLUMN IF EXISTS {col}"))
-                conn.commit()
-                logger.info("Migration completed: 5.1 Application table normalization successful")
+                # Only run the data-copy if the legacy `offer_sent` column is still
+                # present in `applications` (i.e. the migration hasn't run yet).
+                if column_exists(conn, "applications", "offer_sent"):
+                    logger.info("Migration 5.1: legacy offer columns found in applications — running normalization.")
+                    
+                    offer_cols = [
+                        ("offer_sent", "FALSE::boolean"),
+                        ("offer_sent_date", "NULL::timestamp"),
+                        ("offer_approval_status", "'pending'::varchar(20)"),
+                        ("offer_approved_by", "NULL::integer"),
+                        ("offer_approved_at", "NULL::timestamp"),
+                        ("offer_response_status", "'pending'::varchar(20)"),
+                        ("offer_response_date", "NULL::timestamp"),
+                        ("offer_token", "NULL::varchar(100)"),
+                        ("offer_short_id", "NULL::varchar(20)"),
+                        ("offer_token_expiry", "NULL::timestamp with time zone"),
+                        ("offer_token_used", "FALSE::boolean"),
+                        ("offer_template_snapshot", "NULL::text"),
+                        ("offer_pdf_path", "NULL::varchar(500)"),
+                        ("offer_accepted_ip", "NULL::varchar(50)"),
+                        ("offer_accepted_user_agent", "NULL::text"),
+                        ("offer_email_status", "'pending'::varchar(20)"),
+                        ("offer_email_retry_count", "0::integer"),
+                        ("reminder_sent_at", "NULL::timestamp"),
+                    ]
+                    
+                    select_exprs = ["id"]
+                    for col, default_sql in offer_cols:
+                        if column_exists(conn, "applications", col):
+                            select_exprs.append(col)
+                        else:
+                            select_exprs.append(f"{default_sql} as {col}")
+                    
+                    cols_list = ", ".join([col for col, _ in offer_cols])
+                    select_list = ", ".join(select_exprs)
+                    
+                    # Insert missing Offer records for all Applications
+                    conn.execute(text(f"""
+                        INSERT INTO offers (application_id, {cols_list})
+                        SELECT {select_list}
+                        FROM applications
+                        ON CONFLICT (application_id) DO NOTHING
+                    """))
+
+                    # Insert missing Onboarding records for all Applications
+                    if column_exists(conn, "applications", "joining_date"):
+                        emp_col = "employee_id" if column_exists(conn, "applications", "employee_id") else "NULL::varchar(50) as employee_id"
+                        card_col = "id_card_url" if column_exists(conn, "applications", "id_card_url") else "NULL::varchar(500) as id_card_url"
+                        onb_col = "onboarded_at" if column_exists(conn, "applications", "onboarded_at") else "NULL::timestamp as onboarded_at"
+                        
+                        conn.execute(text(f"""
+                            INSERT INTO onboardings (application_id, joining_date, employee_id, id_card_url, onboarded_at)
+                            SELECT id, joining_date, {emp_col}, {card_col}, {onb_col}
+                            FROM applications
+                            ON CONFLICT (application_id) DO NOTHING
+                        """))
+
+                    # Drop legacy columns from applications
+                    cols_to_drop = [
+                        "offer_sent", "offer_sent_date", "offer_approval_status", "offer_approved_by", "offer_approved_at",
+                        "offer_response_status", "offer_response_date", "offer_token", "offer_short_id", "offer_token_expiry",
+                        "offer_token_used", "offer_template_snapshot", "offer_pdf_path", "offer_accepted_ip", "offer_accepted_user_agent",
+                        "offer_email_status", "offer_email_retry_count", "reminder_sent_at",
+                        "joining_date", "employee_id", "id_card_url", "onboarded_at", "onboarding_approval_status"
+                    ]
+                    for col in cols_to_drop:
+                        conn.execute(text(f"ALTER TABLE applications DROP COLUMN IF EXISTS {col}"))
+                    conn.commit()
+                    logger.info("Migration completed: 5.1 Application table normalization successful")
+                else:
+                    logger.debug("Migration 5.1: skipped (already applied — offer columns not in applications).")
             except Exception as e:
                 _safe_rollback(conn)
                 logger.error(f"Migration error during 5.1 table normalization: {e}")
+
+        # 1.2 Ensure offers.offer_preview_count exists (added to model after initial SQL schema)
+        if "postgresql" in str(conn.engine.url):
+            try:
+                conn.execute(text(
+                    "ALTER TABLE offers ADD COLUMN IF NOT EXISTS offer_preview_count INTEGER NOT NULL DEFAULT 0"
+                ))
+                conn.commit()
+                logger.debug("Ensured offers.offer_preview_count column exists")
+            except Exception as e:
+                _safe_rollback(conn)
+                logger.warning(f"Failed to add offers.offer_preview_count: {e}")
 
         # 1e. (question_sets table is created in step 0 above)
 
@@ -313,7 +380,7 @@ def run_startup_migrations(engine: Engine):
             conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS check_users_role"))
             conn.execute(text("""
                 ALTER TABLE users ADD CONSTRAINT check_users_role 
-                CHECK (role IN ('super_admin', 'hr', 'recruiter', 'pending_hr', 'candidate'))
+                CHECK (role IN ('super_admin', 'hr', 'pending_hr', 'candidate'))
             """))
             conn.commit()
             logger.info("Updated check_users_role constraint")
@@ -407,6 +474,81 @@ def run_startup_migrations(engine: Engine):
                 _safe_rollback(conn)
                 logger.warning(f"Migration skipped index {constraint_name}: {exc}")
 
+    # 5. Encrypt legacy plaintext values and enforce decryption checks
+    try:
+        encrypt_existing_plaintext_data(engine)
+    except Exception as exc:
+        logger.error(f"Failed to encrypt existing plaintext values: {exc}")
+
+
+def encrypt_existing_plaintext_data(engine: Engine):
+    """
+    Finds all columns in the DB defined with EncryptedText and encrypts them
+    if they contain plaintext data. Bypasses SQLAlchemy ORM decryption to prevent
+    redundant updates and infinite migration loops on startup.
+    """
+    from app.core.encryption import is_encrypted, encrypt_field
+    from app.infrastructure.database import Base
+    from sqlalchemy import text
+    
+    with engine.connect() as conn:
+        for mapper in Base.registry.mappers:
+            cls = mapper.class_
+            if not hasattr(cls, '__tablename__'):
+                continue
+            tablename = cls.__tablename__
+            encrypted_cols = []
+            for col in mapper.columns:
+                if hasattr(col.type, '__class__') and col.type.__class__.__name__ == 'EncryptedText':
+                    encrypted_cols.append(col.name)
+            
+            if not encrypted_cols:
+                continue
+                
+            # C-10: Sanitize SQL by validating against known metadata to prevent injection
+            if tablename not in Base.metadata.tables:
+                logger.warning(f"Skipping unknown table '{tablename}' during encryption migration.")
+                continue
+
+            logger.info(f"Checking table '{tablename}' for legacy plaintext values in columns: {encrypted_cols}")
+            for col_name in encrypted_cols:
+                # Double check col_name is valid for this table
+                if col_name not in Base.metadata.tables[tablename].columns:
+                    logger.warning(f"Skipping unknown column '{col_name}' in table '{tablename}'.")
+                    continue
+                
+                try:
+                    # Select raw database values without ORM decryption
+                    # SQL interpolation is safe here because both tablename and col_name are verified against metadata
+                    result = conn.execute(text(f"SELECT id, {col_name} FROM {tablename} WHERE {col_name} IS NOT NULL"))
+                    rows = result.fetchall()
+                    
+                    updates = []
+                    for row_id, raw_val in rows:
+                        if raw_val and not is_encrypted(raw_val):
+                            logger.info(f"Encrypting legacy plaintext value for {tablename}.{col_name} (id={row_id})")
+                            encrypted_val = encrypt_field(raw_val)
+                            updates.append((encrypted_val, row_id))
+                    
+                    if updates:
+                        # Perform bulk update
+                        # SQL interpolation is safe here because both tablename and col_name are verified against metadata
+                        for encrypted_val, row_id in updates:
+                            conn.execute(
+                                text(f"UPDATE {tablename} SET {col_name} = :val WHERE id = :id"),
+                                {"val": encrypted_val, "id": row_id}
+                            )
+                        conn.commit()
+                        logger.info(f"Successfully migrated {len(updates)} legacy plaintext rows in '{tablename}.{col_name}'")
+                except Exception as table_err:
+                    conn.rollback()
+                    logger.error(f"Error checking/migrating table '{tablename}.{col_name}': {table_err}")
+        
+    # Enforce strict encryption on read after migration is done
+    import app.core.encryption as encryption
+    encryption.ENFORCE_ENCRYPTION = True
+    logger.info("EncryptedText column validation/migration complete. Plaintext read check is now ENFORCED.")
+
 
 def validate_enum_parity(engine: Engine):
     """
@@ -470,7 +612,11 @@ def validate_required_columns(engine: Engine):
                 missing.append(f"{table}.{col}")
     
     if missing:
-        error_msg = f"CRITICAL DATABASE ERROR: The following columns are missing from the database: {', '.join(missing)}. Please run 'python scripts/migrate.py' to fix the schema."
+        error_msg = (
+            f"CRITICAL DATABASE ERROR: The following columns are missing from the database: {', '.join(missing)}. "
+            "Apply the latest SQL from supabase/migrations/ in the Supabase SQL Editor "
+            "(see CLIENT_SETUP_GUIDE.md and setup/production_schema.sql for new projects)."
+        )
         logger.critical(error_msg)
         raise RuntimeError(error_msg)
     

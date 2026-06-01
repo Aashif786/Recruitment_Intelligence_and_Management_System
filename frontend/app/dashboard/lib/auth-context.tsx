@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { API_BASE_URL } from '@/lib/config'
+import { getApiBaseUrl } from '@/lib/config'
 import { clearSession } from '@/lib/session-store'
 
 export interface User {
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 15000)
           try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+            const response = await fetch(`${getApiBaseUrl()}/api/auth/me`, {
               credentials: 'include',
               signal: controller.signal,
               cache: 'no-store',
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         // Other server error: don't force logout; just mark offline if needed.
         if (!silent) {
-          console.error(`[v0] Server error (${result?.status}) fetching user info from ${API_BASE_URL}/api/auth/me`)
+          console.error(`[v0] Server error (${result?.status}) fetching user info from ${getApiBaseUrl()}/api/auth/me`)
         }
         setIsOffline(Boolean(result?.isOffline))
       }
@@ -133,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(async (email: string, password: string, full_name: string) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, full_name }),
@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Don't log expected registration errors (email exists, etc.) to console
       if (error instanceof TypeError && error.message.includes('fetch')) {
         console.error("[v0] Registration error:", error)
-        throw new Error(`Unable to connect to backend server at ${API_BASE_URL}. Please ensure the FastAPI server is running.`)
+        throw new Error(`Unable to connect to backend server at ${getApiBaseUrl()}. Please ensure the FastAPI server is running.`)
       }
       throw error
     } finally {
@@ -177,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verify = useCallback(async (email: string, otp: string) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp }),
@@ -204,9 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(errorMessage)
       }
 
-      console.log("[v0] OTP verified successfully")
     } catch (error) {
-      console.error("[v0] Verify error:", error)
       throw error
     } finally {
       setIsLoading(false)
@@ -216,20 +214,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true)
     try {
-      if (typeof API_BASE_URL === 'undefined' || API_BASE_URL === 'undefined') {
-        throw new Error("API_BASE_URL is not defined. Please check your environment configuration.");
+      const apiBase = getApiBaseUrl()
+      if (!apiBase || apiBase === 'undefined') {
+        throw new Error("API base URL is not defined. Please check your environment configuration.");
       }
 
-      console.log("[v0] Logging in user:", { email, password: '***' })
-
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${apiBase}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
         credentials: 'include'
       })
-
-      console.log("[v0] Login response status:", response.status)
 
       if (!response.ok) {
         let errorMessage = 'Login failed'
@@ -258,7 +253,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let data;
       try {
         data = await response.json()
-        console.log("[v0] Login success. HttpOnly Cookie secured.");
       } catch (e) {
         throw new Error("Failed to parse login response from the server.");
       }
@@ -286,7 +280,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Don't log expected authentication errors to console (wrong password, etc.)
       // as they're handled by the UI and would trigger Next.js error overlay
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error(`Unable to connect to backend server at ${API_BASE_URL}. Please ensure the FastAPI server is running.`)
+        throw new Error(`Unable to connect to backend server at ${getApiBaseUrl()}. Please ensure the FastAPI server is running.`)
       }
       throw error
     } finally {
@@ -296,7 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch(`${API_BASE_URL}/api/auth/logout`, {
+      await fetch(`${getApiBaseUrl()}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include'
       })

@@ -17,7 +17,7 @@ import { APIClient } from '@/app/dashboard/lib/api-client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Sparkles, UploadCloud, Loader2, FileText, X, PlusCircle, ArrowLeft, CheckCircle2, BookOpen } from 'lucide-react'
-import { API_BASE_URL } from '@/lib/config'
+import { getApiBaseUrl } from '@/lib/config'
 import { toast } from 'sonner'
 
 // ── Repository types ──────────────────────────────────────────────────────────
@@ -313,7 +313,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                 return
             }
 
-            const baseUrl = API_BASE_URL
+            const baseUrl = getApiBaseUrl()
 
             const response = await fetch(`${baseUrl}/api/jobs/extract`, {
                 method: 'POST',

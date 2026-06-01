@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Mail, ArrowRight, Loader2, ArrowLeft } from 'lucide-react'
+import { getApiBaseUrl } from '@/lib/config'
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('')
@@ -19,7 +20,7 @@ export default function ForgotPasswordPage() {
         setError('')
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:10000'}/api/auth/forgot-password`, {
+            const response = await fetch(`${getApiBaseUrl()}/api/auth/forgot-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email }),
@@ -28,7 +29,7 @@ export default function ForgotPasswordPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || data.detail || 'Failed to send reset email')
+                throw new Error(data.error || data.detail || 'Unable to send reset email. Please check the address and try again.')
             }
 
             setIsSent(true)
@@ -81,7 +82,7 @@ export default function ForgotPasswordPage() {
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
                                         className="w-full pl-10 pr-4 py-3 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-muted-foreground text-foreground"
-                                        placeholder="Enter email"
+                                        placeholder="you@company.com"
                                         disabled={isSubmitting}
                                     />
                                 </div>

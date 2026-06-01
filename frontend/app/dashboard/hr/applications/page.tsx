@@ -27,7 +27,7 @@ import useSWR from "swr";
 import { fetcher } from "@/app/dashboard/lib/swr-fetcher";
 import { performMutation } from "@/app/dashboard/lib/swr-utils";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/config";
+import { getApiBaseUrl } from "@/lib/config";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useApplicationsMutate } from "./hooks/use-applications-mutate";
@@ -131,6 +131,23 @@ export default function HRApplicationsPage() {
   const applications = paginatedData?.items ?? [];
   const totalCount = paginatedData?.total || 0;
   const isLoading = isSwrLoading;
+
+
+
+
+
+
+
+
+
+  
+  useEffect(() => {
+    if (error) {
+      console.error("[Applications Page] SWR Fetching Error:", error);
+    } else if (paginatedData) {
+      console.log("[Applications Page] SWR Fetching Success:", paginatedData);
+    }
+  }, [paginatedData, error]);
 
   const totalPages = paginatedData?.pages || 0;
   const hasMoreApplications = applicationsPage < totalPages;
@@ -334,14 +351,13 @@ export default function HRApplicationsPage() {
             />
           </div>
 
-          {/* Date To Filter */}
           <div className="w-full sm:w-[170px]">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">To Date</label>
             <input
               type="date"
               min={dateFrom || "2020-01-01"}
               max={new Date().toLocaleDateString('en-CA')}
-              defaultValue={new Date().toLocaleDateString('en-CA')}
+              value={dateTo}
               className="w-full px-3 h-11 bg-background border-2 border-input rounded-xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-foreground cursor-pointer"
               onChange={(e) => setDateTo(e.target.value)}
             />
@@ -446,7 +462,7 @@ export default function HRApplicationsPage() {
                   <Avatar className="h-12 w-12 border border-border/50 shadow-sm shrink-0">
                     <AvatarImage 
                       src={app.photo_url 
-                        || (app.candidate_photo_path ? (app.candidate_photo_path.startsWith('http') ? app.candidate_photo_path : `${API_BASE_URL}/${app.candidate_photo_path.replace(/\\/g, "/")}`) : undefined)}
+                        || (app.candidate_photo_path ? (app.candidate_photo_path.startsWith('http') ? app.candidate_photo_path : `${getApiBaseUrl()}/${app.candidate_photo_path.replace(/\\/g, "/")}`) : undefined)}
                       alt={app.candidate_name || 'Candidate'}
                       className="object-cover"
                     />

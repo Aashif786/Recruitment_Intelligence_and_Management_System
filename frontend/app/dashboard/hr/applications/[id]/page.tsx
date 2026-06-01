@@ -22,7 +22,6 @@ import useSWR from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
 import { performMutation } from "@/app/dashboard/lib/swr-utils"
 import { APIClient } from "@/app/dashboard/lib/api-client"
-import { API_BASE_URL } from "@/lib/config"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { normalizeHireRecommendation } from "@/lib/recommendation-label"
 import { isInterviewNotCompleted } from "@/components/reports/interviewIncomplete"
@@ -90,6 +89,14 @@ export default function HRApplicationDetailPage() {
     const applicationId = params.id as string
     const { data: application, error: appError, isLoading: appLoading, mutate: mutateApp } = useSWR<any>(`/api/applications/${applicationId}`, (url: string) => fetcher<any>(url))
 
+    // Handle unauthorized access explicitly
+    useEffect(() => {
+        if (appError?.status === 401 || appError?.status === 403) {
+            toast.error("You are not authorized to view this application. Redirecting to login...")
+            router.push('/auth/login?expired=true')
+        }
+    }, [appError, router])
+
     const { data: interviewReport, error: reportError, isLoading: reportLoading, mutate: mutateReport } = useSWR(
         (application?.interview?.status === 'completed' || 
          application?.interview?.status === 'terminated' || 
@@ -117,6 +124,15 @@ export default function HRApplicationDetailPage() {
             setNotesDraft(application.hr_notes)
         }
     }, [application?.hr_notes])
+
+    useEffect(() => {
+        if (appError) {
+            const errorMsg = appError.message || String(appError);
+            if (errorMsg.includes('401') || errorMsg.toLowerCase().includes('unauthorized') || errorMsg.toLowerCase().includes('token')) {
+                router.push('/auth/login?expired=true');
+            }
+        }
+    }, [appError, router])
 
     const resumeStatus: string = useMemo(() => {
         const raw = application?.resume_status as string | undefined

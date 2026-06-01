@@ -3,7 +3,7 @@ from typing import Optional, List, Any
 from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.domain.models import User, Job, Application, JobVersion
-from app.domain.schemas import JobCreate, JobUpdate, JobResponse, JobExtractionResponse
+from app.domain.schemas import JobCreate, JobUpdate, JobResponse, JobExtractionResponse, JobPublicResponse
 from app.core.auth import get_current_user, get_current_hr
 from app.core.ownership import validate_hr_ownership
 from app.core.rate_limiter import limiter
@@ -529,7 +529,7 @@ def _clamp_pagination(*, skip: int, limit: Optional[int], default_limit: int = 1
     return s, lim
 
 
-@router.get("/public", response_model=list[JobResponse])
+@router.get("/public", response_model=list[JobPublicResponse])
 def list_public_jobs(
     search: Optional[str] = None,
     skip: int = 0,
@@ -579,7 +579,7 @@ def list_jobs(
     jobs = query.order_by(Job.created_at.desc(), Job.id.desc()).offset(s).limit(lim).all()
     return jobs
 
-@router.get("/public/{job_id}", response_model=JobResponse)
+@router.get("/public/{job_id}", response_model=JobPublicResponse)
 def get_public_job(
     job_id: str,
     db: Session = Depends(get_db)

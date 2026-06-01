@@ -12,6 +12,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+ENFORCE_ENCRYPTION = False
+
 
 # ---------------------------------------------------------------------------
 # Key Management
@@ -112,6 +114,8 @@ def decrypt_field(ciphertext: str) -> str:
                 "Returning plaintext blocked under strict ENFORCE_ENCRYPTION policy."
             )
             raise ValueError("Decryption blocked: Enforce encryption is active but data is not encrypted.")
+        else:
+            logger.warning(f"Unencrypted legacy data returned from encrypted column: '{ciphertext[:20]}...'")
         return ciphertext
     
     try:

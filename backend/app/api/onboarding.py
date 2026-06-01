@@ -7,7 +7,7 @@ from app.domain.models import User, Application, GlobalSettings, Notification, A
 from app.domain.schemas import ApplicationResponse, OfferResponseRequest
 from app.core.auth import get_current_hr, get_current_admin
 from app.services.offer_letter_service import generate_offer_letter_pdf, get_offer_letter_data
-from app.services.email_service import send_offer_letter_email, send_simple_email, send_onboarding_reminder_email, send_joining_confirmation_email
+from app.services.email_service import send_offer_letter_email, send_simple_email, send_onboarding_reminder_email, send_joining_confirmation_email, send_onboarding_summary_email
 from app.core.config import get_settings
 from typing import List, Optional
 import os
@@ -98,7 +98,7 @@ async def get_application_by_short_id(db: Session, short_id: str, lock=False):
         query = query.with_for_update()
     return query.first()
 
-from app.services.state_machine import CandidateStateMachine, TransitionAction, CandidateState
+from app.services.state_machine import CandidateStateMachine, TransitionAction, CandidateState, InvalidTransitionError, DuplicateTransitionError, get_user_friendly_fsm_error
 
 def check_hr_permission(user: User, application: Application, db: Session):
     """
@@ -138,9 +138,13 @@ async def generate_pdf_via_puppeteer(html_content: str, filename: str, bucket: s
     
     try:
         headers = {}
-        pdf_secret = os.environ.get("PDF_GENERATION_SECRET") or os.environ.get("JWT_SECRET") or getattr(settings, "jwt_secret", None)
-        if pdf_secret:
-            headers["Authorization"] = f"Bearer {pdf_secret}"
+        # C-21: Use dedicated secret for PDF service; never fallback to main JWT secret
+        pdf_secret = settings.pdf_generation_secret
+        if not pdf_secret:
+            logger.error("PDF_GENERATION_SECRET is not configured. PDF service calls will fail.")
+            raise Exception("PDF service misconfigured: missing secret.")
+            
+        headers["Authorization"] = f"Bearer {pdf_secret}"
 
         async with httpx.AsyncClient(follow_redirects=True) as client:
             response = await client.post(
@@ -217,6 +221,8 @@ async def get_hr_offer_preview(
     
     settings_records = db.query(GlobalSettings).all()
     gs = {s.key: s.value for s in settings_records}
+    from app.core.branding import get_all_branding
+    branding = get_all_branding(db)
     
     template_str = application.offer_template_snapshot or gs.get("offer_letter_template", "")
     if not template_str:
@@ -227,8 +233,8 @@ async def get_hr_offer_preview(
         application.job.title if application.job else "N/A",
         (application.job.domain if application.job else "Engineering") or "Engineering",
         application.joining_date or datetime.now(),
-        gs.get("company_name", "Our Company"),
-        gs.get("company_logo_url", ""),
+        branding.get("company_name"),
+        branding.get("company_logo_url"),
         gs.get("hr_email", ""),
         gs.get("hr_name", ""),
         gs.get("hr_phone", ""),
@@ -319,15 +325,20 @@ async def request_offer_approval(
         logger.error(f"Date parsing error: {e}")
         raise HTTPException(status_code=400, detail="Invalid joining date format. Expected YYYY-MM-DD or ISO format.")
 
+    # Convert to naive IST for database compatibility and uniform comparison
+    jdate_ist = to_naive_ist(jdate)
+
     # Validation: Joining date cannot be in the past
-    if jdate.date() < get_ist_now().date():
+    if jdate_ist.date() < get_ist_now().date():
         raise HTTPException(status_code=400, detail="Joining date cannot be in the past.")
 
     settings_records = db.query(GlobalSettings).all()
     gs = {s.key: s.value for s in settings_records}
+    from app.core.branding import get_all_branding
+    branding = get_all_branding(db)
     
     # Initialize basic offer fields
-    application.joining_date = jdate
+    application.joining_date = jdate_ist
     application.offer_template_snapshot = gs.get("offer_letter_template")
     application.offer_token = str(uuid.uuid4())
     application.offer_short_id = generate_short_id()
@@ -350,8 +361,8 @@ async def request_offer_approval(
                 job_role=application.job.title if application.job else "N/A",
                 department=(application.job.domain if application.job else "Engineering") or "Engineering",
                 joining_date=application.joining_date,
-                company_name=gs.get("company_name", "Our Company"),
-                logo_url=gs.get("company_logo_url", ""),
+                company_name=branding.get("company_name"),
+                logo_url=branding.get("company_logo_url"),
                 hr_email=gs.get("hr_email", ""),
                 hr_name=gs.get("hr_name", ""),
                 hr_phone=gs.get("hr_phone", ""),
@@ -396,17 +407,24 @@ async def request_offer_approval(
             background_tasks.add_task(process_offer_email, application.id, application.offer_pdf_path, gs.get("company_name", "Our Company"))
             return {"status": "success", "message": "Offer letter sent successfully."}
             
+        except (InvalidTransitionError, DuplicateTransitionError) as e:
+            logger.error(f"OFFER_RELEASE_FSM_ERROR: {str(e)}")
+            db.rollback()
+            raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
         except Exception as e:
             import traceback
             logger.error(f"OFFER_RELEASE_CRITICAL_FAILURE: {str(e)}\n{traceback.format_exc()}")
             db.rollback()
-            raise HTTPException(status_code=400, detail=f"Offer letter could not be sent: {str(e)}")
+            raise HTTPException(status_code=500, detail="We encountered a problem sending the offer letter. Please try again or contact support.")
     else:
         # Staging path
         try:
             fsm.transition(application, TransitionAction.SEND_FOR_APPROVAL, user_id=current_user.id)
+        except (InvalidTransitionError, DuplicateTransitionError) as e:
+            raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
         except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            logger.error(f"OFFER_STAGE_ERROR: {str(e)}")
+            raise HTTPException(status_code=500, detail="Unable to stage the offer for approval. Please try again.")
         
         application.status = "pending_approval"
         application.offer_approval_status = "pending"
@@ -443,15 +461,19 @@ async def approve_offer_letter(
     check_hr_permission(current_user, application, db)
     
     # State Machine Hardening
-    from app.services.state_machine import CandidateStateMachine, TransitionAction
     fsm = CandidateStateMachine(db)
     try:
         fsm.transition(application, TransitionAction.SEND_OFFER, user_id=current_user.id)
+    except (InvalidTransitionError, DuplicateTransitionError) as e:
+        raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"OFFER_APPROVE_FSM_ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail="Unable to approve the offer at this time. Please try again.")
 
     settings_records = db.query(GlobalSettings).all()
     gs = {s.key: s.value for s in settings_records}
+    from app.core.branding import get_all_branding
+    branding = get_all_branding(db)
     
     # PDF Generation (Puppeteer + Supabase)
     try:
@@ -462,8 +484,8 @@ async def approve_offer_letter(
             job_role=application.job.title if application.job else "N/A",
             department=(application.job.domain if application.job else "Engineering") or "Engineering",
             joining_date=application.joining_date,
-            company_name=gs.get("company_name", "Our Company"),
-            logo_url=gs.get("company_logo_url", ""),
+            company_name=branding.get("company_name"),
+            logo_url=branding.get("company_logo_url"),
             hr_email=gs.get("hr_email", ""),
             hr_name=gs.get("hr_name", ""),
             hr_phone=gs.get("hr_phone", ""),
@@ -486,7 +508,7 @@ async def approve_offer_letter(
     except Exception as e:
         logger.error(f"Puppeteer transition failed: {e}")
         log_audit(db, "OFFER_PDF_FAILED", application.id, current_user.id, {"error": str(e)})
-        raise HTTPException(status_code=500, detail=f"Document generation failure: {str(e)}")
+        raise HTTPException(status_code=500, detail="We encountered a problem generating the offer letter document. Please verify the offer template in Settings and try again.")
 
     # Update Application State
     application.offer_sent = True
@@ -562,6 +584,15 @@ async def get_offer_preview(request: Request, token: str, db: Session = Depends(
     application = db.query(Application).join(Offer).filter(Offer.offer_token == token).first()
     if not application:
         raise HTTPException(status_code=404, detail="Offer not found")
+
+    offer = application.offer
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+
+    if offer.offer_preview_count >= 10:
+        raise HTTPException(status_code=403, detail="Offer preview limit exceeded.")
+
+    offer.offer_preview_count = (offer.offer_preview_count or 0) + 1
     
     if application.offer_token_used:
         raise HTTPException(status_code=400, detail="Offer already responded to.")
@@ -570,19 +601,23 @@ async def get_offer_preview(request: Request, token: str, db: Session = Depends(
         expiry = to_naive_ist(application.offer_token_expiry)
         if expiry < get_ist_now():
             raise HTTPException(status_code=400, detail="Offer expired.")
+            
+    db.commit()
 
-    company_name_setting = db.query(GlobalSettings).filter(GlobalSettings.key == "company_name").first()
+    from app.core.branding import get_branding_value
+    resolved_company_name = get_branding_value(db, "company_name")
     return {
         "candidate_name": application.candidate_name,
         "job_title": application.job.title if application.job else "Unknown Role",
         "joining_date": application.joining_date.isoformat() if application.joining_date else None,
-        "company_name": company_name_setting.value if company_name_setting and company_name_setting.value else "Our Company"
+        "company_name": resolved_company_name
     }
 
 def generate_employee_id(db: Session):
     """Utility to generate a unique employee ID (Task 8)."""
+    import secrets
     while True:
-        emp_id = 'EMP-' + ''.join(random.choices(string.digits, k=6))
+        emp_id = 'EMP-' + ''.join(secrets.choice(string.digits) for _ in range(6))
         exists = db.query(Application).filter(Application.employee_id == emp_id).first()
         if not exists:
             return emp_id
@@ -648,60 +683,95 @@ async def capture_photo(
     except Exception as e:
         db.rollback()
         logger.error(f"Cloud photo save failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Photo save failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Photo could not be saved. Please check your connection and try again.")
         
     return {"status": "success", "candidate_photo_path": application.candidate_photo_path}
 
 @router.post("/cron/check-reminders")
 def check_onboarding_reminders(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
-    (System/Admin) Check for candidates joining in exactly 7 days and send reminder.
-    Task 1 Requirement.
+    (System/Admin) Check for candidates joining in the next 7 days.
+    - Sends a consolidated summary email to all super_admins and HR users.
+    - Sends individual per-candidate reminder emails for those not yet notified.
     """
     today = get_ist_now().date()
-    target_date = today + timedelta(days=7)
-    
-    start_of_target = datetime.combine(target_date, datetime.min.time())
-    end_of_target = datetime.combine(target_date, datetime.max.time())
 
-    # Find candidates who accepted offer and join in exactly 7 days
+    # Full 7-day window: today through today+7 (inclusive)
+    start_of_window = datetime.combine(today, datetime.min.time())
+    end_of_window = datetime.combine(today + timedelta(days=7), datetime.max.time())
+
     from app.domain.models import Onboarding, Offer
-    candidates = db.query(Application).join(Onboarding).outerjoin(Offer).filter(
+
+    # ── 1. All accepted candidates joining in the next 7 days ───────────────
+    all_upcoming = db.query(Application).join(Onboarding).filter(
         Application.status.in_(["accepted"]),
-        Onboarding.joining_date >= start_of_target,
-        Onboarding.joining_date <= end_of_target,
-        Offer.reminder_sent_at == None
+        Onboarding.joining_date >= start_of_window,
+        Onboarding.joining_date <= end_of_window,
     ).all()
-    
+
+    # ── 2. Collect every admin / super-admin / HR email for summary ─────────
+    authority_users = db.query(User).filter(
+        User.role.in_(["super_admin", "hr"]),
+        User.is_active == True,
+        User.approval_status == "approved",
+    ).all()
+    authority_emails = list({u.email for u in authority_users if u.email})
+
+    # ── 3. Send the consolidated summary to all higher authorities ──────────
+    if all_upcoming and authority_emails:
+        summary_payload = [
+            {
+                "name": app.candidate_name,
+                "job_title": app.job.title if app.job else "N/A",
+                "joining_date": app.joining_date.strftime("%B %d, %Y")
+                if app.joining_date else "TBD",
+            }
+            for app in all_upcoming
+        ]
+        # Sort by joining date so the table is chronological
+        summary_payload.sort(key=lambda x: x["joining_date"])
+
+        for email_addr in authority_emails:
+            background_tasks.add_task(
+                send_onboarding_summary_email,
+                to_email=email_addr,
+                candidates_list=summary_payload,
+            )
+
+    # ── 4. Individual reminders for candidates not yet notified ─────────────
+    unnotified = db.query(Application).join(Onboarding).outerjoin(Offer).filter(
+        Application.status.in_(["accepted"]),
+        Onboarding.joining_date >= start_of_window,
+        Onboarding.joining_date <= end_of_window,
+        Offer.reminder_sent_at == None,
+    ).all()
+
     reminders_sent = 0
-    super_admins = db.query(User).filter(User.role == "super_admin").all()
-    admin_emails = [admin.email for admin in super_admins if admin.email]
-
-    for app in candidates:
-        hr_email = app.hr.email if app.hr else None
-        
-        emails_to_notify = []
-        if hr_email: emails_to_notify.append(hr_email)
-        emails_to_notify.extend(admin_emails)
-        emails_to_notify = list(set(emails_to_notify))
-
-        joining_date_str = app.joining_date.strftime("%B %d, %Y")
+    for app in unnotified:
+        joining_date_str = app.joining_date.strftime("%B %d, %Y") if app.joining_date else "TBD"
         job_title = app.job.title if app.job else "N/A"
 
-        for email_addr in emails_to_notify:
+        # Per-candidate individual notification to the assigned HR
+        hr_email = app.hr.email if app.hr else None
+        if hr_email:
             background_tasks.add_task(
                 send_onboarding_reminder_email,
-                to_email=email_addr,
+                to_email=hr_email,
                 candidate_name=app.candidate_name,
                 joining_date=joining_date_str,
-                job_title=job_title
+                job_title=job_title,
             )
 
         app.reminder_sent_at = get_ist_now()
         reminders_sent += 1
-        
+
     db.commit()
-    return {"status": "success", "reminders_queued": reminders_sent}
+    return {
+        "status": "success",
+        "upcoming_candidates": len(all_upcoming),
+        "summary_sent_to": len(authority_emails),
+        "individual_reminders_queued": reminders_sent,
+    }
 
 @router.post("/applications/{application_id}/generate-id-card")
 async def generate_id_card(
@@ -731,13 +801,15 @@ async def generate_id_card(
         template = env.get_template("id_card_template.html")
         
         gs = {s.key: s.value for s in db.query(GlobalSettings).all()}
+        from app.core.branding import get_all_branding
+        branding = get_all_branding(db)
         
         # Get Candidate Photo (signed URL)
         photo_url = get_signed_url(settings.supabase_bucket_id_photos, application.candidate_photo_path)
         
         data = {
-            "company_name": gs.get("company_name") or settings.company_name,
-            "logo_url": gs.get("company_logo_url", ""),
+            "company_name": branding.get("company_name"),
+            "logo_url": branding.get("company_logo_url"),
             "candidate_name": application.candidate_name,
             "employee_id": application.employee_id,
             "job_role": application.job.title if application.job else "N/A",
@@ -762,7 +834,7 @@ async def generate_id_card(
     except Exception as e:
         db.rollback()
         logger.error(f"ID Card Generation Error: {e}")
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="ID card could not be generated. Please ensure the candidate photo has been captured and try again.")
 
 @router.get("/applications/{application_id}/download-id-card")
 def download_id_card(

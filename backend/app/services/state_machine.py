@@ -128,6 +128,48 @@ class DuplicateTransitionError(Exception):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Friendly labels for non-technical users
+# ─────────────────────────────────────────────────────────────────────────────
+STATE_DISPLAY_NAMES = {
+    "applied": "Applied",
+    "screened": "Screened",
+    "aptitude_round": "Aptitude Assessment",
+    "ai_interview": "AI Interview",
+    "interview_completed": "Interviews Completed",
+    "review_later": "Under Review",
+    "hired": "Hired",
+    "rejected": "Rejected",
+    "offer_sent": "Offer Letter Released",
+    "pending_approval": "Offer Staged for Approval",
+    "accepted": "Offer Accepted",
+    "onboarded": "Onboarded",
+    "physical_interview": "Physical Interview",
+    "permanent_failure": "Disqualified",
+}
+
+ACTION_DISPLAY_NAMES = {
+    "approve_for_interview": "approve for interview",
+    "send_for_approval": "stage for approval",
+    "send_offer": "release offer letter",
+    "accept_offer": "accept offer",
+    "hire": "hire candidate",
+    "reject": "reject candidate",
+    "complete_interview": "complete interview",
+    "fail_proctoring": "fail proctoring check",
+}
+
+def get_user_friendly_fsm_error(e: Exception) -> str:
+    if isinstance(e, InvalidTransitionError):
+        state_display = STATE_DISPLAY_NAMES.get(e.current_state, e.current_state.replace('_', ' ').title() if e.current_state else "unknown")
+        action_display = ACTION_DISPLAY_NAMES.get(e.action, e.action.replace('_', ' ').lower() if e.action else "unknown")
+        return f"Cannot {action_display} because the candidate is currently in the '{state_display}' stage."
+    elif isinstance(e, DuplicateTransitionError):
+        state_display = STATE_DISPLAY_NAMES.get(e.state, e.state.replace('_', ' ').title() if e.state else "unknown")
+        return f"The candidate's status is already set to '{state_display}'."
+    return str(e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 4. State Machine Service
 # ─────────────────────────────────────────────────────────────────────────────
 

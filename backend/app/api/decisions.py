@@ -12,7 +12,7 @@ from app.core.auth import get_current_user, get_current_hr
 from app.core.ownership import validate_hr_ownership
 from app.services.email_service import send_hired_email, send_rejected_email
 import logging
-from app.core.timezone import get_ist_now
+from app.core.timezone import get_ist_now, to_naive_ist
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/decisions", tags=["hiring decisions"])
@@ -37,6 +37,7 @@ def make_hiring_decision(
     from app.services.state_machine import (
         CandidateStateMachine, TransitionAction,
         InvalidTransitionError, DuplicateTransitionError,
+        get_user_friendly_fsm_error,
     )
     
     """Make hiring decision (HR only)"""
@@ -61,7 +62,7 @@ def make_hiring_decision(
             notes=decision_data.decision_comments,
         )
     except (InvalidTransitionError, DuplicateTransitionError) as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
     
     # Create decision record
     hiring_decision = HiringDecision(
@@ -118,6 +119,7 @@ async def hire_candidate(
     from app.services.state_machine import (
         CandidateStateMachine, TransitionAction,
         InvalidTransitionError, DuplicateTransitionError,
+        get_user_friendly_fsm_error,
     )
     from app.services.offer_letter_service import get_offer_letter_data, generate_offer_letter_pdf_bytes
     from app.core.storage import upload_file
@@ -134,10 +136,16 @@ async def hire_candidate(
     try:
         jdate = datetime.fromisoformat(hire_data.joining_date.replace('Z', '+00:00'))
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid joining_date format. Use ISO 8601 (e.g. 2026-05-01).")
+        raise HTTPException(status_code=400, detail="Invalid joining date format. Please select a valid date.")
+
+    # Convert to naive IST for database compatibility and uniform comparison
+    jdate_ist = to_naive_ist(jdate)
 
     # 2. Load global settings (company branding, offer template)
     gs = {s.key: s.value for s in db.query(GlobalSettings).all()}
+    from app.core.branding import get_all_branding
+    branding = get_all_branding(db)
+    
     template_str = gs.get("offer_letter_template", "")
     if not template_str:
         raise HTTPException(
@@ -155,10 +163,10 @@ async def hire_candidate(
             notes=hire_data.notes or "Hired via formal process",
         )
     except (InvalidTransitionError, DuplicateTransitionError) as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
 
     # 4. Snapshot the template on the Application for historical record
-    application.joining_date = jdate
+    application.joining_date = jdate_ist
     application.offer_template_snapshot = template_str
 
     # 5. Render the HTML template with candidate data
@@ -166,9 +174,9 @@ async def hire_candidate(
         candidate_name=application.candidate_name,
         job_role=application.job.title if application.job else "N/A",
         department=(application.job.domain if application.job else "Engineering") or "Engineering",
-        joining_date=jdate,
-        company_name=gs.get("company_name", "Our Company"),
-        logo_url=gs.get("company_logo_url", ""),
+        joining_date=jdate_ist,
+        company_name=branding.get("company_name"),
+        logo_url=branding.get("company_logo_url"),
         hr_email=gs.get("hr_email", ""),
         hr_name=gs.get("hr_name", ""),
         hr_phone=gs.get("hr_phone", ""),
@@ -180,7 +188,7 @@ async def hire_candidate(
         pdf_bytes = generate_offer_letter_pdf_bytes(template_str, data)
     except RuntimeError as e:
         logger.error(f"Offer letter PDF generation failed for application {application_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate offer letter PDF: {e}")
+        raise HTTPException(status_code=500, detail="We encountered a problem generating the offer letter document. Please verify the template configuration.")
 
     # 7. Upload generated PDF to Supabase
     timestamp = int(get_ist_now().timestamp())
@@ -201,7 +209,7 @@ async def hire_candidate(
         hr_id=current_user.id,
         decision="hired",
         decision_comments=hire_data.notes,
-        joining_date=jdate,
+        joining_date=jdate_ist,
         offer_letter_path=storage_path,
         decided_at=get_ist_now()
     )
@@ -247,9 +255,8 @@ def get_application_decision(
                 # Check job ownership if application.hr_id is null/mismatched
                 if not application.job or application.job.hr_id != current_user.id:
                     raise HTTPException(status_code=403, detail="Forbidden: You do not own this application.")
-        elif current_user.role.lower() == "candidate":
-            if (application.candidate_email or "").lower() != (current_user.email or "").lower():
-                raise HTTPException(status_code=403, detail="Unauthorized access")
+        else:
+            raise HTTPException(status_code=403, detail="Forbidden: Access restricted.")
     
     
     decision = db.query(HiringDecision).options(

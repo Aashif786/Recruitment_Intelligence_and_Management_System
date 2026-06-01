@@ -10,30 +10,61 @@ import { GlobalNavbar } from '@/components/global-navbar'
 import { NavigationProgress } from '@/components/navigation-progress'
 import { ScrollContainer } from '@/components/scroll-container'
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'),
-  title: 'CAL-RIMS - AI-Powered Recruitment Intelligence System',
-  description: 'CAL-RIMS is an AI-powered automated recruitment platform for seamless hiring, empowering teams to find, evaluate, and hire top-tier talent efficiently.',
-  openGraph: {
-    title: 'CALRIMS - AI-Powered Recruitment Intelligence System',
-    description: 'CALRIMS is an AI-powered automated recruitment platform for seamless hiring, empowering teams to find, evaluate, and hire top-tier talent efficiently.',
-    images: ['/calrims/og-image.jpg'],
-    type: 'website',
-  },
-  alternates: {
-    canonical: 'https://caldimproducts.com/calrims',
-  },
-  generator: 'Caldim Engineering',
+import { getBrandingServer } from '@/lib/branding-server';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getBrandingServer();
+  const siteUrl = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://caldimproducts.com/calrims').replace(/\/$/, '');
+  const canonicalUrl = siteUrl.endsWith('/calrims') ? `${siteUrl}/` : `${siteUrl}/calrims/`;
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title: branding.seoTitleDefault,
+    description: branding.seoDescriptionDefault,
+    openGraph: {
+      title: branding.seoTitleDefault,
+      description: branding.seoDescriptionDefault,
+      images: [`${siteUrl}/logo.png`],
+      type: 'website',
+      url: canonicalUrl,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: branding.seoTitleDefault,
+      description: branding.seoDescriptionDefault,
+      images: [`${siteUrl}/logo.png`],
+    },
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    generator: branding.productName,
+    icons: {
+      icon: branding.faviconUrl,
+      shortcut: branding.faviconUrl,
+      apple: branding.faviconUrl,
+    }
+  };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const branding = await getBrandingServer();
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" style={{ overflow: 'hidden', height: '100%' }}>
       <body className="app-shell font-sans" suppressHydrationWarning style={{ overflow: 'hidden', height: '100%', margin: 0, padding: 0 }}>
+        <style dangerouslySetInnerHTML={{ __html: `
+          :root {
+            --primary: ${branding.themeColor} !important;
+            --ring: ${branding.themeColor} !important;
+          }
+          .dark {
+            --primary: ${branding.themeColor} !important;
+            --ring: ${branding.themeColor} !important;
+          }
+        `}} />
         <SWRProvider>
           {/* Stable container to mitigate hydration issues from browser extensions */}
           <div className="relative flex flex-col h-screen overflow-hidden">

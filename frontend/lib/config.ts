@@ -2,9 +2,24 @@
  * Client-side configuration for the Automated Recruitment System
  */
 
-// Centralized API Base URL with fallback to 127.0.0.1:10000 to avoid IPv6/localhost issues
-const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:10000';
-export const API_BASE_URL = rawApiBaseUrl.replace(/\/+$/, '');
+export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1' && host !== '192.168.1.173') {
+      return window.location.origin + '/calrims';
+    }
+  }
+  const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:10000';
+  let url = rawApiBaseUrl.replace(/\/+$/, '');
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    if (url.startsWith('http://')) {
+      url = url.replace(/^http:\/\//, 'https://');
+    }
+  }
+  return url;
+}
+
+export const API_BASE_URL = 'http://127.0.0.1:10000'; // Deprecated - use getApiBaseUrl() instead
 
 // Safeguard: warn in production if API base URL is missing (fallback remains localhost).
 if (typeof window !== 'undefined') {

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from datetime import datetime
 import re
 import json
@@ -124,6 +124,10 @@ class ResetPasswordRequest(BaseModel):
     @classmethod
     def validate_email(cls, v):
         return UserRegister.validate_email_robust(v)
+
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    profile_image_url: Optional[str] = None
 
 # ============================================================================
 # Job Schemas
@@ -294,6 +298,22 @@ class JobResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     
+    class Config:
+        from_attributes = True
+
+class JobPublicResponse(BaseModel):
+    id: int
+    job_id: Optional[str] = None
+    title: str
+    description: str
+    experience_level: str
+    location: Optional[str] = 'Remote'
+    mode_of_work: Optional[str] = 'Remote'
+    job_type: Optional[str] = 'Full-Time'
+    domain: Optional[str] = 'Engineering'
+    status: str
+    created_at: datetime
+
     class Config:
         from_attributes = True
 
@@ -641,8 +661,12 @@ class InterviewAnswerSubmit(BaseModel):
     @field_validator('answer_text')
     @classmethod
     def validate_answer_text(cls, v):
-        if len(v) > 50000:
-            raise ValueError("Answer text is too long (max 50,000 characters).")
+        if len(v) > 10000:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=400,
+                detail="Answer text is too long (max 10,000 characters)."
+            )
         return v
 
 class InterviewQuestionResponse(BaseModel):
@@ -731,10 +755,19 @@ class MonitoringEventCreate(BaseModel):
     def validate_event_type(cls, v):
         if not v or not v.strip():
             raise ValueError("event_type cannot be empty.")
-        if len(v) > 50:
-            # Truncate silently to fit DB column rather than rejecting valid proctoring events
-            return v[:50]
-        return v
+        import re
+        v_clean = re.sub(r'[^a-z0-9_]', '_', v.strip().lower())
+        
+        valid_types = {
+            "focus_lost", "face_not_visible", "multiple_faces", "normal", 
+            "tab_switch", "fullscreen_exit", "face_not_detected", "multiple_people"
+        }
+        if v_clean in valid_types:
+            return v_clean
+        if re.match(r"^focus_lost_strike_\d+_[a-z0-9_]+$", v_clean):
+            return v_clean
+            
+        raise ValueError(f"Invalid event_type: {v}")
 
     @field_validator('confidence_score')
     @classmethod
@@ -823,6 +856,29 @@ class GeneralGrievanceCreate(BaseModel):
     issue_type: str
     description: str
 
+class SupportTicketCreate(BaseModel):
+    email: EmailStr
+    access_key: str
+    grievance_type: str
+    description: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_access_key(cls, data):
+        if isinstance(data, dict):
+            if "key" in data and "access_key" not in data:
+                data["access_key"] = data["key"]
+        return data
+
+    @field_validator('grievance_type')
+    @classmethod
+    def validate_grievance_type(cls, v):
+        valid_types = {"technical", "access_issue", "misconduct_appeal", "key_reissue", "other"}
+        v_clean = v.strip().lower()
+        if v_clean not in valid_types:
+            raise ValueError(f"Invalid grievance_type. Must be one of {valid_types}")
+        return v_clean
+
 class InterviewIssueResolve(BaseModel):
     hr_response: Optional[str] = ""  # Optional for 'dismiss' action; required for reply/resolve
     action: str  # 'reissue_key', 'dismiss', 'dismissed', 'resolve', 'resolved', 'reply'
@@ -897,6 +953,47 @@ class GlobalSettingsUpdate(BaseModel):
     imap_email: Optional[str] = None
     imap_password: Optional[str] = None
     auto_sync_enabled: Optional[bool] = None
+    
+    product_name: Optional[str] = None
+    dark_logo_url: Optional[str] = None
+    favicon_url: Optional[str] = None
+    footer_text: Optional[str] = None
+    support_email: Optional[str] = None
+    theme_color: Optional[str] = None
+    terms_url: Optional[str] = None
+    privacy_url: Optional[str] = None
+    seo_title_default: Optional[str] = None
+    seo_description_default: Optional[str] = None
+
+    @field_validator('imap_email')
+    @classmethod
+    def validate_imap_email(cls, v):
+        if v is None or v.strip() == '':
+            return v
+        v = v.strip()
+        # RFC-like email validation
+        email_pattern = re.compile(
+            r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        )
+        if not email_pattern.match(v):
+            raise ValueError(
+                'Invalid email format. Please enter a valid email address (e.g. user@gmail.com).'
+            )
+        return v
+
+    @field_validator('imap_password')
+    @classmethod
+    def validate_imap_password(cls, v):
+        if v is None or v.strip() == '':
+            return v
+        v = v.strip()
+        # Gmail App Passwords are 16 chars (with spaces removed), but allow ≥8 to be safe
+        password_no_spaces = v.replace(' ', '')
+        if len(password_no_spaces) < 8:
+            raise ValueError(
+                'App Password is too short. Gmail App Passwords are typically 16 characters.'
+            )
+        return v
 
 class GlobalSettingsResponse(BaseModel):
     company_logo_url: Optional[str] = ""
@@ -909,6 +1006,17 @@ class GlobalSettingsResponse(BaseModel):
     imap_email: Optional[str] = ""
     imap_password: Optional[str] = ""
     auto_sync_enabled: bool = False
+    
+    product_name: Optional[str] = ""
+    dark_logo_url: Optional[str] = ""
+    favicon_url: Optional[str] = ""
+    footer_text: Optional[str] = ""
+    support_email: Optional[str] = ""
+    theme_color: Optional[str] = ""
+    terms_url: Optional[str] = ""
+    privacy_url: Optional[str] = ""
+    seo_title_default: Optional[str] = ""
+    seo_description_default: Optional[str] = ""
 
 # ============================================================================
 # Candidate Offer Actions

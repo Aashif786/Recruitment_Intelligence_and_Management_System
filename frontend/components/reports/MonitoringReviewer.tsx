@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import useSWR from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
-import { API_BASE_URL } from '@/lib/config'
+import { getApiBaseUrl } from '@/lib/config'
 import {
   Video,
   CameraOff,
@@ -53,7 +53,7 @@ interface MonitoringReviewerProps {
 }
 
 export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ interviewId, videoUrl }) => {
-  const { data: events = [], isLoading } = useSWR<MonitoringEvent[]>(
+  const { data: events = [], isLoading, error: monitoringError } = useSWR<MonitoringEvent[]>(
     interviewId ? `/api/interviews/${interviewId}/monitoring-events` : null,
     fetcher
   )
@@ -141,13 +141,23 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
     )
   }
 
+  if (monitoringError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-3xl border-red-200 bg-red-50/50 dark:bg-red-950/20">
+        <AlertCircle className="w-8 h-8 text-red-500 mb-3" />
+        <p className="text-sm font-semibold text-red-700 dark:text-red-300">Could not load proctoring events</p>
+        <p className="text-xs text-red-600/80 mt-1">{(monitoringError as Error).message || 'Please try again later.'}</p>
+      </div>
+    )
+  }
+
   if (events.length === 0) {
     return (
       <div className="space-y-4">
         {videoUrl ? (
           <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-xl aspect-video relative group">
             <video
-              src={videoUrl?.startsWith('http') ? videoUrl : `${API_BASE_URL}${videoUrl}`}
+              src={videoUrl?.startsWith('http') ? videoUrl : `${getApiBaseUrl()}${videoUrl}`}
               controls
               preload="metadata"
               className="w-full h-full"
@@ -261,7 +271,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
                 <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
                   {ev.frame_image_url ? (
                     <img
-                      src={ev.frame_image_url?.startsWith('http') ? ev.frame_image_url : `${API_BASE_URL}${ev.frame_image_url}`}
+                      src={ev.frame_image_url?.startsWith('http') ? ev.frame_image_url : `${getApiBaseUrl()}${ev.frame_image_url}`}
                       alt="Monitoring frame"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
@@ -327,7 +337,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
               <div className="rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 aspect-video shadow-lg bg-slate-950 flex items-center justify-center max-h-[70vh] w-full">
                 {selectedEvent?.frame_image_url ? (
                   <img
-                    src={selectedEvent.frame_image_url?.startsWith('http') ? selectedEvent.frame_image_url : `${API_BASE_URL}${selectedEvent.frame_image_url}`}
+                    src={selectedEvent.frame_image_url?.startsWith('http') ? selectedEvent.frame_image_url : `${getApiBaseUrl()}${selectedEvent.frame_image_url}`}
                     alt="Inspection Frame"
                     className="w-full h-full object-contain"
                   />

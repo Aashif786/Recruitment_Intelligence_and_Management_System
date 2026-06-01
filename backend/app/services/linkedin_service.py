@@ -133,6 +133,15 @@ def post_job_to_linkedin(
         # Build the apply link
         apply_url = f"{frontend_base_url.rstrip('/')}/jobs/{job_id}"
 
+        # Validate that the apply URL is a valid absolute HTTPS URL (P2-L05)
+        from urllib.parse import urlparse
+        parsed_url = urlparse(apply_url)
+        if parsed_url.scheme != "https" or not parsed_url.netloc:
+            logger.warning(
+                f"[LinkedIn] Cancelled posting because apply_url '{apply_url}' is not a valid absolute HTTPS URL."
+            )
+            return
+
         post_text = _build_post_text(
             title=title,
             location=location,

@@ -9,8 +9,22 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '10000')}"
 backlog = 2048
 
 # Worker processes
-# Ideal number of workers is (2 * cores) + 1
-workers = multiprocessing.cpu_count() * 2 + 1
+db_url = os.environ.get("DATABASE_URL", "")
+is_pgbouncer = "6543" in db_url or "pgbouncer" in db_url.lower()
+
+# Enforce max 2 workers if not using PgBouncer to prevent DB connection pool exhaustion
+if is_pgbouncer:
+    workers = multiprocessing.cpu_count() * 2 + 1
+else:
+    workers = min(2, multiprocessing.cpu_count() * 2 + 1)
+
+# Allow manual override via environment variable if needed
+if os.environ.get("GUNICORN_WORKERS"):
+    try:
+        workers = int(os.environ["GUNICORN_WORKERS"])
+    except ValueError:
+        pass
+
 worker_class = "uvicorn.workers.UvicornWorker"
 worker_connections = 1000
 timeout = 30

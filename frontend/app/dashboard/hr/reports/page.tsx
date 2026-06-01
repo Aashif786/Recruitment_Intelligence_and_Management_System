@@ -42,7 +42,9 @@ import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import useSWR, { mutate } from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
-import { API_BASE_URL } from '@/lib/config'
+import { APIClient } from '@/app/dashboard/lib/api-client'
+import { getApiBaseUrl } from '@/lib/config'
+import { toast } from 'sonner'
 import {
   Radar,
   RadarChart,
@@ -72,6 +74,7 @@ import {
   isProgressionAllZeros,
   isRadarAllZeros,
 } from '@/components/reports/interviewIncomplete'
+import { getRecommendationLabel, getRecommendationColor } from '@/lib/recommendation-label'
 
 // Constants
 const SKILL_CATEGORIES = [
@@ -173,18 +176,6 @@ function cleanQuestionText(text: string): string {
   return cleaned.trim();
 }
 
-function getRecommendationLabel(score: number) {
-  if (score > 6) return 'Select';
-  if (score > 4) return 'Consider';
-  return 'Reject';
-}
-
-function getRecommendationColor(score: number) {
-  if (score > 6) return 'bg-primary/10 text-primary border-primary/20';
-  if (score > 4) return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
-  return 'bg-destructive/10 text-destructive border-destructive/20';
-}
-
 export default function ReportsPage() {
 
   const searchParams = useSearchParams()
@@ -233,12 +224,8 @@ export default function ReportsPage() {
 
 
 
-  // Construct API URL with server-side filters
-  const reportsApiUrl = useMemo(() => {
+  const reportsFilterQueryString = useMemo(() => {
     const q = new URLSearchParams();
-    q.set("limit", String(reportsPerPage));
-    q.set("skip", String((reportsPage - 1) * reportsPerPage));
-    
     if (appliedFilters.status !== "Default") q.set("status", appliedFilters.status);
     if (appliedFilters.job !== "All") q.set("job_id", appliedFilters.job);
     if (appliedFilters.skill !== "All") q.set("skill", appliedFilters.skill);
@@ -246,43 +233,36 @@ export default function ReportsPage() {
     if (appliedFilters.search) q.set("search", appliedFilters.search);
     if (appliedFilters.score[0] > 0) q.set("score_min", String(appliedFilters.score[0]));
     if (appliedFilters.score[1] < 10) q.set("score_max", String(appliedFilters.score[1]));
-    
-    const { from, to, date } = appliedFilters
-    const hasValidRange = from && to ? !from.isAfter(to, 'day') : true
-    
-    if (from && hasValidRange) q.set("from_date", from.format('YYYY-MM-DD'));
-    if (to && hasValidRange) q.set("to_date", to.format('YYYY-MM-DD'));
 
+    const { from, to, date } = appliedFilters;
+    const hasValidRange = from && to ? !from.isAfter(to, "day") : true;
+    if (from && hasValidRange) q.set("from_date", from.format("YYYY-MM-DD"));
+    if (to && hasValidRange) q.set("to_date", to.format("YYYY-MM-DD"));
     if (date && !from && !to) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const d = `${year}-${month}-${day}`;
+      const d = dayjs(date).format("YYYY-MM-DD");
       q.set("from_date", d);
       q.set("to_date", d);
     }
+    return q.toString();
+  }, [appliedFilters]);
 
+  const reportsApiUrl = useMemo(() => {
+    const q = new URLSearchParams(reportsFilterQueryString);
+    q.set("limit", String(reportsPerPage));
+    q.set("skip", String((reportsPage - 1) * reportsPerPage));
     return `/api/analytics/reports?${q.toString()}`;
-  }, [reportsPage, reportsPerPage, appliedFilters]);
+  }, [reportsPage, reportsPerPage, reportsFilterQueryString]);
 
-
-
-  // Dedicated Heatmap Data (Unfiltered by date/score to keep heatmap consistent)
   const heatmapApiUrl = useMemo(() => {
-    const q = new URLSearchParams();
-    q.set("limit", "1000"); // Get a large enough sample for the heatmap
-    return `/api/analytics/reports?${q.toString()}`;
-  }, []);
+    return `/api/analytics/reports/heatmap?${reportsFilterQueryString}`;
+  }, [reportsFilterQueryString]);
 
-  const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number }>(reportsApiUrl, fetcher)
-  const { data: heatmapResponse } = useSWR<any>(heatmapApiUrl, fetcher)
+  const { data: reportsResponse, error: fetchError, isLoading: isSWRDashboardLoading } = useSWR<{ reports: Report[], total: number, count: number, failed?: number, pages: number, error?: string, metrics?: { selected: number, hold: number, rejected: number, terminated: number, incomplete: number, avg_score: number, avg_questions: number, total_applied: number, total_finished: number } }>(reportsApiUrl, fetcher)
+  const { data: heatmapResponse } = useSWR<{ counts?: Record<string, number>; error?: string }>(heatmapApiUrl, fetcher)
 
   const rawReports = Array.isArray(reportsResponse)
     ? reportsResponse
     : (reportsResponse?.reports || []);
-  const heatmapReports = Array.isArray(heatmapResponse)
-    ? heatmapResponse
-    : (heatmapResponse?.reports || []);
   const totalCount = Array.isArray(reportsResponse)
     ? reportsResponse.length
     : (reportsResponse?.total ?? rawReports.length ?? 0);
@@ -383,18 +363,21 @@ export default function ReportsPage() {
   const { data: allJobsData } = useSWR<any[]>('/api/jobs?limit=500', fetcher);
   const uniqueExperiences = useMemo(() => ["intern", "junior", "mid", "senior", "lead"], [])
 
-  // Derived Interview Counts for Calendar Heatmap
+  const [isExportingCsv, setIsExportingCsv] = useState(false)
+
+  // Derived interview counts for calendar heatmap (from lightweight API)
   const interviewCounts = useMemo(() => {
     const counts: Record<string, number> = {}
-    heatmapReports.forEach((r: Report) => {
-      const date = new Date(r.timestamp)
+    const apiCounts = heatmapResponse?.counts || {}
+    Object.entries(apiCounts).forEach(([isoDay, count]) => {
+      const date = new Date(`${isoDay}T12:00:00`)
       if (!isNaN(date.getTime())) {
         const dateStr = date.toDateString()
-        counts[dateStr] = (counts[dateStr] || 0) + 1
+        counts[dateStr] = (counts[dateStr] || 0) + count
       }
     })
     return counts
-  }, [heatmapReports])
+  }, [heatmapResponse])
 
   const ReportDensityDay = (props: PickerDayProps) => {
     const dayKey = props.day.toDate().toDateString()
@@ -419,6 +402,24 @@ export default function ReportsPage() {
   // Metrics
   const metrics = useMemo(() => {
     const total = reportsResponse?.total || reports.length;
+    
+    // Use server-provided metrics if available (accurate across all pages)
+    if (reportsResponse && 'metrics' in reportsResponse && reportsResponse.metrics) {
+        const apiMetrics = reportsResponse.metrics;
+      return {
+        total: reportsResponse.total || 0,
+        selected: apiMetrics.selected || 0,
+        hold: apiMetrics.hold || 0,
+        rejected: apiMetrics.rejected || 0,
+        terminated: apiMetrics.terminated || 0,
+        incomplete: apiMetrics.incomplete || 0,
+        avgScore: apiMetrics.avg_score.toFixed(2) || '0.00',
+        avgQuestions: apiMetrics.avg_questions.toFixed(1) || '0.0',
+        totalApplied: apiMetrics.total_applied || 0,
+        totalFinished: apiMetrics.total_finished || 0,
+      };
+    }
+    
     let selectedCount = 0;
     let holdCount = 0;
     let rejectedCount = 0;
@@ -441,7 +442,7 @@ export default function ReportsPage() {
     const avgScore = total > 0 ? (filteredReports.reduce((acc: number, r: Report) => acc + Number(r?.overall_score || 0), 0) / (filteredReports.length || 1)).toFixed(2) : '0.00'
     const avgQuestions = total > 0 ? (filteredReports.reduce((acc: number, r: Report) => acc + (r?.total_questions_answered || 0), 0) / (filteredReports.length || 1)).toFixed(1) : '0.0'
 
-    return { total, selected: selectedCount, hold: holdCount, rejected: rejectedCount, terminated: terminatedCount, incomplete: incompleteCount, avgScore, avgQuestions }
+    return { total, selected: selectedCount, hold: holdCount, rejected: rejectedCount, terminated: terminatedCount, incomplete: incompleteCount, avgScore, avgQuestions, totalApplied: 0, totalFinished: 0 }
   }, [filteredReports, reportsResponse])
 
   const isAnyFilterActive = useMemo(() => {
@@ -545,53 +546,35 @@ export default function ReportsPage() {
 
     text += `QUESTION ANALYSIS\n`
     text += `----------------------------------------\n`
-    report.question_evaluations.forEach((q, i) => {
-      text += `\nQuestion ${i + 1}: ${q.question}\n`
-      text += `Score: ${q.evaluation.overall}/10\n`
-      if (q.evaluation.strengths) {
-        text += `  Strengths:\n${q.evaluation.strengths.map(s => `    - ${s}`).join('\n')}\n`
+    const evaluations = report.question_evaluations || []
+    evaluations.forEach((q, i) => {
+      const evalData = q.evaluation || {}
+      const score = evalData.overall ?? q.score ?? 'N/A'
+      text += `\nQuestion ${i + 1}: ${q.question || 'N/A'}\n`
+      text += `Score: ${score}/10\n`
+      if (evalData.strengths?.length) {
+        text += `  Strengths:\n${evalData.strengths.map((s: string) => `    - ${s}`).join('\n')}\n`
       }
-      if (q.evaluation.weaknesses) {
-        text += `  Weaknesses:\n${q.evaluation.weaknesses.map(w => `    - ${w}`).join('\n')}\n`
+      if (evalData.weaknesses?.length) {
+        text += `  Weaknesses:\n${evalData.weaknesses.map((w: string) => `    - ${w}`).join('\n')}\n`
       }
     })
 
     return text
   }
 
-  const downloadCSV = () => {
-    // Reorganized headers to put important metrics first, long skills list last
-    const headers = ['Candidate,Date,Role,Score,Status,Experience,Skills']
-    const rows = filteredReports.map((r: Report) => {
-      // Clean up skills and handle commas/quotes for CSV safety
-      let cleanSkills = 'N/A';
-      try {
-        const skillsData = r.candidate_profile.primary_skill || r.candidate_profile.skills;
-        if (skillsData) {
-          const skillsArray = typeof skillsData === 'string' ? JSON.parse(skillsData) : skillsData;
-          cleanSkills = Array.isArray(skillsArray) ? skillsArray.join('; ') : String(skillsData);
-        }
-      } catch (e) {
-        cleanSkills = String(r.candidate_profile.primary_skill || 'N/A');
-      }
-
-      // Format status for readability
-      const status = r.status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-      return [
-        `"${r.candidate_profile.candidate_name || r.filename.replace('.json', '')}"`,
-        `"${r.display_date_short}"`,
-        `"${r.candidate_profile.applied_role || 'N/A'}"`,
-        `"${r.overall_score.toFixed(2)}"`,
-        `"${status}"`,
-        `"${r.candidate_profile.experience_level || 'N/A'}"`,
-        `"${cleanSkills.replace(/"/g, '""')}"` // Skills at the end
-      ].join(',')
-    })
-
-    // Add UTF-8 BOM for better Excel compatibility
-    const csvContent = '\uFEFF' + [headers, ...rows].join('\n')
-    downloadFile(csvContent, `interview_reports_${new Date().toISOString().split('T')[0]}.csv`, 'csv')
+  const downloadCSV = async () => {
+    setIsExportingCsv(true)
+    try {
+      const filename = `interview_reports_${new Date().toISOString().split('T')[0]}.csv`
+      await APIClient.downloadFile(`/api/analytics/reports/export?${reportsFilterQueryString}`, filename)
+      toast.success(`Exported up to ${totalCount} matching report(s)`)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Export failed'
+      toast.error(msg)
+    } finally {
+      setIsExportingCsv(false)
+    }
   }
 
   const downloadFile = (content: string, filename: string, type: 'json' | 'txt' | 'csv') => {
@@ -645,12 +628,15 @@ export default function ReportsPage() {
     )
   }
 
-  if (fetchError) {
+  const apiErrorMessage =
+    (!Array.isArray(reportsResponse) && reportsResponse?.error) || null
+
+  if (fetchError || apiErrorMessage) {
     return (
       <div className="p-8">
         <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-200">
           <h3 className="font-bold">Error Loading Reports</h3>
-          <p>{fetchError.message || 'An error occurred while fetching reports.'}</p>
+          <p>{fetchError?.message || apiErrorMessage || 'An error occurred while fetching reports.'}</p>
           <Button onClick={() => mutate(reportsApiUrl)} variant="outline" className="mt-2">Retry</Button>
         </div>
       </div>
@@ -909,9 +895,10 @@ export default function ReportsPage() {
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent className="rounded-lg">
-                      <SelectItem value="Default">Default</SelectItem>
-                      <SelectItem value="Select">Selected</SelectItem>
-                      <SelectItem value="Reject">Rejected</SelectItem>
+                      <SelectItem value="Default">All Reports</SelectItem>
+                      <SelectItem value="Select">High Score (&gt;6)</SelectItem>
+                      <SelectItem value="Consider">Average Score (4-6)</SelectItem>
+                      <SelectItem value="Reject">Low Score (&lt;4)</SelectItem>
                       <SelectItem value="Terminated">Terminated</SelectItem>
                       <SelectItem value="Not Completed">Incomplete</SelectItem>
                     </SelectContent>
@@ -1198,7 +1185,15 @@ export default function ReportsPage() {
 
           {/* Compact Metrics Strip */}
           <div className="animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-100 rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+              <div className="rounded-md bg-muted/40 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Applied</p>
+                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalApplied}</p>
+              </div>
+              <div className="rounded-md bg-muted/40 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Finished</p>
+                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalFinished}</p>
+              </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
                 <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Reports</p>
                 <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.total}</p>
@@ -1229,7 +1224,7 @@ export default function ReportsPage() {
               )}
               {appliedFilters.status !== 'Default' && (
                 <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  Status: {getStatusLabel(appliedFilters.status)}
+                  Status: {appliedFilters.status === 'Select' ? 'High Score' : appliedFilters.status === 'Consider' ? 'Avg Score' : appliedFilters.status === 'Reject' ? 'Low Score' : getStatusLabel(appliedFilters.status)}
                   <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setStatusFilter('Default')} />
                 </Badge>
               )}
@@ -1307,19 +1302,33 @@ export default function ReportsPage() {
             </div>
           )}
 
+          {!Array.isArray(reportsResponse) && (reportsResponse?.failed ?? 0) > 0 && (
+            <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              {reportsResponse?.failed} report(s) on this page could not be loaded. Remaining rows are shown below.
+            </div>
+          )}
+
           {/* Status Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-emerald-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Selected</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">High Performers (&gt; 6)</p>
               <div className="text-emerald-500 font-bold text-2xl">{metrics.selected}</div>
             </div>
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-amber-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">On Hold</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Average Performers (4-6)</p>
               <div className="text-amber-500 font-bold text-2xl">{metrics.hold}</div>
             </div>
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-red-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Rejected</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Low Performers (&lt; 4)</p>
               <div className="text-red-500 font-bold text-2xl">{metrics.rejected}</div>
+            </div>
+            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-gray-500 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Terminated</p>
+              <div className="text-gray-500 font-bold text-2xl">{metrics.terminated}</div>
+            </div>
+            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-orange-500 shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Incomplete</p>
+              <div className="text-orange-500 font-bold text-2xl">{metrics.incomplete}</div>
             </div>
           </div>
 
@@ -1334,12 +1343,13 @@ export default function ReportsPage() {
               
               <div className="flex items-center gap-3">
                 {activeTab === 'table' && (
-                  <Button 
-                    onClick={downloadCSV} 
+                  <Button
+                    onClick={() => void downloadCSV()}
+                    disabled={isExportingCsv || totalCount === 0}
                     variant="outline" 
                     className="gap-2 bg-background hover:bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-300 shadow-sm h-11 rounded-full px-6 font-bold animate-in fade-in slide-in-from-right-4 duration-300"
                   >
-                    <FileText className="h-4 w-4" /> Export to Excel
+                    <FileText className="h-4 w-4" /> {isExportingCsv ? 'Exporting…' : 'Export all filtered'}
                   </Button>
                 )}
 
@@ -1371,9 +1381,9 @@ export default function ReportsPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4">
                   {filteredReports.length > 0 ? (
-                    filteredReports.map((report: Report, idx: number) => (
+                    filteredReports.map((report: Report) => (
                       <ReportCard
-                        key={idx}
+                        key={report.id}
                         report={report}
                         onClick={() => setViewingReport(report)}
                       />
@@ -1411,8 +1421,12 @@ export default function ReportsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredReports.map((report: Report, idx: number) => (
-                        <TableRow key={idx}>
+                      {filteredReports.map((report: Report) => (
+                        <TableRow
+                          key={report.id}
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => setViewingReport(report)}
+                        >
                           <TableCell className="font-semibold text-slate-700 dark:text-slate-200">
                             {report.candidate_profile.candidate_name || report.filename.replace('.json', '')}
                           </TableCell>
@@ -1515,7 +1529,7 @@ export default function ReportsPage() {
                         ].filter(d => d.value > 0)} />
                       </div>
 
-                      <div className="w-full lg:w-1/3 grid grid-cols-2 gap-4">
+                      <div className="w-full lg:w-1/2 grid grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
                           <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.avgScore}</div>
                           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Avg Score</div>
@@ -1533,6 +1547,14 @@ export default function ReportsPage() {
                             {metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%
                           </div>
                           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Success Rate</div>
+                        </div>
+                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
+                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.totalApplied}</div>
+                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Applied</div>
+                        </div>
+                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
+                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.totalFinished}</div>
+                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Finished</div>
                         </div>
                       </div>
                     </div>
@@ -1699,7 +1721,7 @@ export default function ReportsPage() {
                     <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-xl aspect-video relative group">
                       <video
                         key={viewingReport.id}
-                        src={viewingReport.video_url?.startsWith('http') ? viewingReport.video_url : `${API_BASE_URL}${viewingReport.video_url}`}
+                        src={viewingReport.video_url?.startsWith('http') ? viewingReport.video_url : `${getApiBaseUrl()}${viewingReport.video_url}`}
                         controls
                         preload="metadata"
                         className="w-full h-full"

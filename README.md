@@ -1,109 +1,211 @@
-# CALRIMS - AI-Powered Recruitment Information Management System
+# CALRIMS — AI-Powered Recruitment Information Management System
 
-An industry-leading, fully automated recruitment platform that leverages cutting-edge AI to streamline hiring. From intelligent interviews and resume parsing to data-driven decision making, CALRIMS delivers a **premium, high-performance experience** for both HR teams and candidates.
+> An end-to-end, production-ready hiring platform that automates the full candidate journey — from intelligent AI interviews and smart resume parsing to offer management, onboarding, and compliance reporting.
 
-## 🚀 Key Modern Enhancements
+---
 
-- **Next.js 16 + Tailwind CSS 4**: Built on the absolute latest frontend stack for unmatched performance and developer experience.
-- **Unified Global Navigation**: A responsive `GlobalNavbar` providing seamless transitions across landing, authentication, and dashboard views.
-- **AI-Driven Logic**: Integrated support for OpenAI, Anthropic, and Groq to provide flexible, intelligent assessments.
-- **Premium Aesthetics**: Sophisticated dark/light mode theming with glassmorphism (`backdrop-blur-xl`) and meticulous component design.
-- **Real-Time Interaction**: WebSocket-powered live interview engine for synchronous assessment and feedback.
+## ✨ Feature Highlights
 
-## 🛠️ Project Architecture
+| Area | What it does |
+| :--- | :--- |
+| **AI Interview Engine** | Adaptive voice/text interviews with real-time LLM evaluation (OpenAI · Anthropic · Groq) |
+| **Smart Resume Screening** | Automated skill extraction, job-fit scoring, and ranking powered by LLMs |
+| **Email Resume Ingestion** | IMAP-based mailbox sync — resumes land in an inbox and are parsed automatically |
+| **Candidate Pipeline** | Kanban-style pipeline with a state-machine that enforces legal transitions |
+| **Offer Letter Management** | HTML template editor → immutable PDF generation → secure candidate accept/reject portal |
+| **Onboarding Pipeline** | Photo capture, ID card generation, and joining confirmation — all in one workflow |
+| **Analytics & Reports** | Hiring funnel metrics, time-to-hire, diversity stats, and custom report exports |
+| **Reliability Monitor** | Super Admin panel to retry stuck AI parse jobs without developer intervention |
+| **Ticket & Support** | HR and candidate-facing support ticket system |
+| **Audit Trail** | Every critical action (state changes, offer decisions, logins) is logged immutably |
+| **RBAC** | Fine-grained roles: Candidate · HR Manager · Super Admin |
+| **Dark / Light Mode** | Full theming with glassmorphism UI and Framer Motion animations |
 
-CALRIMS is built as a robust, scalable microservices-ready application:
+---
 
-1.  **Frontend**: Next.js 16 (App Router) with TypeScript, Tailwind CSS, and Framer Motion.
-2.  **Backend**: High-performance FastAPI (Python 3.12+) with asynchronous handlers.
-3.  **Database**: PostgreSQL with SQLAlchemy 2.0 ORM and Alembic migrations.
-4.  **Storage**: Supabase Object Storage for resumes and media assets.
-5.  **Infrastructure**: Dockerized environment with Nginx and Redis for caching/rate-limiting.
+## 🛠️ Architecture
 
-### System Overview
-
-```mermaid
-graph TD
-    Client[Next.js Frontend] <--> API[FastAPI Backend]
-    API <--> DB[(PostgreSQL)]
-    API <--> Cache[(Redis)]
-    API <--> Storage[Supabase Storage]
-    API <--> AI[AI Providers: OpenAI/Anthropic/Groq]
 ```
+┌──────────────────────┐        ┌──────────────────────────────────────┐
+│  Next.js 15 Frontend │◄──────►│  FastAPI Backend  (port 10000)       │
+│  (TypeScript · App   │  REST  │  ├── app/api/        (route handlers) │
+│   Router · SWR)      │        │  ├── app/services/   (business logic) │
+└──────────────────────┘        │  ├── app/domain/     (models/schemas) │
+                                │  └── app/core/       (auth/config)    │
+                                └──────┬──────────────────────┬─────────┘
+                                       │                      │
+                                  Supabase (PostgreSQL)   Supabase Storage
+                                  (SQLAlchemy + startup   (resumes, photos,
+                                   migrations)            offer PDFs)
+                                       │
+                              AI Providers (OpenAI / Anthropic / Groq)
+```
+
+---
 
 ## 📁 Directory Structure
 
 ```
-├── backend/                  # Python FastAPI backend
-│   ├── app/                  # Core application logic (Routes, Services, Models)
-│   ├── tests/                # Comprehensive test suite
-│   ├── scripts/              # Migration and maintenance scripts
-│   ├── Dockerfile            # Containerization settings
-│   └── requirements.txt      # Python dependencies
-├── frontend/                 # Next.js 16 frontend
-│   ├── app/                  # Next.js App Router (Auth, Dashboards, Landing)
-│   ├── components/           # Reusable UI components (Shadcn UI based)
-│   ├── lib/                  # Shared utilities, hooks, and context
-│   ├── tests/                # Playwright & Vitest suites
-│   └── package.json          # Node.js dependencies
-├── database/                 # Database schema and migration files
-├── docs/                     # Extended documentation and guides
-├── supabase/                 # Supabase configuration and edge functions
-├── docker-compose.prod.yml   # Production deployment orchestration
-└── README.md                 # Project documentation
+rims/
+├── backend/
+│   ├── app/
+│   │   ├── api/              # Route handlers (applications, interviews, onboarding, …)
+│   │   ├── services/         # Business logic (AI, email, state machine, offer letters, …)
+│   │   ├── domain/           # SQLAlchemy models & Pydantic schemas
+│   │   ├── core/             # Auth, config, storage, timezone helpers
+│   │   └── infrastructure/   # Database session & migrations
+│   ├── scripts/              # Production startup scripts
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/
+│   ├── app/
+│   │   ├── auth/             # Login, Register, Forgot/Reset Password, Verify OTP
+│   │   ├── dashboard/
+│   │   │   ├── hr/           # Applications, Jobs, Pipeline, Reports, Ingested Emails, …
+│   │   │   ├── onboarding/   # Offer management, photo capture, ID card, joining
+│   │   │   ├── repository/   # Candidate resume repository
+│   │   │   └── settings/     # Global settings & offer letter template editor
+│   │   ├── interview/        # Candidate-facing live interview room
+│   │   ├── offer/            # Candidate offer accept/reject portal
+│   │   ├── jobs/             # Public job listings
+│   │   └── page.tsx          # Marketing landing page
+│   ├── components/           # Shared UI components (Shadcn UI + custom)
+│   └── package.json
+├── setup/                    # Client production schema (see CLIENT_SETUP_GUIDE.md)
+├── supabase/migrations/      # Supabase migration history
+├── docker-compose.prod.yml   # Production orchestration
+├── ONBOARDING_GUIDE.md       # Onboarding pipeline & offer letter guide
+└── README.md
 ```
-
-## ✨ Core Features
-
-- **AI Interview Engine**: Adaptive voice/text interviews that analyze candidate responses in real-time.
-- **Smart Resume Screening**: Automated skill extraction and matching against job requirements using LLMs.
-- **Advanced HR Analytics**: Data-driven insights into hiring pipelines, diversity, and time-to-hire.
-- **Integrated Support System**: Ticket management for both candidates and HR personnel.
-- **Onboarding Pipeline**: Automated workflows to transition candidates from 'Hired' to 'Onboarded'.
-- **Role-Based Access Control (RBAC)**: Fine-grained permissions for Candidates, HR Managers, and Super Admins.
-
-## 🚦 Quick Start
-
-### 1. Prerequisites
-- **Node.js**: 18.x or higher
-- **Python**: 3.9 - 3.12
-- **PostgreSQL**: 14+
-- **Redis**: 6+ (Optional for local dev)
-
-### 2. Backend Setup
-```bash
-cd backend
-python -m venv venv
-# Windows: venv\Scripts\activate | Unix: source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-# Configure your DATABASE_URL and API keys in .env
-python -m uvicorn app.main:app --reload --port 10000
-```
-*API Docs: [http://localhost:10000/docs](http://localhost:10000/docs)*
-
-### 3. Frontend Setup
-```bash
-cd frontend
-npm install
-npm run dev
-```
-*App URL: [http://localhost:3000](http://localhost:3000)*
-
-### 4. Default Credentials
-| Role | Email | Password |
-| :--- | :--- | :--- |
-| **HR Manager** | `hr@company.com` | `password123` |
-| **Candidate** | `candidate@example.com` | `password123` |
-
-## 📚 Documentation & Guides
-
-For more detailed information, please refer to the following guides:
-- [Onboarding Guide](file:///c:/Users/aashi/OneDrive/Desktop/Project/rims/ONBOARDING_GUIDE.md) - Detailed setup for new developers.
-- [Client Setup Guide](file:///c:/Users/aashi/OneDrive/Desktop/Project/rims/CLIENT_SETUP_GUIDE.md) - Instructions for client deployments.
-- [Project Report](file:///c:/Users/aashi/OneDrive/Desktop/Project/rims/PROJECT_REPORT.md) - Technical overview and implementation details.
-- [Database Schema](file:///c:/Users/aashi/OneDrive/Desktop/Project/rims/DATABASE_SCHEMA.sql) - Visual representation of the relational model.
 
 ---
 
-**Built with ❤️ for Modern Hiring Teams.**
+## 🚀 Quick Start
+
+### Prerequisites
+
+| Tool | Version |
+| :--- | :--- |
+| Node.js | 18.x + |
+| Python | 3.10 – 3.12 |
+| [Supabase](https://supabase.com) project | PostgreSQL + Storage (see [CLIENT_SETUP_GUIDE.md](./CLIENT_SETUP_GUIDE.md)) |
+
+### 1 — Clone & configure
+
+```bash
+git clone https://github.com/caldimengg-manikandan/rims.git
+cd rims
+```
+
+### 2 — Backend
+
+```bash
+cd backend
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
+
+cp .env.example .env          # fill in Supabase + secrets (see below)
+```
+
+**Dependencies:** `.\start.ps1` installs from `requirements_core.txt` (slim local set). **Docker/production** uses `backend/requirements.txt`. The repo-root `requirements.txt` is a minimal gunicorn/uvicorn pin only.
+
+**Windows (recommended):**
+
+```powershell
+.\start.ps1
+```
+
+**macOS / Linux (manual):**
+
+```bash
+export BACKEND_START_MODE=script
+python -m uvicorn app.main:app --reload --port 10000
+```
+
+**Production (Linux / Docker):** see [CLIENT_SETUP_GUIDE.md](./CLIENT_SETUP_GUIDE.md) and `docker-compose.prod.yml`.
+
+**Interactive API docs:** http://localhost:10000/docs
+
+#### Required `.env` variables
+
+Copy from `backend/.env.example`. Minimum for local dev:
+
+```env
+DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+JWT_SECRET=                          # openssl rand -hex 32
+ENCRYPTION_KEY=                      # Fernet key for phone encryption
+SUPABASE_URL=https://[PROJECT-REF].supabase.co
+SUPABASE_SERVICE_ROLE_KEY=
+GROQ_API_KEY=                        # or OPENAI_API_KEY / ANTHROPIC_API_KEY
+ENV=development
+FRONTEND_BASE_URL=http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+
+> For a **new** Supabase project, run `setup/production_schema.sql` in the SQL Editor first (see CLIENT_SETUP_GUIDE §2.2), then start the backend.
+
+### 3 — Frontend
+
+```bash
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` (see `frontend/.env.example`).
+
+**App URL:** http://localhost:3000
+
+#### HR Reports (optional checks)
+
+- **Backend smoke:** from `backend/`, with `BACKEND_START_MODE=script` set, run `python scripts/verify_reports_module.py`.
+- **Playwright (reports UI):** requires a running backend, frontend, and HR credentials:
+
+```bash
+cd frontend
+npx playwright install chromium
+set E2E_HR_EMAIL=hr@example.com
+set E2E_HR_PASSWORD=your-password
+npm run test:e2e:reports
+```
+
+Reports use a lightweight `/api/analytics/reports/heatmap` endpoint for the calendar and **Export all filtered** downloads the full filtered CSV (not just the current page).
+
+### 4 — First admin user
+
+Set `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` in `backend/.env` before the first backend start to bootstrap a Super Admin. Do **not** use default passwords in production.
+
+---
+
+## 🔑 Role Permissions
+
+| Permission | Candidate | HR Manager | Super Admin |
+| :--- | :---: | :---: | :---: |
+| Apply for jobs / take interview | ✅ | — | — |
+| View & manage applications | — | ✅ | ✅ |
+| Create / edit job listings | — | ✅ | ✅ |
+| Approve offer letters | — | — | ✅ |
+| Access analytics & reports | — | ✅ | ✅ |
+| Manage global settings | — | — | ✅ |
+| View reliability monitor | — | — | ✅ |
+| Manage HR user accounts | — | — | ✅ |
+
+---
+
+## 📚 Documentation
+
+| Document | Purpose |
+| :--- | :--- |
+| [ONBOARDING_GUIDE.md](./ONBOARDING_GUIDE.md) | Offer pipeline, template editor, email ingestion, and photo/ID card workflow |
+| [CLIENT_SETUP_GUIDE.md](./CLIENT_SETUP_GUIDE.md) | Production deployment checklist for client environments |
+| [setup/production_schema.sql](./setup/production_schema.sql) | Full relational schema for new Supabase projects |
+| [supabase/migrations/](./supabase/migrations/) | Same schema for Supabase CLI (`supabase db push`) |
+
+---
+
+**Built with ❤️ by the CALRIMS team.**

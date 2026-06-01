@@ -14,11 +14,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { APIClient } from '@/app/dashboard/lib/api-client'
 import { toast } from 'sonner'
+import { useBranding } from '@/lib/branding-client'
 
 const AVATAR_STYLES = ['avataaars', 'bottts', 'adventurer', 'fun-emoji', 'pixel-art', 'lorelei']
 
 export default function ProfilePage() {
     const { user, refreshUser } = useAuth()
+    const { branding } = useBranding()
     const [isUpdating, setIsUpdating] = React.useState(false)
     const [customUrl, setCustomUrl] = React.useState('')
     const [isPickerOpen, setIsPickerOpen] = React.useState(false)
@@ -206,7 +208,7 @@ export default function ProfilePage() {
                         <CardContent className="p-8 space-y-8">
                             <div className="prose prose-slate dark:prose-invert max-w-none">
                                 <p className="text-lg leading-relaxed text-muted-foreground">
-                                    As a <span className="text-foreground font-bold underline decoration-primary/30 decoration-4 underline-offset-4">{user.role.replace('_', ' ')}</span> in the CALRIMS platform, you are granted high-level administrative access to the recruitment lifecycle. Your actions directly influence the talent acquisition strategy and organizational growth.
+                                    As a <span className="text-foreground font-bold underline decoration-primary/30 decoration-4 underline-offset-4">{user.role.replace('_', ' ')}</span> in the {branding.productName} platform, you are granted high-level administrative access to the recruitment lifecycle. Your actions directly influence the talent acquisition strategy and organizational growth.
                                 </p>
                             </div>
 

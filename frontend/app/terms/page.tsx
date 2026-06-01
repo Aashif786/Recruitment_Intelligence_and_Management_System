@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getBrandingServer } from "@/lib/branding-server";
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const branding = await getBrandingServer();
   return (
     <div className="min-h-screen bg-background text-foreground py-20 px-6">
       <div className="max-w-3xl mx-auto space-y-8">
@@ -15,7 +17,7 @@ export default function TermsPage() {
         <div className="prose prose-slate dark:prose-invert max-w-none">
           <p>Last updated: {new Date().toLocaleDateString()}</p>
           <p>
-            Welcome to CALRIMS. By accessing or using our platform, you agree to be bound by these Terms of Service.
+            Welcome to {branding.productName}. By accessing or using our platform, you agree to be bound by these Terms of Service.
           </p>
           <h2>1. Acceptance of Terms</h2>
           <p>

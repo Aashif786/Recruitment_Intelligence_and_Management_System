@@ -70,9 +70,10 @@ class SecurityHeadersMiddleware:
                 set_header(b"content-security-policy",
                            # BUG-026 Fix: Removed 'unsafe-inline' from script-src.
                            # This was a CSP bypass that allowed arbitrary inline script execution.
-                           # If inline scripts are needed, use nonce-based CSP instead.
-                           b"default-src 'self'; script-src 'self'; "
-                           b"img-src 'self' data: blob:; connect-src 'self'; "
+                           b"default-src 'self'; "
+                           b"script-src 'self' https://cdn.jsdelivr.net; "
+                           b"img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com; "
+                           b"connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com https://api.groq.com; "
                            b"frame-ancestors 'none'; object-src 'none'")
 
             await send(message)

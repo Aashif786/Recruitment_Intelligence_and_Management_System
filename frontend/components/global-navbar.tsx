@@ -12,6 +12,7 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { ThemeTogglerButton } from '@/components/animate-ui/components/buttons/theme-toggler'
 import useSWR from 'swr'
 import { APIClient } from '@/app/dashboard/lib/api-client'
+import { useBranding } from '@/lib/branding-client'
 
 export const GlobalNavbar = React.memo(function GlobalNavbar() {
   const [mounted, setMounted] = useState(false)
@@ -23,9 +24,9 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
   const pathname = usePathname()
   const { isAuthenticated, user } = useAuth()
 
-  const { data: settings } = useSWR('/api/settings', (url) => APIClient.get(url)) as { data: any }
-  const companyLogo = settings?.company_logo_url || "/calrims/logo-dark.png"
-  const companyName = settings?.company_name || "CALRIMS"
+  const { branding } = useBranding()
+  const companyLogo = branding.logoUrl
+  const companyName = branding.companyName
 
   if (!mounted) return null
 
@@ -39,6 +40,26 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
 
   const NavContent = () => (
     <div className="flex flex-col md:flex-row items-start md:items-center gap-4 p-4 md:p-0">
+      {!isDashboard && (
+        <div className="flex items-center gap-4 font-semibold text-sm">
+          {!isHome && (
+            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
+              Home
+            </Link>
+          )}
+          {!isJobs && (
+            <Link href="/jobs" className="text-muted-foreground hover:text-foreground transition-colors">
+              Browse Roles
+            </Link>
+          )}
+          {!isAuth && (
+            <Link href="/auth/login?role=hr" className="text-muted-foreground hover:text-foreground transition-colors">
+              HR Portal
+            </Link>
+          )}
+        </div>
+      )}
+
       <ModeToggle className="text-muted-foreground hover:text-foreground hover:bg-accent hidden md:flex" />
 
       {isDashboard ? (
@@ -46,7 +67,7 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
           <NotificationBell />
           <UserNav />
         </div>
-      ) : (isAuthenticated && !isJobs && !isHome) ? (
+      ) : (isAuthenticated && !isJobs && !isHome && !isAuth) ? (
         <Link href={user?.role === 'candidate' ? '/jobs' : '/dashboard/hr'} className="w-full md:w-auto">
           <Button className="w-full md:w-auto rounded-full px-6 bg-primary text-primary-foreground hover:bg-primary/90 font-bold transition-all shadow-lg shadow-primary/20">
             {user?.role === 'candidate' ? 'Browse Jobs' : 'Go to Dashboard'} <ChevronRight className="ml-1 h-4 w-4" />

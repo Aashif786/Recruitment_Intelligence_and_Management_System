@@ -14,22 +14,19 @@ try:
 except ImportError:
     SUPABASE_AVAILABLE = False
 
-# Module-level singleton — avoids re-creating the HTTP client on every request
-_supabase_client: Optional[Any] = None
+import functools
 
 def resolve_bucket_and_path(bucket: str, path: str):
     if path and path.startswith("MAIL_ATTACHMENTS/"):
         return "MAIL_ATTACHMENTS", path.replace("MAIL_ATTACHMENTS/", "", 1)
     return bucket, path
 
+# Use lru_cache for thread-safe lazy initialization
+@functools.lru_cache(maxsize=1)
 def get_supabase_client() -> Optional[Any]:
-    global _supabase_client
-    if _supabase_client is not None:
-        return _supabase_client
     if settings.supabase_url and settings.supabase_key and SUPABASE_AVAILABLE:
         try:
-            _supabase_client = create_client(settings.supabase_url, settings.supabase_key)
-            return _supabase_client
+            return create_client(settings.supabase_url, settings.supabase_key)
         except Exception as e:
             logger.error(f"Failed to initialize Supabase client: {e}")
     return None

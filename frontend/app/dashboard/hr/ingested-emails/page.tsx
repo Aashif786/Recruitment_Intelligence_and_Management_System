@@ -53,6 +53,7 @@ import {
     Zap,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
+import { useAuth } from '@/app/dashboard/lib/auth-context'
 
 interface IngestedEmail {
     id: number
@@ -93,10 +94,16 @@ export default function IngestedEmailsPage() {
     const [imapConfigured, setImapConfigured] = useState(false)
     const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
     const [showCredentials, setShowCredentials] = useState(false)
+    const [emailError, setEmailError] = useState('')
+    const [passwordError, setPasswordError] = useState('')
+    const [configError, setConfigError] = useState('')
+
+    const { user } = useAuth()
 
     // Load current settings on mount — only fetch safe, non-sensitive metadata
     useEffect(() => {
         const loadSettings = async () => {
+            if (user?.role !== 'super_admin') return
             try {
                 const settings = await APIClient.get('/api/settings') as any
                 // BUG-002 Fix: Only load email address (safe) and configured flag.
@@ -109,7 +116,7 @@ export default function IngestedEmailsPage() {
             }
         }
         loadSettings()
-    }, [])
+    }, [user])
 
     // Assignment Modal State
     const [selectedResume, setSelectedResume] = useState<IngestedEmail | null>(null)
@@ -146,27 +153,60 @@ export default function IngestedEmailsPage() {
         refreshInterval: 60000 // refresh every minute
     })
 
-    const allItems = data?.items ?? []
-    
-    const filteredItems = allItems;
+    // Items are already server-filtered; no need for additional client-side filtering
+    // (a previous client-side filter was causing Bugs 8 & 9 by double-filtering results)
+    const filteredItems = data?.items ?? []
 
     const totalCount = data?.total ?? 0;
     const totalPages = data?.pages ?? 0;
 
+    // Global stats come embedded in every listing response via global_stats field.
+    // This ensures stats cards always reflect accurate numbers regardless of
+    // the active filter (fixes Bugs 4, 5, and 7).
+    const globalStats = (data as any)?.global_stats ?? null
+    const statTotalIngested = globalStats?.total_ingested ?? totalCount
+    const statAutoMapped = globalStats?.auto_mapped ?? 0
+    const statPending = globalStats?.pending_assignment ?? 0
+
     // Save IMAP Settings
     const handleSaveSettings = async () => {
+        // Clear previous errors
+        setEmailError('')
+        setPasswordError('')
+        setConfigError('')
+
         if (!imapUser.trim()) {
-            toast.error('Please enter the IMAP Email address')
+            setEmailError('Email address is required')
             return
         }
-        // Only require password if it's a new setup (not yet configured)
-        if (!imapConfigured && !imapPass.trim()) {
-            toast.error('Please enter the Gmail App Password')
+
+        // Client-side email format validation
+        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+        if (!emailPattern.test(imapUser.trim())) {
+            setEmailError('Invalid email format. Please enter a valid email address (e.g. user@gmail.com).')
+            return
+        }
+
+        // Only require password if it's a new setup (not yet configured) OR if user has typed something in the password field
+        const hasNewPassword = imapPass.trim().length > 0;
+        if (!imapConfigured && !hasNewPassword) {
+            setPasswordError('App Password is required')
+            return
+        }
+
+        if (hasNewPassword) {
+            // Client-side password length check (Gmail App Passwords are 16 chars)
+            const passwordNoSpaces = imapPass.trim().replace(/\s/g, '')
+            if (passwordNoSpaces.length < 8) {
+                setPasswordError('App Password is too short. Gmail App Passwords are typically 16 characters.')
+                return
+            }
+        }
             return
         }
 
         setIsSavingSettings(true)
-        const toastId = toast.loading('Saving recruiter mailbox configuration...')
+        const toastId = toast.loading('Verifying mailbox credentials and saving configuration...')
 
         try {
             const payload: Record<string, unknown> = {
@@ -179,13 +219,44 @@ export default function IngestedEmailsPage() {
             }
             await APIClient.post('/api/settings', payload)
 
-            toast.success('Configuration saved! Auto-sync will now run in the background.', { id: toastId })
+            toast.success('Mailbox verified and configuration saved! Auto-sync will now run in the background.', { id: toastId })
             setImapConfigured(true)
             setImapPass('') // Clear password field after save
             setShowCredentials(false)
+            setConfigError('')
         } catch (err: any) {
             console.error('Save settings error:', err)
-            toast.error(err.response?.data?.detail || 'Failed to save settings.', { id: toastId })
+            toast.dismiss(toastId)
+            // APIClient throws a plain Error with the message string — not an axios-style
+            // object with .response.data. We read err.message directly.
+            const errMsg: string = err?.message || 'Settings could not be saved. Please try again.'
+
+            if (
+                errMsg.includes('Invalid email') ||
+                errMsg.includes('email format') ||
+                errMsg.includes('imap_email')
+            ) {
+                setEmailError(errMsg.replace('Value error, ', ''))
+                toast.error('Please fix the validation errors below.', { id: toastId })
+            } else if (
+                errMsg.includes('App Password') ||
+                errMsg.includes('imap_password') ||
+                errMsg.includes('too short')
+            ) {
+                setPasswordError(errMsg.replace('Value error, ', ''))
+                toast.error('Please fix the validation errors below.', { id: toastId })
+            } else if (
+                errMsg.includes('Authentication failed') ||
+                errMsg.includes('AUTHENTICATIONFAILED') ||
+                errMsg.includes('Invalid credentials')
+            ) {
+                // IMAP auth failure returned as HTTP 400 — credentials were NOT saved
+                setConfigError(errMsg)
+                toast.error('Mailbox authentication failed. Credentials were not saved.', { id: toastId })
+            } else {
+                setConfigError(errMsg)
+                toast.error(errMsg, { id: toastId })
+            }
         } finally {
             setIsSavingSettings(false)
         }
@@ -226,7 +297,7 @@ export default function IngestedEmailsPage() {
             setTimeout(() => mutate(), 30000)
         } catch (err: any) {
             console.error('Sync error:', err)
-            toast.error(err.response?.data?.detail || err.message || 'Sync failed. Please verify your IMAP login details.', { id: toastId })
+            toast.error(err.response?.data?.detail || 'Mailbox sync failed. Please verify your email address and App Password, then try again.', { id: toastId })
         } finally {
             setIsSyncing(false)
         }
@@ -253,7 +324,7 @@ export default function IngestedEmailsPage() {
             mutate()
         } catch (err: any) {
             console.error('Assignment error:', err)
-            toast.error(err.response?.data?.detail || 'Failed to assign candidate.', { id: toastId })
+            toast.error(err.response?.data?.detail || 'Could not assign the candidate to the selected job. Please try again.', { id: toastId })
         } finally {
             setIsAssigning(false)
         }
@@ -282,14 +353,16 @@ export default function IngestedEmailsPage() {
                         </Badge>
                     )}
                     <div className="flex gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowCredentials(!showCredentials)}
-                            className={`gap-2 border-border shadow-sm rounded-xl h-11 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
-                        >
-                            <Settings className="h-4 w-4" />
-                            Configure Mailbox
-                        </Button>
+                        {user?.role === 'super_admin' && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowCredentials(!showCredentials)}
+                                className={`gap-2 border-border shadow-sm rounded-xl h-11 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
+                            >
+                                <Settings className="h-4 w-4" />
+                                Configure Mailbox
+                            </Button>
+                        )}
                         <Button
                             onClick={handleSync}
                             disabled={isSyncing}
@@ -307,7 +380,7 @@ export default function IngestedEmailsPage() {
             </PageHeader>
 
             {/* Credentials Card */}
-            {showCredentials && (
+            {showCredentials && user?.role === 'super_admin' && (
                 <Card className="border-2 border-primary/10 bg-card shadow-xl rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
                     <CardHeader className="border-b border-border/50 pb-6">
                         <div className="flex items-center justify-between">
@@ -334,16 +407,26 @@ export default function IngestedEmailsPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="pt-8 space-y-6">
+                        {configError && (
+                            <div className="p-4 rounded-xl bg-red-50 border-2 border-red-200 text-red-700 text-sm font-semibold flex items-start gap-3">
+                                <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-black text-red-800 text-xs uppercase tracking-wider mb-1">Connection Failed</p>
+                                    <p>{configError}</p>
+                                </div>
+                            </div>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="imap_user" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">IMAP Email Address</Label>
                                 <Input
                                     id="imap_user"
                                     value={imapUser}
-                                    onChange={e => setImapUser(e.target.value)}
-                                    className="h-12 bg-background border-2 border-input rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium"
+                                    onChange={e => { setImapUser(e.target.value); setEmailError(''); setConfigError(''); }}
+                                    className={`h-12 bg-background border-2 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium ${emailError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10' : 'border-input'}`}
                                     placeholder="example@gmail.com"
                                 />
+                                {emailError && <p className="text-xs font-bold text-red-500 ml-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{emailError}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="imap_pass" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
@@ -353,11 +436,12 @@ export default function IngestedEmailsPage() {
                                     id="imap_pass"
                                     type="password"
                                     value={imapPass}
-                                    onChange={e => setImapPass(e.target.value)}
-                                    className="h-12 bg-background border-2 border-input rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium"
+                                    onChange={e => { setImapPass(e.target.value); setPasswordError(''); setConfigError(''); }}
+                                    className={`h-12 bg-background border-2 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium ${passwordError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10' : 'border-input'}`}
                                     placeholder={imapConfigured ? '••••••••••••••••' : 'xxxx xxxx xxxx xxxx'}
                                     autoComplete="new-password"
                                 />
+                                {passwordError && <p className="text-xs font-bold text-red-500 ml-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{passwordError}</p>}
                             </div>
                         </div>
                         
@@ -382,7 +466,7 @@ export default function IngestedEmailsPage() {
                 </Card>
             )}
 
-            {/* Quick Metrics */}
+            {/* Quick Metrics — always show real counts from global_stats regardless of active filter */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="border border-border/60 shadow-sm rounded-2xl bg-card">
                     <CardContent className="p-6 flex items-center gap-4">
@@ -392,7 +476,7 @@ export default function IngestedEmailsPage() {
                         <div>
                             <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Total Ingested</div>
                             <div className="text-2xl font-black text-foreground mt-0.5 tabular-nums">
-                                {isLoading ? '...' : totalCount}
+                                {isLoading ? '...' : statTotalIngested}
                             </div>
                         </div>
                     </CardContent>
@@ -406,7 +490,7 @@ export default function IngestedEmailsPage() {
                         <div>
                             <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Auto-Mapped</div>
                             <div className="text-2xl font-black text-foreground mt-0.5 tabular-nums">
-                                {isLoading ? '...' : (statusFilter === 'mapped' ? totalCount : '—')}
+                                {isLoading ? '...' : statAutoMapped}
                             </div>
                         </div>
                     </CardContent>
@@ -420,7 +504,7 @@ export default function IngestedEmailsPage() {
                         <div>
                             <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Pending Assignment</div>
                             <div className="text-2xl font-black text-foreground mt-0.5 tabular-nums">
-                                {isLoading ? '...' : (statusFilter === 'unmapped' ? totalCount : '—')}
+                                {isLoading ? '...' : statPending}
                             </div>
                         </div>
                     </CardContent>

@@ -13,6 +13,7 @@ import {
 import { cn } from '@/app/dashboard/lib/utils'
 import useSWR from 'swr'
 import { APIClient } from '@/app/dashboard/lib/api-client'
+import { useBranding } from '@/lib/branding-client'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -26,9 +27,10 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { data: settings } = useSWR('/api/settings', (url) => APIClient.get(url)) as { data: any }
-  const companyLogo = settings?.company_logo_url || "/calrims/logo-dark.png"
-  const companyName = settings?.company_name || "RIMS"
+  const { branding } = useBranding()
+  const companyLogo = branding.logoUrl
+  const companyName = branding.companyName
+  const productName = branding.productName
 
   const passwordLength = password.length >= 8
   const passwordUppercase = /[A-Z]/.test(password)
@@ -53,7 +55,7 @@ export default function RegisterPage() {
 
     const emailRegex = /^(?!\d+@)(?![^@]*\.\.)(?!^\.)[A-Za-z0-9_\-+]+(?:\.[A-Za-z0-9_\-+]+)*@(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/;
     if (!emailRegex.test(email)) {
-      setError("Enter valid email");
+      setError("Please enter a valid work email address (e.g. you@company.com).");
       return;
     }
 
@@ -68,7 +70,7 @@ export default function RegisterPage() {
     }
 
     if (passwordCriteriaCount < 4) {
-      setError('Password does not meet all requirements')
+      setError('Password must be at least 8 characters and include an uppercase letter, a number, and a special character.')
       return
     }
 
@@ -88,7 +90,7 @@ export default function RegisterPage() {
     <div className="h-[calc(100vh-4rem)] flex-1 w-full flex flex-col lg:flex-row bg-background selection:bg-primary/20 relative overflow-hidden">
 
       {/* LEFT COLUMN: Hero Imagery (Hidden on Mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-950">
+      <div className="hidden lg:flex lg:flex-col lg:justify-between lg:w-1/2 relative overflow-hidden bg-slate-950 p-12">
         {/* The second generated AI/HR image */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -99,7 +101,7 @@ export default function RegisterPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/60 to-transparent" />
 
         {/* Content overlaid on image (Top Left Corner) */}
-        <div className="absolute top-10 left-12 z-20">
+        <div className="z-20">
           <div className="flex flex-col gap-5 w-full max-w-[55rem]">
             <h2 className="text-4xl lg:text-[2.75rem] font-light uppercase tracking-[0.15em] leading-[1.3] text-white/90">
               Recruitment Intelligence & <br /> Management System
@@ -113,7 +115,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Content overlaid on image (Bottom) */}
-        <div className="relative z-10 p-12 mt-auto flex flex-col justify-end h-full w-full max-w-2xl text-slate-100">
+        <div className="relative z-10 mt-8 flex flex-col justify-end w-full max-w-2xl text-slate-100">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}

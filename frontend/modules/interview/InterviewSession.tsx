@@ -6,7 +6,7 @@ import AnswerInput from './AnswerInput';
 import ScoreIndicator from './ScoreIndicator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { API_BASE_URL } from '@/lib/config';
+import { getApiBaseUrl } from '@/lib/config';
 import { toast } from 'sonner';
 import { APIClient } from '@/app/dashboard/lib/api-client';
 
@@ -15,7 +15,7 @@ import '@tensorflow/tfjs-backend-webgl';
 import * as blazeface from '@tensorflow-models/blazeface';
 import {
   Loader2, ShieldCheck, ShieldAlert,
-  UserCheck, Eye, BrainCircuit, CheckCircle2, Trophy, LogOut
+  UserCheck, Eye, BrainCircuit, CheckCircle2, Trophy, LogOut, CameraOff
 } from 'lucide-react';
 import InterviewSidebar from './InterviewSidebar';
 import { FeedbackDialog } from '@/components/interview-support';
@@ -31,7 +31,7 @@ function authHeaders(token: string) {
 }
 
 async function apiFetch(path: string, token: string, opts: RequestInit = {}) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...opts,
     headers: { ...authHeaders(token), ...(opts.headers || {}) },
   });
@@ -82,6 +82,8 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     }
     return 0;
   });
+  const [isCameraConnected, setIsCameraConnected] = useState(true);
+  const lastStrikeTimeRef = useRef(0);
   const sessionStartRef = useRef(Date.now());
   // Shadow isStarted in a ref so handleStrike stays stable across isStarted changes
   const isStartedRef = useRef(false);
@@ -163,6 +165,11 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const handleStrike = useCallback((reason: string) => {
     if (!isStartedRef.current) return; // use ref — stable, no re-render dependency
     if (Date.now() - sessionStartRef.current < 15000) return; // ignore first 15s
+    if (Date.now() - lastStrikeTimeRef.current < 2000) {
+      console.log('[Proctoring] Strike ignored due to 2s cooldown');
+      return;
+    }
+    lastStrikeTimeRef.current = Date.now();
 
     setFocusStrikes(prev => {
       const next = prev + 1;
@@ -175,7 +182,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
       // Record strike as a monitoring event to create a server-side audit trail
       const sanitizedReason = reason.replace(/\s+/g, '_').toLowerCase();
-      fetch(`${API_BASE_URL}/api/interviews/${interviewId}/monitoring-events`, {
+      fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/monitoring-events`, {
         method: 'POST',
         headers: authHeaders(token),
         body: JSON.stringify({
@@ -186,7 +193,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       }).catch((err) => console.error('Failed to post strike monitoring event:', err));
 
       if (next < 4) {
-        toast.error(`Warning ${next}/4: ${reason}`, {
+        toast.error(`Warning ${next}/3: ${reason}`, {
           description: 'Multiple violations will result in immediate session termination.',
           duration: 5000,
         });
@@ -194,7 +201,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         if (!terminationSentRef.current) {
           terminationSentRef.current = true;
           setIsTerminated(true);
-          fetch(`${API_BASE_URL}/api/interviews/${interviewId}/security-violation`, {
+          fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/security-violation`, {
             method: 'POST',
             headers: authHeaders(token),
             body: JSON.stringify({ reason }),
@@ -619,10 +626,51 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
   // ─── PROCTORING SETUP ──────────────────────────────────────────────────────
   const cameraInitializedRef = useRef(false);
+  const deviceChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initCameraRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Handle device reconnection with debouncing
+  const handleDeviceChange = useCallback(async () => {
+    // Clear any pending debounce timeout
+    if (deviceChangeTimeoutRef.current) {
+      clearTimeout(deviceChangeTimeoutRef.current);
+    }
+
+    // Debounce: wait 100ms before attempting reconnection
+    deviceChangeTimeoutRef.current = setTimeout(async () => {
+      // Only attempt reconnection if:
+      // 1. Camera is currently disconnected
+      // 2. Interview is not finished (allow reconnection during preview and active interview)
+      if (!cameraInitializedRef.current && !isFinishedRef.current) {
+        try {
+          // Enumerate devices to confirm video input is available
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const hasVideoInput = devices.some(device => device.kind === 'videoinput');
+          
+          if (hasVideoInput) {
+            console.log('[Camera] Video device detected, attempting reinitialization...');
+            // Call initCamera to reinitialize the stream
+            if (initCameraRef.current) {
+              await initCameraRef.current();
+            }
+          }
+        } catch (err) {
+          console.error('[Camera] Device enumeration failed:', err);
+        }
+      }
+    }, 100);
+  }, []);
 
   useEffect(() => {
     async function initCamera() {
-      if (cameraInitializedRef.current) return;
+      const isStreamActive = !!activeStreamRef.current && 
+                             activeStreamRef.current.getTracks().length > 0 && 
+                             activeStreamRef.current.getTracks().every((t: any) => t.readyState === 'live');
+      if (cameraInitializedRef.current && isStreamActive) return;
+
+      // Clear old stream references before reinitialization
+      activeStreamRef.current?.getTracks().forEach(track => track.stop());
+      activeStreamRef.current = null;
       
       try {
         await tf.ready();
@@ -632,8 +680,19 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         activeStreamRef.current = stream;
-        if (sessionVideoRef.current) sessionVideoRef.current.srcObject = stream;
+        
+        // Ensure stream is bound to all relevant video elements
+        if (sessionVideoRef.current) {
+          sessionVideoRef.current.srcObject = stream;
+          sessionVideoRef.current.play().catch(e => console.warn("Preview video play error:", e));
+        }
+        if (floatingVideoRef.current) {
+          floatingVideoRef.current.srcObject = stream;
+          floatingVideoRef.current.play().catch(e => console.warn("Floating video play error:", e));
+        }
+
         cameraInitializedRef.current = true;
+        setIsCameraConnected(true);
         setIsDeviceTestSuccess(true);
         setDeviceTestError(null);
 
@@ -641,6 +700,8 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         if (videoTrack) {
           videoTrack.onmute = () => handleStrike('Camera feed disabled/muted');
           videoTrack.onended = () => {
+            cameraInitializedRef.current = false;
+            setIsCameraConnected(false);
             handleStrike('Camera hardware disconnected');
           };
         }
@@ -682,23 +743,33 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         }
       } catch (e: any) {
         console.error('Video setup failed', e);
+        setIsCameraConnected(false);
         setIsDeviceTestSuccess(false);
         setDeviceTestError(e.message || String(e));
       }
     }
     
+    // Store initCamera in ref so handleDeviceChange can call it
+    initCameraRef.current = initCamera;
+    
     initCamera();
+    
+    // Register devicechange event listener to detect camera reconnection
+    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
 
     // ── cleanup only runs on true component unmount, NOT on re-renders ──
     const mountedStream = { ref: activeStreamRef };
     return () => {
+      // Remove devicechange event listener
+      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+      
       // Only stop tracks when the whole component unmounts (user leaves interview)
       if (mountedStream.ref.current) {
         mountedStream.ref.current.getTracks().forEach(t => t.stop());
         console.log('[Camera] Stopped all tracks on component unmount.');
       }
     };
-  }, [handleStrike]); // handleStrike is now stable — doesn't change on isStarted
+  }, [handleStrike, handleDeviceChange]); // handleStrike is now stable — doesn't change on isStarted
 
   // Synchronize camera stream to pre-start preview when loading completes
   useEffect(() => {
@@ -718,21 +789,23 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         console.log("[Float] Bound camera stream to floating widget.");
       }
     }
-  }, [isStarted]);
+  }, [isStarted, isCameraConnected]);
 
   // Fullscreen tracking
   useEffect(() => {
     const onFSChange = () => {
       const isFull = !!document.fullscreenElement;
       setIsFullscreen(isFull);
-      // If session is running and user exits fullscreen, show the gate overlay
+      // If session is running and user exits fullscreen, record strike and show gate
       if (!isFull && isStartedRef.current) {
+        console.log('[Proctoring] Fullscreen exit detected');
+        handleStrike('Exited fullscreen mode');
         setShowFullscreenGate(true);
       }
     };
     document.addEventListener('fullscreenchange', onFSChange);
     return () => document.removeEventListener('fullscreenchange', onFSChange);
-  }, []);
+  }, [handleStrike]);
 
   const enterFullscreen = async () => {
     try {
@@ -753,7 +826,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         setTerminationReason(reason);
         setIsTerminated(true);
         
-        fetch(`${API_BASE_URL}/api/interviews/${interviewId}/fail-device-test`, {
+        fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/fail-device-test`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -910,7 +983,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           // Capture secure frame snapshot periodically
           const snapshot = captureFrame(video);
 
-          fetch(`${API_BASE_URL}/api/interviews/${interviewId}/monitoring-events`, {
+          fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/monitoring-events`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -929,9 +1002,17 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     }, 3000);
 
     const handleVisibility = () => {
-      if (document.hidden) handleStrike('Tab switched');
+      if (!isStartedRef.current) return; // Only detect during active interview
+      if (document.hidden) {
+        console.log('[Proctoring] Tab switch detected');
+        handleStrike('Tab switched');
+      }
     };
-    const handleBlur = () => handleStrike('Window focus lost');
+    const handleBlur = () => {
+      if (!isStartedRef.current) return; // Only detect during active interview
+      console.log('[Proctoring] Window focus lost');
+      handleStrike('Window focus lost');
+    };
     
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
@@ -1076,30 +1157,13 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
               )}
 
               <Button
+                disabled={!isDeviceTestSuccess}
                 className={`w-full h-16 rounded-2xl font-black text-xl shadow-xl transition-all duration-300 ${
                   !isDeviceTestSuccess 
-                    ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' 
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none hover:bg-slate-300' 
                     : 'shadow-primary/20'
                 }`}
                 onClick={async () => {
-                  if (!isDeviceTestSuccess) {
-                    const reason = "Invalid Interview session";
-                    setTerminationReason(reason);
-                    setIsTerminated(true);
-                    try {
-                      await fetch(`${API_BASE_URL}/api/interviews/${interviewId}/fail-device-test`, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ reason })
-                      });
-                    } catch (err) {
-                      console.error("Failed to report device test failure:", err);
-                    }
-                    return;
-                  }
                   // Request fullscreen before starting interview
                   try {
                     await document.documentElement.requestFullscreen();
@@ -1275,17 +1339,34 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           autoPlay
           muted
           playsInline
-          className={`w-full h-full object-cover transition-all duration-700 ${!isFaceDetected ? 'grayscale blur-sm' : ''}`}
+          className={`w-full h-full object-cover transition-all duration-700 ${(!isFaceDetected || !isCameraConnected) ? 'grayscale blur-sm' : ''}`}
         />
         <div className="absolute top-3 left-3 flex gap-1.5">
-          <div className={`px-2 py-1 rounded-lg backdrop-blur-md border text-[8px] font-black uppercase tracking-tighter flex items-center gap-1.5 ${isFaceDetected ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
-            <div className={`w-1 h-1 rounded-full ${isFaceDetected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-            {isFaceDetected ? 'Live Session' : 'Sensor Alert'}
+          <div className={`px-2 py-1 rounded-lg backdrop-blur-md border text-[8px] font-black uppercase tracking-tighter flex items-center gap-1.5 ${(isFaceDetected && isCameraConnected) ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+            <div className={`w-1 h-1 rounded-full ${(isFaceDetected && isCameraConnected) ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+            {(isFaceDetected && isCameraConnected) ? 'Live Session' : 'Sensor Alert'}
           </div>
         </div>
-        {!isFaceDetected && (
+        {isCameraConnected && !isFaceDetected && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
             <ShieldAlert className="w-8 h-8 text-white animate-bounce" />
+          </div>
+        )}
+        {!isCameraConnected && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-[2px] p-2 text-center">
+            <CameraOff className="w-8 h-8 text-red-500 mb-2 animate-pulse" />
+            <p className="text-[10px] font-bold text-white mb-2">Camera Disconnected</p>
+            <Button 
+              size="sm" 
+              className="h-7 px-3 text-[9px] font-black uppercase tracking-widest bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              onClick={async () => {
+                if (initCameraRef.current) {
+                  await initCameraRef.current();
+                }
+              }}
+            >
+              Reconnect
+            </Button>
           </div>
         )}
       </div>
