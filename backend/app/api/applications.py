@@ -1343,12 +1343,51 @@ def _extract_storage_path_identifier(path: str) -> Optional[str]:
     # 2. Extract the part after the bucket name if present
     for marker in ["/MAIL_ATTACHMENTS/", "/resumes/"]:
         if marker in path:
-            return path.split(marker)[-1]
-    # 3. Handle relative paths (e.g., '123/resume_abc.pdf' or 'ingested/xyz.pdf')
-    # If it starts with MAIL_ATTACHMENTS/, strip it
+            return path.split(marker)[-1].strip("/")
+    # 3. Handle relative paths
     if path.startswith("MAIL_ATTACHMENTS/"):
-        return path.replace("MAIL_ATTACHMENTS/", "", 1)
-    return path
+        return path.replace("MAIL_ATTACHMENTS/", "", 1).strip("/")
+    return path.strip("/")
+
+def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: set = None, app_emails_set: set = None):
+    """
+    Unified logic to resolve if an ingested email is mapped to an application.
+    Returns (app_object_or_none, processed_flag).
+    """
+    if item.processed:
+        # If manually marked processed, we don't necessarily need the app object for stats,
+        # but for the list we still try to find it for the "VIEW CANDIDATE" link.
+        pass
+
+    # Extract candidate's raw email from sender email
+    sender_str = item.sender_email or ""
+    match = re.search(r'<([^>]+)>', sender_str)
+    raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
+
+    # 1. Match by unique storage path identifier (most accurate)
+    path_id = _extract_storage_path_identifier(item.file_url)
+    if path_id and len(path_id) > 5: # Avoid matching on empty or too-short paths
+        if app_paths_set is not None:
+            if path_id in app_paths_set:
+                # For stats (where we have the set), we don't return the full app object
+                return True, True
+        else:
+            # For the list (where we need the full app object)
+            app = db.query(Application).filter(Application.resume_file_path.like(f"%{path_id}%")).first()
+            if app:
+                return app, True
+
+    # 2. Match by candidate email (fallback)
+    if raw_email:
+        if app_emails_set is not None:
+            if raw_email in app_emails_set:
+                return True, True
+        else:
+            app = db.query(Application).filter(Application.candidate_email.ilike(raw_email)).order_by(Application.applied_at.desc()).first()
+            if app:
+                return app, True
+
+    return None, item.processed
 
 @router.get("/ingested-emails/stats")
 def get_ingested_emails_stats(
@@ -1374,26 +1413,9 @@ def get_ingested_emails_stats(
     
     auto_mapped = 0
     for item in items:
-        # 1. Explicitly marked as processed (manual assignment sets this)
-        if item.processed:
+        app_found, is_processed = _resolve_resume_mapping(item, db, app_paths, app_emails)
+        if app_found or is_processed:
             auto_mapped += 1
-            continue
-            
-        # 2. Match by unique storage path identifier
-        if item.file_url:
-            path_id = _extract_storage_path_identifier(item.file_url)
-            if path_id and path_id in app_paths:
-                auto_mapped += 1
-                continue
-
-        # 3. Match by candidate email (extracted from sender string)
-        sender_str = item.sender_email or ""
-        match = re.search(r'<([^>]+)>', sender_str)
-        raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
-        
-        if raw_email in app_emails:
-            auto_mapped += 1
-            continue
                 
     return {
         "total_ingested": total_ingested,
@@ -1429,34 +1451,17 @@ def get_ingested_emails(
     results = []
     
     for item in items:
-        # Extract candidate's raw email from sender email
+        app, is_processed = _resolve_resume_mapping(item, db)
+        
+        # Duplicate detection logic
         sender_str = item.sender_email or ""
         match = re.search(r'<([^>]+)>', sender_str)
         raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
-
-        # Match application strictly by unique identifier extracted from path
-        app = None
-        if item.file_url:
-            path_id = _extract_storage_path_identifier(item.file_url)
-            if path_id:
-                # Search for application with matching relative path
-                app = db.query(Application).filter(
-                    Application.resume_file_path.like(f"%{path_id}%")
-                ).first()
-            
-        # Fallback to matching strictly by candidate's email
-        if not app and raw_email:
-            app = db.query(Application).filter(
-                Application.candidate_email.ilike(raw_email)
-            ).order_by(Application.applied_at.desc()).first()
-
         candidate_email_to_check = app.candidate_email if app else raw_email
         
         is_duplicate = False
         if candidate_email_to_check:
-            dup_query = db.query(Application).filter(
-                Application.candidate_email.ilike(candidate_email_to_check)
-            )
+            dup_query = db.query(Application).filter(Application.candidate_email.ilike(candidate_email_to_check))
             if app:
                 dup_query = dup_query.filter(Application.id != app.id)
             is_duplicate = dup_query.count() > 0
@@ -1468,7 +1473,7 @@ def get_ingested_emails(
             "file_name": item.file_name,
             "file_url": item.file_url,
             "received_at": item.received_at.replace(tzinfo=timezone.utc) if item.received_at else None,
-            "processed": item.processed or (app is not None),
+            "processed": is_processed or (app is not None),
             "application_id": app.id if app else None,
             "job_title": app.job.title if app and app.job else None,
             "job_code": app.job.job_id if app and app.job else None,
