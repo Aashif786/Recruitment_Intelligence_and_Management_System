@@ -232,10 +232,19 @@ def debug_applications(db: Session = Depends(get_db)):
         test_secret = '5ff829b387f2b50f516a5326b52ad798312cd6c7709226e4ad9b21f254ee8019'
         secret_matches = (settings.jwt_secret == test_secret)
 
+        u = db.query(User).filter(User.id == 26).first()
+        res = get_hr_applications(current_user=u, db=db, to_date='2026-06-01', limit=10, skip=0)
+
         return {
             "success": True,
             "database_host": db_url,
             "jwt_secret_matches": secret_matches,
+            "get_hr_applications_test": {
+                "total": res.get("total"),
+                "items_count": len(res.get("items", [])),
+                "error_hint": res.get("error_hint"),
+                "items_preview": [{k: v for k, v in item.items() if k in ["id", "candidate_name", "status"]} for item in res.get("items", [])][:3]
+            },
             "counts": {
                 "applications": db.query(Application).count(),
                 "jobs": db.query(Job).count(),
