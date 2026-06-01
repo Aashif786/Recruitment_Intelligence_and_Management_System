@@ -134,6 +134,14 @@ export default function HRApplicationsPage() {
   const totalCount = paginatedData?.total || 0;
   const isLoading = isSwrLoading;
 
+  useEffect(() => {
+    if (error) {
+      console.error("[Applications Page] SWR Fetching Error:", error);
+    } else if (paginatedData) {
+      console.log("[Applications Page] SWR Fetching Success:", paginatedData);
+    }
+  }, [paginatedData, error]);
+
   const totalPages = paginatedData?.pages || 0;
   const hasMoreApplications = applicationsPage < totalPages;
 
