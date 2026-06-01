@@ -130,7 +130,7 @@ export default function InterviewSidebar({
                     </div>
                 </div>
                 <p className="text-[9px] font-medium text-slate-500 leading-tight">
-                    {strikes === 0 ? "No violations detected. Session secure." : strikes === 1 ? "1 violation recorded. Please stay focused." : "Critical alert: One strike remaining."}
+                    {strikes === 0 ? "No violations detected. Session secure." : strikes === 1 ? "1 violation recorded. Please stay focused." : strikes === 2 ? "2 violations recorded. Critical alert." : "3 violations recorded. One strike remaining!"}
                 </p>
             </div>
 

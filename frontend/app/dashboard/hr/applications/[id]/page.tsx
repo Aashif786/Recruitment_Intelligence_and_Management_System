@@ -117,6 +117,15 @@ export default function HRApplicationDetailPage() {
         }
     }, [application?.hr_notes])
 
+    useEffect(() => {
+        if (appError) {
+            const errorMsg = appError.message || String(appError);
+            if (errorMsg.includes('401') || errorMsg.toLowerCase().includes('unauthorized') || errorMsg.toLowerCase().includes('token')) {
+                router.push('/auth/login?expired=true');
+            }
+        }
+    }, [appError, router])
+
     const resumeStatus: string = useMemo(() => {
         const raw = application?.resume_status as string | undefined
         if (raw) return raw

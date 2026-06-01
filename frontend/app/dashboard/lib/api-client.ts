@@ -216,10 +216,10 @@ export class APIClient {
       if (response.status === 401 && typeof window !== 'undefined') {
         const currentPath = window.location.pathname
         // Only redirect if NOT already on an auth/public page (prevents loop)
-        const isAuthPage = currentPath.includes('/auth/') ||
-          currentPath.includes('/calrims') ||
-          currentPath.includes('/interview') ||
-          currentPath === '/'
+        const cleanPath = currentPath.replace(/^\/calrims/, '') || '/'
+        const isAuthPage = cleanPath.includes('/auth/') ||
+          cleanPath.includes('/interview') ||
+          cleanPath === '/'
         if (!isAuthPage) {
           // Debounce: only redirect once every 3s to prevent looping
           const lastRedirect = parseInt(sessionStorage.getItem('_auth_redirect_ts') || '0')

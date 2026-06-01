@@ -15,7 +15,7 @@ import '@tensorflow/tfjs-backend-webgl';
 import * as blazeface from '@tensorflow-models/blazeface';
 import {
   Loader2, ShieldCheck, ShieldAlert,
-  UserCheck, Eye, BrainCircuit, CheckCircle2, Trophy, LogOut
+  UserCheck, Eye, BrainCircuit, CheckCircle2, Trophy, LogOut, CameraOff
 } from 'lucide-react';
 import InterviewSidebar from './InterviewSidebar';
 import { FeedbackDialog } from '@/components/interview-support';
@@ -82,6 +82,8 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     }
     return 0;
   });
+  const [isCameraConnected, setIsCameraConnected] = useState(true);
+  const lastStrikeTimeRef = useRef(0);
   const sessionStartRef = useRef(Date.now());
   // Shadow isStarted in a ref so handleStrike stays stable across isStarted changes
   const isStartedRef = useRef(false);
@@ -163,6 +165,11 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const handleStrike = useCallback((reason: string) => {
     if (!isStartedRef.current) return; // use ref — stable, no re-render dependency
     if (Date.now() - sessionStartRef.current < 15000) return; // ignore first 15s
+    if (Date.now() - lastStrikeTimeRef.current < 2000) {
+      console.log('[Proctoring] Strike ignored due to 2s cooldown');
+      return;
+    }
+    lastStrikeTimeRef.current = Date.now();
 
     setFocusStrikes(prev => {
       const next = prev + 1;
@@ -186,7 +193,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       }).catch((err) => console.error('Failed to post strike monitoring event:', err));
 
       if (next < 4) {
-        toast.error(`Warning ${next}/4: ${reason}`, {
+        toast.error(`Warning ${next}/3: ${reason}`, {
           description: 'Multiple violations will result in immediate session termination.',
           duration: 5000,
         });
@@ -656,11 +663,14 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
   useEffect(() => {
     async function initCamera() {
+      const isStreamActive = !!activeStreamRef.current && 
+                             activeStreamRef.current.getTracks().length > 0 && 
+                             activeStreamRef.current.getTracks().every((t: any) => t.readyState === 'live');
+      if (cameraInitializedRef.current && isStreamActive) return;
+
       // Clear old stream references before reinitialization
       activeStreamRef.current?.getTracks().forEach(track => track.stop());
       activeStreamRef.current = null;
-      
-      if (cameraInitializedRef.current) return;
       
       try {
         await tf.ready();
@@ -671,7 +681,12 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         activeStreamRef.current = stream;
         if (sessionVideoRef.current) sessionVideoRef.current.srcObject = stream;
+        if (floatingVideoRef.current) {
+          floatingVideoRef.current.srcObject = stream;
+          floatingVideoRef.current.play().catch(e => console.error("Error playing floating video:", e));
+        }
         cameraInitializedRef.current = true;
+        setIsCameraConnected(true);
         setIsDeviceTestSuccess(true);
         setDeviceTestError(null);
 
@@ -680,6 +695,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           videoTrack.onmute = () => handleStrike('Camera feed disabled/muted');
           videoTrack.onended = () => {
             cameraInitializedRef.current = false;
+            setIsCameraConnected(false);
             handleStrike('Camera hardware disconnected');
           };
         }
@@ -721,6 +737,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         }
       } catch (e: any) {
         console.error('Video setup failed', e);
+        setIsCameraConnected(false);
         setIsDeviceTestSuccess(false);
         setDeviceTestError(e.message || String(e));
       }
@@ -766,7 +783,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         console.log("[Float] Bound camera stream to floating widget.");
       }
     }
-  }, [isStarted]);
+  }, [isStarted, isCameraConnected]);
 
   // Fullscreen tracking
   useEffect(() => {
@@ -1316,17 +1333,34 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           autoPlay
           muted
           playsInline
-          className={`w-full h-full object-cover transition-all duration-700 ${!isFaceDetected ? 'grayscale blur-sm' : ''}`}
+          className={`w-full h-full object-cover transition-all duration-700 ${(!isFaceDetected || !isCameraConnected) ? 'grayscale blur-sm' : ''}`}
         />
         <div className="absolute top-3 left-3 flex gap-1.5">
-          <div className={`px-2 py-1 rounded-lg backdrop-blur-md border text-[8px] font-black uppercase tracking-tighter flex items-center gap-1.5 ${isFaceDetected ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
-            <div className={`w-1 h-1 rounded-full ${isFaceDetected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-            {isFaceDetected ? 'Live Session' : 'Sensor Alert'}
+          <div className={`px-2 py-1 rounded-lg backdrop-blur-md border text-[8px] font-black uppercase tracking-tighter flex items-center gap-1.5 ${(isFaceDetected && isCameraConnected) ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+            <div className={`w-1 h-1 rounded-full ${(isFaceDetected && isCameraConnected) ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+            {(isFaceDetected && isCameraConnected) ? 'Live Session' : 'Sensor Alert'}
           </div>
         </div>
-        {!isFaceDetected && (
+        {isCameraConnected && !isFaceDetected && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
             <ShieldAlert className="w-8 h-8 text-white animate-bounce" />
+          </div>
+        )}
+        {!isCameraConnected && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-[2px] p-2 text-center">
+            <CameraOff className="w-8 h-8 text-red-500 mb-2 animate-pulse" />
+            <p className="text-[10px] font-bold text-white mb-2">Camera Disconnected</p>
+            <Button 
+              size="sm" 
+              className="h-7 px-3 text-[9px] font-black uppercase tracking-widest bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              onClick={async () => {
+                if (initCameraRef.current) {
+                  await initCameraRef.current();
+                }
+              }}
+            >
+              Reconnect
+            </Button>
           </div>
         )}
       </div>
