@@ -2290,6 +2290,7 @@ async def update_hr_notes(
 @router.post("/extract-basic-info")
 @limiter.limit("5/minute")
 async def extract_basic_info(
+    request: Request,
     resume_file: UploadFile = File(...),
     current_user: User = Depends(get_current_hr)
 ):
