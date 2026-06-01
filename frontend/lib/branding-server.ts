@@ -1,10 +1,10 @@
-import { API_BASE_URL } from './config';
+import { getApiBaseUrl } from './config';
 import { getBranding, BrandingConfig } from './branding';
 
 export async function getBrandingServer(): Promise<BrandingConfig> {
   try {
     // Fetch settings from the backend API
-    const res = await fetch(`${API_BASE_URL}/api/settings/branding`, { 
+    const res = await fetch(`${getApiBaseUrl()}/api/settings/branding`, { 
       next: { revalidate: 60 } // Cache for 1 minute
     });
     if (res.ok) {

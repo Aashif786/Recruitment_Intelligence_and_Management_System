@@ -43,7 +43,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import useSWR, { mutate } from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
 import { APIClient } from '@/app/dashboard/lib/api-client'
-import { API_BASE_URL } from '@/lib/config'
+import { getApiBaseUrl } from '@/lib/config'
 import { toast } from 'sonner'
 import {
   Radar,
@@ -1721,7 +1721,7 @@ export default function ReportsPage() {
                     <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-xl aspect-video relative group">
                       <video
                         key={viewingReport.id}
-                        src={viewingReport.video_url?.startsWith('http') ? viewingReport.video_url : `${API_BASE_URL}${viewingReport.video_url}`}
+                        src={viewingReport.video_url?.startsWith('http') ? viewingReport.video_url : `${getApiBaseUrl()}${viewingReport.video_url}`}
                         controls
                         preload="metadata"
                         className="w-full h-full"

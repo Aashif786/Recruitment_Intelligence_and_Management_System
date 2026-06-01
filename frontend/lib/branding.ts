@@ -22,8 +22,8 @@ export const BRANDING_DEFAULTS: BrandingConfig = {
   footerText: 'Powered by Caldim Engineering. Built for teams who care about who they hire.',
   supportEmail: 'support@caldimproducts.com',
   themeColor: '#2563eb', // Default blue color
-  termsUrl: '/calrims/terms/',
-  privacyUrl: '/calrims/privacy/',
+  termsUrl: '/terms/',
+  privacyUrl: '/privacy/',
   seoTitleDefault: 'CAL-RIMS - AI-Powered Recruitment Intelligence System',
   seoDescriptionDefault: 'CAL-RIMS is an AI-powered automated recruitment platform for seamless hiring, empowering teams to find, evaluate, and hire top-tier talent efficiently.',
 };
@@ -38,8 +38,17 @@ export function getBranding(settings: any): BrandingConfig {
   const footerText = settings?.footer_text || process.env.NEXT_PUBLIC_FOOTER_TEXT || BRANDING_DEFAULTS.footerText;
   const supportEmail = settings?.support_email || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || BRANDING_DEFAULTS.supportEmail;
   const themeColor = settings?.theme_color || process.env.NEXT_PUBLIC_THEME_COLOR || BRANDING_DEFAULTS.themeColor;
-  const termsUrl = settings?.terms_url || process.env.NEXT_PUBLIC_TERMS_URL || BRANDING_DEFAULTS.termsUrl;
-  const privacyUrl = settings?.privacy_url || process.env.NEXT_PUBLIC_PRIVACY_URL || BRANDING_DEFAULTS.privacyUrl;
+  
+  let termsUrl = settings?.terms_url || process.env.NEXT_PUBLIC_TERMS_URL || BRANDING_DEFAULTS.termsUrl;
+  let privacyUrl = settings?.privacy_url || process.env.NEXT_PUBLIC_PRIVACY_URL || BRANDING_DEFAULTS.privacyUrl;
+  
+  if (termsUrl.startsWith('/calrims/')) {
+    termsUrl = termsUrl.substring('/calrims'.length);
+  }
+  if (privacyUrl.startsWith('/calrims/')) {
+    privacyUrl = privacyUrl.substring('/calrims'.length);
+  }
+
   const seoTitleDefault = settings?.seo_title_default || process.env.NEXT_PUBLIC_SEO_TITLE_DEFAULT || BRANDING_DEFAULTS.seoTitleDefault;
   const seoDescriptionDefault = settings?.seo_description_default || process.env.NEXT_PUBLIC_SEO_DESCRIPTION_DEFAULT || BRANDING_DEFAULTS.seoDescriptionDefault;
 

@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import useSWR from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
-import { API_BASE_URL } from '@/lib/config'
+import { getApiBaseUrl } from '@/lib/config'
 import { 
     Award, 
     FileText, 
@@ -108,7 +108,7 @@ export default function CandidateScorecardPage() {
                 <div className="flex items-center gap-6">
                     <Avatar className="h-24 w-24 ring-4 ring-background shadow-2xl border-2 border-border/50">
                         {application.candidate_photo_path ? (
-                            <AvatarImage src={`${API_BASE_URL}/${application.candidate_photo_path.replace(/\\/g, '/')}`} />
+                            <AvatarImage src={`${getApiBaseUrl()}/${application.candidate_photo_path.replace(/\\/g, '/')}`} />
                         ) : (
                             <AvatarFallback className="text-3xl font-black bg-gradient-to-br from-primary/20 to-primary/40">
                                 {application.candidate_name.charAt(0).toUpperCase()}

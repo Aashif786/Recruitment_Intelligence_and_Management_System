@@ -22,7 +22,6 @@ import useSWR from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
 import { performMutation } from "@/app/dashboard/lib/swr-utils"
 import { APIClient } from "@/app/dashboard/lib/api-client"
-import { API_BASE_URL } from "@/lib/config"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { normalizeHireRecommendation } from "@/lib/recommendation-label"
 import { isInterviewNotCompleted } from "@/components/reports/interviewIncomplete"

@@ -92,9 +92,7 @@ export default function HRApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [jobIdFilter, setJobIdFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
-  // Initialize to today (YYYY-MM-DD) — was previously empty, meaning the TO DATE filter
-  // showed today visually (via defaultValue) but never actually sent the filter to the API.
-  const [dateTo, setDateTo] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const [dateTo, setDateTo] = useState("");
   const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -411,7 +409,7 @@ export default function HRApplicationsPage() {
                 onClick={() => {
                     setSearchTerm("");
                     setDateFrom("");
-                    setDateTo(new Date().toLocaleDateString('en-CA'));
+                    setDateTo("");
                     setStatusFilter("all");
                     setJobIdFilter("all");
                     setApplicationsPage(1);

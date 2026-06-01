@@ -43,7 +43,8 @@ export class APIClient {
       normalized.startsWith('/api/onboarding/') ||
       normalized === '/api/applications/apply' ||
       normalized === '/api/applications/extract-basic-info' ||
-      normalized === '/api/support/ticket'
+      normalized === '/api/support/ticket' ||
+      normalized === '/api/settings/branding'
     )
   }
 

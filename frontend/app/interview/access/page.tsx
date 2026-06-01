@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { API_BASE_URL } from '@/lib/config'
+import { getApiBaseUrl } from '@/lib/config'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -25,7 +25,7 @@ function InterviewAccessForm() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API_BASE_URL}/api/interviews/access`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/interviews/access`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: finalEmail, access_key: finalKey })

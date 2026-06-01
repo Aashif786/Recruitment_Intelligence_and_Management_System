@@ -6,7 +6,7 @@ import AnswerInput from './AnswerInput';
 import ScoreIndicator from './ScoreIndicator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { API_BASE_URL } from '@/lib/config';
+import { getApiBaseUrl } from '@/lib/config';
 import { toast } from 'sonner';
 import { APIClient } from '@/app/dashboard/lib/api-client';
 
@@ -31,7 +31,7 @@ function authHeaders(token: string) {
 }
 
 async function apiFetch(path: string, token: string, opts: RequestInit = {}) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...opts,
     headers: { ...authHeaders(token), ...(opts.headers || {}) },
   });
@@ -175,7 +175,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
       // Record strike as a monitoring event to create a server-side audit trail
       const sanitizedReason = reason.replace(/\s+/g, '_').toLowerCase();
-      fetch(`${API_BASE_URL}/api/interviews/${interviewId}/monitoring-events`, {
+      fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/monitoring-events`, {
         method: 'POST',
         headers: authHeaders(token),
         body: JSON.stringify({
@@ -194,7 +194,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         if (!terminationSentRef.current) {
           terminationSentRef.current = true;
           setIsTerminated(true);
-          fetch(`${API_BASE_URL}/api/interviews/${interviewId}/security-violation`, {
+          fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/security-violation`, {
             method: 'POST',
             headers: authHeaders(token),
             body: JSON.stringify({ reason }),
@@ -803,7 +803,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         setTerminationReason(reason);
         setIsTerminated(true);
         
-        fetch(`${API_BASE_URL}/api/interviews/${interviewId}/fail-device-test`, {
+        fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/fail-device-test`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -960,7 +960,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           // Capture secure frame snapshot periodically
           const snapshot = captureFrame(video);
 
-          fetch(`${API_BASE_URL}/api/interviews/${interviewId}/monitoring-events`, {
+          fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/monitoring-events`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,

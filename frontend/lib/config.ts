@@ -3,6 +3,12 @@
  */
 
 export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1' && host !== '192.168.1.173') {
+      return window.location.origin + '/calrims';
+    }
+  }
   const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:10000';
   let url = rawApiBaseUrl.replace(/\/+$/, '');
   if (typeof window !== 'undefined' && window.location.protocol === 'https:') {

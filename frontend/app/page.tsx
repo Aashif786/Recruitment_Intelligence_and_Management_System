@@ -612,7 +612,7 @@ export default function Home() {
                 <span
                   className="hero-title-stroke whitespace-nowrap text-slate-950"
                 >
-                  Hire with the same precision
+                  Hire with the same precision{" "}
                 </span>
                 <span className="block text-primary">
                   you use to build products.
@@ -1080,12 +1080,12 @@ export default function Home() {
               >
                 Terms
               </Link>
-              <a
+              {/* <a
                 href="#"
                 className="text-white/70 hover:text-white transition-colors"
               >
                 Updates
-              </a>
+              </a> */}
             </div>
           </div>
         </footer>
@@ -1121,11 +1121,17 @@ function BinaryColumn({
 }) {
   return (
     <div
-      className="hidden md:flex flex-col absolute top-0 bottom-0 pointer-events-none select-none z-0"
+      className="hidden md:flex flex-col"
       style={{
         left,
         right,
         opacity,
+        position: "absolute",
+        top: 0,
+        bottom: 0,
+        pointerEvents: "none",
+        userSelect: "none",
+        zIndex: 0,
         overflow: "hidden",
         width: "18px",
         maskImage:
