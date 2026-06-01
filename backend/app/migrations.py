@@ -481,21 +481,19 @@ def run_startup_migrations(engine: Engine):
 def encrypt_existing_plaintext_data(engine: Engine):
     """
     Finds all columns in the DB defined with EncryptedText and encrypts them
-    if they contain plaintext data.
+    if they contain plaintext data. Bypasses SQLAlchemy ORM decryption to prevent
+    redundant updates and infinite migration loops on startup.
     """
-    from sqlalchemy.orm import Session
-    from app.infrastructure.database import SessionLocal
     from app.core.encryption import is_encrypted, encrypt_field
-    import app.domain.models as models
-    from sqlalchemy import inspect
+    from app.infrastructure.database import Base
+    from sqlalchemy import text
     
-    db = SessionLocal()
-    try:
-        from app.infrastructure.database import Base
+    with engine.connect() as conn:
         for mapper in Base.registry.mappers:
             cls = mapper.class_
             if not hasattr(cls, '__tablename__'):
                 continue
+            tablename = cls.__tablename__
             encrypted_cols = []
             for col in mapper.columns:
                 if hasattr(col.type, '__class__') and col.type.__class__.__name__ == 'EncryptedText':
@@ -504,29 +502,32 @@ def encrypt_existing_plaintext_data(engine: Engine):
             if not encrypted_cols:
                 continue
                 
-            logger.info(f"Checking table '{cls.__tablename__}' for legacy plaintext values in columns: {encrypted_cols}")
-            try:
-                rows = db.query(cls).all()
-                updated_count = 0
-                for row in rows:
-                    needs_update = False
-                    for col_name in encrypted_cols:
-                        val = getattr(row, col_name)
-                        if val and not is_encrypted(val):
-                            logger.info(f"Encrypting legacy plaintext value for {cls.__tablename__}.{col_name} (id={getattr(row, 'id', 'N/A')})")
-                            token = encrypt_field(val)
-                            setattr(row, col_name, token)
-                            needs_update = True
-                    if needs_update:
-                        updated_count += 1
-                if updated_count > 0:
-                    db.commit()
-                    logger.info(f"Successfully migrated {updated_count} rows in '{cls.__tablename__}'")
-            except Exception as table_err:
-                db.rollback()
-                logger.error(f"Error checking/migrating table '{cls.__tablename__}': {table_err}")
-    finally:
-        db.close()
+            logger.info(f"Checking table '{tablename}' for legacy plaintext values in columns: {encrypted_cols}")
+            for col_name in encrypted_cols:
+                try:
+                    # Select raw database values without ORM decryption
+                    result = conn.execute(text(f"SELECT id, {col_name} FROM {tablename} WHERE {col_name} IS NOT NULL"))
+                    rows = result.fetchall()
+                    
+                    updates = []
+                    for row_id, raw_val in rows:
+                        if raw_val and not is_encrypted(raw_val):
+                            logger.info(f"Encrypting legacy plaintext value for {tablename}.{col_name} (id={row_id})")
+                            encrypted_val = encrypt_field(raw_val)
+                            updates.append((encrypted_val, row_id))
+                    
+                    if updates:
+                        # Perform bulk update
+                        for encrypted_val, row_id in updates:
+                            conn.execute(
+                                text(f"UPDATE {tablename} SET {col_name} = :val WHERE id = :id"),
+                                {"val": encrypted_val, "id": row_id}
+                            )
+                        conn.commit()
+                        logger.info(f"Successfully migrated {len(updates)} legacy plaintext rows in '{tablename}.{col_name}'")
+                except Exception as table_err:
+                    conn.rollback()
+                    logger.error(f"Error checking/migrating table '{tablename}.{col_name}': {table_err}")
         
     # Enforce strict encryption on read after migration is done
     import app.core.encryption as encryption
