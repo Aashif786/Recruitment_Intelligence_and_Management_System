@@ -16,7 +16,7 @@ import logging
 import time
 from datetime import datetime, timezone, timedelta
 from app.infrastructure.database import get_db, SessionLocal
-from app.domain.models import User, Application, Job, ResumeExtraction, Interview, InterviewAnswer, ResumeExtractionVersion, InterviewReport
+from app.domain.models import User, Application, Job, ResumeExtraction, Interview, InterviewAnswer, ResumeExtractionVersion, InterviewReport, AttachmentResume
 from app.domain.schemas import (
     ApplicationCreate,
     ApplicationStatusUpdate,
@@ -270,7 +270,7 @@ def get_candidate_ranking(
 
 
 @router.post("/apply", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("300/minute")  # High limit for batch uploads (up to 50 files × 3 workers)
+@limiter.limit("10/minute")  # Reduced from 300/minute to prevent public abuse. Batch uploads should use an authenticated endpoint.
 async def apply_for_job(
     request: Request,
     job_id: int = Form(...),
@@ -331,20 +331,22 @@ async def apply_for_job(
     suspicious_email_domain = None
     if candidate_email:
         try:
-            # Minimal, explicit list to avoid over-blocking; can be extended safely later.
+            # Expanded list of disposable email domains (C-23)
             DISPOSABLE_DOMAINS = {
-                "fengnu.com",
-                "mailinator.com",
-                "guerrillamail.com",
-                "10minutemail.com",
-                "tempmail.com",
+                "fengnu.com", "mailinator.com", "guerrillamail.com", "10minutemail.com", 
+                "tempmail.com", "yopmail.com", "sharklasers.com", "getnada.com", 
+                "dispostable.com", "trashmail.com", "mail.tm", "mail.gw", "temp-mail.org"
             }
             _, domain_part = candidate_email.rsplit("@", 1)
             domain_part = domain_part.lower().strip()
             if domain_part in DISPOSABLE_DOMAINS:
                 suspicious_email_domain = domain_part
+                is_disposable = True
+            else:
+                is_disposable = False
         except Exception:
             suspicious_email_domain = None
+            is_disposable = False
 
     # 3. Phone Validation & Normalization (Points 3, 4)
     from app.core.phone_utils import compute_phone_hash, normalize_phone_digits
@@ -579,6 +581,7 @@ async def apply_for_job(
         resume_hash=resume_hash,
         status="applied",
         hr_notes=warning_notes,
+        is_disposable_email=is_disposable,
         applied_at=datetime.now(timezone(timedelta(hours=5, minutes=30))).replace(tzinfo=None),
         resume_status="pending",
     )
@@ -596,7 +599,17 @@ async def apply_for_job(
 
         # Upload Photo to Supabase
         if photo_content:
-            photo_ext = os.path.splitext(photo_file.filename)[1] if photo_file.filename else ".jpg"
+            # Derive extension from magic bytes, not filename
+            photo_ext = ".jpg" # default
+            if photo_content.startswith(b'\xff\xd8\xff'):
+                photo_ext = ".jpg"
+            elif photo_content.startswith(b'\x89PNG'):
+                photo_ext = ".png"
+            elif photo_content.startswith(b'GIF87a') or photo_content.startswith(b'GIF89a'):
+                photo_ext = ".gif"
+            elif photo_content.startswith(b'RIFF') and photo_content[8:12] == b'WEBP':
+                photo_ext = ".webp"
+            
             photo_storage_path = f"{new_application.id}/photo_initial{photo_ext}"
             returned_photo_path = upload_file(settings.supabase_bucket_id_photos, photo_storage_path, photo_content, content_type=photo_file.content_type)
             if not returned_photo_path:
@@ -1002,12 +1015,12 @@ async def process_application_background(application_id: int, job_id: int, abs_f
 
 
 @router.get("/has-applied", response_model=HasAppliedResponse)
-@limiter.limit("20/minute")
+@limiter.limit("5/minute")  # Stricter rate limit to prevent email/phone enumeration
 def has_applied_for_job(
     request: Request,
     job_id: int,
     candidate_email: str,
-    candidate_phone: Optional[str] = None,
+    candidate_phone: str, # Require both email and phone to confirm application status
     db: Session = Depends(get_db),
 ):
     """Return whether a (job_id, candidate_email/phone) application already exists.
@@ -1275,14 +1288,26 @@ from pydantic import BaseModel
 class EmailIngestRequest(BaseModel):
     imap_user: str
     imap_pass: str
+    imap_host: Optional[str] = "imap.gmail.com"
 
 from app.domain.models import AttachmentResume
 
 @router.post("/ingest-emails")
-async def ingest_email_resumes(req: EmailIngestRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def ingest_email_resumes(
+    req: EmailIngestRequest, 
+    background_tasks: BackgroundTasks, 
+    current_user: User = Depends(get_current_hr),
+    db: Session = Depends(get_db)
+):
     """
     Trigger manual email ingestion via IMAP and map/analyze them immediately
     """
+    # Security check: verify IMAP host is trusted (prevents SSRF/probing)
+    trusted_hosts = ["imap.gmail.com"]
+    # Add any other trusted hosts from settings if needed
+    if req.imap_host and req.imap_host not in trusted_hosts:
+         raise HTTPException(status_code=400, detail="Untrusted IMAP host.")
+
     # Phase 1: Rapid Fetch (Synchronous but optimized)
     result = fetch_resume_attachments(db, req.imap_user, req.imap_pass)
     if not result.get("success"):
@@ -1431,11 +1456,11 @@ def get_ingested_emails(
         "total": total,
         "page": (skip // limit) + 1,
         "size": limit,
-        "pages": (total + limit - 1) // limit,
+        "pages": (total + limit - 1) // limit if limit > 0 else 1,
         "global_stats": {
-            "total_ingested": total_ingested,
-            "auto_mapped": auto_mapped_count,
-            "pending_assignment": pending_count,
+            "total_ingested": stats["total_ingested"],
+            "auto_mapped": stats["auto_mapped"],
+            "pending_assignment": stats["pending_assignment"],
         },
     }
 
@@ -1470,6 +1495,21 @@ async def assign_ingested_email(
     if not candidate_name or candidate_name.lower() == "emailed candidate":
         email_match = re.search(r'<([^>]+)>', sender_str)
         raw_email = email_match.group(1).lower().strip() if email_match else sender_str.lower().strip()
+    
+    # Check for disposable email
+    is_disposable = False
+    if raw_email:
+        try:
+            DISPOSABLE_DOMAINS = {
+                "fengnu.com", "mailinator.com", "guerrillamail.com", "10minutemail.com", 
+                "tempmail.com", "yopmail.com", "sharklasers.com", "getnada.com", 
+                "dispostable.com", "trashmail.com", "mail.tm", "mail.gw", "temp-mail.org"
+            }
+            _, domain_part = raw_email.rsplit("@", 1)
+            if domain_part.lower().strip() in DISPOSABLE_DOMAINS:
+                is_disposable = True
+        except Exception:
+            pass
         candidate_name = raw_email.split('@')[0].replace('.', ' ').title()
     else:
         email_match = re.search(r'<([^>]+)>', sender_str)
@@ -1536,6 +1576,7 @@ async def assign_ingested_email(
         resume_file_name=resume.file_name,
         resume_hash=resume_hash,
         resume_file_path=resume_file_path,
+        is_disposable_email=is_disposable,
         status="applied",
         applied_at=get_ist_now(),
         resume_status="pending",
@@ -2246,10 +2287,23 @@ async def update_hr_notes(
     return application
 
 @router.post("/extract-basic-info")
-async def extract_basic_info(resume_file: UploadFile = File(...)):
+@limiter.limit("5/minute")
+async def extract_basic_info(
+    resume_file: UploadFile = File(...),
+    current_user: User = Depends(get_current_hr)
+):
     """Fast endpoint to extract Name and Phone from an uploaded resume."""
-    # Read file content
+    # 1. Extension Check
+    allowed_extensions = {'.pdf', '.docx', '.doc'}
+    file_ext = os.path.splitext(resume_file.filename)[1].lower()
+    if file_ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {file_ext}")
+
+    # 2. Size Limit Check (2MB cap)
+    MAX_FILE_SIZE = 2 * 1024 * 1024
     content = await resume_file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File size exceeds the 2MB limit.")
     
     # Extract text locally in memory
     resume_text = ""

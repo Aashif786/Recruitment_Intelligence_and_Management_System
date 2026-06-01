@@ -5,6 +5,7 @@ from app.domain.models import GlobalSettings, User
 from app.domain.schemas import GlobalSettingsUpdate, GlobalSettingsResponse
 from app.core.auth import get_current_hr, get_current_admin
 from app.services.email_ingestion_service import fetch_resume_attachments, run_batch_resume_processing
+from app.core.encryption import encrypt_field, decrypt_field
 import imaplib
 import logging
 
@@ -62,7 +63,7 @@ def _get_sensitive_settings_dict(db: Session) -> dict:
         "hr_phone": settings_dict.get("hr_phone", ""),
         "offer_letter_template": settings_dict.get("offer_letter_template", ""),
         "imap_email": settings_dict.get("imap_email", ""),
-        "imap_password": settings_dict.get("imap_password", ""),
+        "imap_password": "••••••••" if settings_dict.get("imap_password") else "",
         "auto_sync_enabled": settings_dict.get("auto_sync_enabled", "false").lower() == "true",
         
         "product_name": branding.get("product_name"),
@@ -151,11 +152,23 @@ def update_settings(
     imap_email_new = data.get("imap_email")
     imap_password_new = data.get("imap_password")
     
+    # "••••••••" is the masked placeholder from the frontend meaning "no change"
+    is_password_placeholder = imap_password_new == "••••••••"
+    if is_password_placeholder:
+        data.pop("imap_password", None)
+        imap_password_new = None
+
     if imap_email_new or imap_password_new:
         # Resolve the full pair: use new value if provided, else fall back to DB
-        existing = {s.key: s.value for s in db.query(GlobalSettings).all()}
-        email_to_test = (imap_email_new or existing.get("imap_email", "")).strip()
-        password_to_test = (imap_password_new or existing.get("imap_password", "")).strip()
+        existing_records = {s.key: s.value for s in db.query(GlobalSettings).all()}
+        email_to_test = (imap_email_new or existing_records.get("imap_email", "")).strip()
+        
+        # If new password provided, use it. Otherwise, use existing one from DB (and decrypt it)
+        if imap_password_new:
+            password_to_test = imap_password_new.strip()
+        else:
+            raw_pass = existing_records.get("imap_password", "")
+            password_to_test = decrypt_field(raw_pass).strip()
         
         if email_to_test and password_to_test:
             result = _verify_imap_credentials(email_to_test, password_to_test)
@@ -164,8 +177,6 @@ def update_settings(
                     "IMAP credential verification failed for %s: %s",
                     email_to_test, result["error"]
                 )
-                # Use HTTP 400 (not 422) so the frontend can distinguish an IMAP
-                # authentication failure from a Pydantic schema validation error.
                 raise HTTPException(
                     status_code=400,
                     detail=result["error"]
@@ -179,6 +190,10 @@ def update_settings(
         str_value = str(value)
         if isinstance(value, bool):
             str_value = "true" if value else "false"
+        
+        # Encrypt sensitive fields before saving
+        if key == "imap_password" and str_value and str_value != "••••••••":
+            str_value = encrypt_field(str_value)
             
         setting = db.query(GlobalSettings).filter(GlobalSettings.key == key).first()
         if setting:
@@ -197,7 +212,8 @@ def update_settings(
                 # Retrieve fully resolved credentials from DB
                 existing = {s.key: s.value for s in bg_db.query(GlobalSettings).all()}
                 email = existing.get("imap_email", "").strip()
-                password = existing.get("imap_password", "").strip()
+                # Decrypt password before using it for sync
+                password = decrypt_field(existing.get("imap_password", "")).strip()
                 if email and password:
                     fetch_resume_attachments(bg_db, email, password)
                     await run_batch_resume_processing(bg_db)

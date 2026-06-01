@@ -275,7 +275,8 @@ def login(request: Request, response: Response, credentials: UserLogin, db: Sess
         value=access_token,
         httponly=True,
         samesite="strict",
-        secure=settings.env == "production"
+        secure=settings.env == "production",
+        path="/"
         # Removed max_age and expires: Browser will delete cookie on close
     )
 
@@ -425,14 +426,34 @@ def reject_hr_user(request: Request, user_id: int, current_admin: User = Depends
     return {"message": f"User {user.email} has been rejected and candidates reassigned."}
 
 
+from app.core.redis_store import get_redis_client
+from app.core.auth import verify_token
+
 @router.post("/logout")
-def logout(response: Response):
-    """Clear the authentication cookie"""
+def logout(request: Request, response: Response):
+    """Clear the authentication cookie and revoke token in Redis"""
+    token = request.cookies.get("access_token")
+    if token:
+        try:
+            payload = verify_token(token)
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            if jti and exp:
+                redis_client = get_redis_client()
+                if redis_client:
+                    # Blocklist the token JTI until it naturally expires
+                    ttl = int(exp - datetime.now(timezone.utc).timestamp())
+                    if ttl > 0:
+                        redis_client.setex(f"token_blocklist:{jti}", ttl, "true")
+        except Exception as e:
+            logger.warning(f"Failed to blocklist token on logout: {e}")
+
     response.delete_cookie(
         key="access_token",
         httponly=True,
         samesite="strict",
-        secure=settings.env == "production"
+        secure=settings.env == "production",
+        path="/"
     )
     return {"message": "Logged out successfully"}
 
@@ -475,6 +496,8 @@ def forgot_password(request: Request, data: ForgotPasswordRequest, background_ta
     raw_otp = ''.join(secrets.choice(string.digits) for _ in range(6))
     user.otp_code = hash_password(raw_otp)
     user.otp_expiry = get_ist_now() + timedelta(minutes=30)
+    user.otp_attempt_count = 0
+    user.otp_locked_until = None
     
     try:
         db.commit()
@@ -492,6 +515,8 @@ def reset_password(request: Request, data: ResetPasswordRequest, db: Session = D
     user = db.query(User).filter(User.email == data.email.lower()).first()
     if not user:
          # C-01: generic message same as forgot-password success to prevent email enumeration
+         # Prevent email enumeration by always performing a dummy hash check
+         pwd_context.verify("dummy_password", "$2b$12$XzQyJkG9aBcDeFgHiJkLmOpQrStUvWxYz0123456789abcdefghij")
          return {"message": "Password has been successfully reset"}
     
     # C-02 OTP locked check

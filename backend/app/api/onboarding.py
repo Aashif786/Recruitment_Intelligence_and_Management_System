@@ -138,9 +138,13 @@ async def generate_pdf_via_puppeteer(html_content: str, filename: str, bucket: s
     
     try:
         headers = {}
-        pdf_secret = os.environ.get("PDF_GENERATION_SECRET") or os.environ.get("JWT_SECRET") or getattr(settings, "jwt_secret", None)
-        if pdf_secret:
-            headers["Authorization"] = f"Bearer {pdf_secret}"
+        # C-21: Use dedicated secret for PDF service; never fallback to main JWT secret
+        pdf_secret = settings.pdf_generation_secret
+        if not pdf_secret:
+            logger.error("PDF_GENERATION_SECRET is not configured. PDF service calls will fail.")
+            raise Exception("PDF service misconfigured: missing secret.")
+            
+        headers["Authorization"] = f"Bearer {pdf_secret}"
 
         async with httpx.AsyncClient(follow_redirects=True) as client:
             response = await client.post(

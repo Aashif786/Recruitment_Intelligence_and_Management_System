@@ -134,6 +134,7 @@ from app.core.standardized_route import StandardizedAPIRoute
 
 # ── IMAP Email Polling Background Task ─────────────────────────────────────
 from app.services.email_ingestion_service import fetch_resume_attachments
+from app.core.encryption import decrypt_field
 
 async def _imap_polling_loop():
     """Background coroutine that polls the IMAP inbox for resume attachments.
@@ -154,7 +155,8 @@ async def _imap_polling_loop():
 
             if auto_sync_enabled:
                 imap_email = settings_dict.get("imap_email") or settings.imap_email or ''
-                imap_password = settings_dict.get("imap_password") or settings.imap_password or ''
+                raw_pass = settings_dict.get("imap_password") or settings.imap_password or ''
+                imap_password = decrypt_field(raw_pass).strip()
 
                 if imap_email and imap_password:
                     fetch_resume_attachments(db, imap_email, imap_password)
@@ -241,7 +243,10 @@ app.add_exception_handler(RateLimitExceeded, cors_aware_rate_limit_handler)
 
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
+# In production, this should be the IP of your trusted load balancer/proxy.
+# For local dev/internal networks, 127.0.0.1 is fine, but we use a list for flexibility.
+trusted_proxy_hosts = ["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_proxy_hosts)
 
 from app.core.middleware import PerformanceLoggingMiddleware, SecurityHeadersMiddleware
 app.add_middleware(SecurityHeadersMiddleware)

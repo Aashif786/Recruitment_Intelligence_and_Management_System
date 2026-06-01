@@ -127,6 +127,7 @@ class Application(Base):
     resume_file_name = Column(String(255))
     resume_hash = Column(String(64), nullable=True, index=True) # SHA256 of content
     candidate_photo_path = Column(String(500), nullable=True)
+    is_disposable_email = Column(Boolean, default=False)
     status = Column(String(50), default='applied', index=True)
     # Resume AI pipeline: pending → parsing → parsed | failed
     resume_status = Column(String(32), default='pending', index=True)

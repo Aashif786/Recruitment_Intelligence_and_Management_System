@@ -32,7 +32,9 @@ class Settings(BaseSettings):
 
     # JWT
     jwt_secret: str = ""
+    interview_jwt_secret: str = "" # Isolated key for interview candidate sessions
     jwt_algorithm: str = "HS256"
+    pdf_generation_secret: str = "" # Secret for authorizing internal PDF service calls
     jwt_expiration_minutes: int = 120
     jwt_refresh_expiration_days: int = 7
 

@@ -18,7 +18,11 @@ export async function middleware(request: NextRequest) {
 
     if (token) {
       try {
-        const secretKey = process.env.JWT_SECRET || 'secret';
+        const secretKey = process.env.JWT_SECRET;
+        if (!secretKey) {
+          console.error('JWT_SECRET is not configured on the server.');
+          return NextResponse.redirect(new URL('/auth/login?error=config', request.url));
+        }
         const secret = new TextEncoder().encode(secretKey);
         await jwtVerify(token, secret);
         isValid = true;

@@ -201,15 +201,33 @@ async def access_interview(
             
         # 4. Atomic Initialization Logic (if first access)
         if not interview.is_used:
+            # Atomic update to prevent race conditions
+            # Use raw SQL for the update to ensure atomicity and get the updated row back
+            current_time_str = current_time.strftime('%Y-%m-%d %H:%M:%S')
+            result = db.execute(
+                text("UPDATE interviews SET is_used=true, status='in_progress', used_at=:used_at WHERE id=:id AND is_used=false RETURNING *"),
+                {"used_at": current_time, "id": interview.id}
+            )
+            updated_row = result.fetchone()
+            
+            if not updated_row:
+                # If no row was updated, it means another request already set is_used=true
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="This interview session is already being initialized by another request."
+                )
+            
+            # Refresh the interview object with the new state
+            db.refresh(interview)
+            
             # Handle relationship resilience for orphaned data
             application = interview.application
             job = application.job if application else None
             
             # Fail-safe initialization BEFORE triggering background tasks
             interview.locked_skill = "general"
-            interview.is_used = True
-            interview.used_at = current_time
-            _set_interview_status(interview, "in_progress")
+            # is_used, used_at, and status are already set by the atomic UPDATE
             
             if job:
                 interview.interview_stage = _determine_initial_stage(job)
@@ -268,9 +286,12 @@ async def access_interview(
             duration_mins = interview.duration_minutes
             
         token_expiry_delta = max(timedelta(hours=4), timedelta(minutes=duration_mins + 30))
+        # Use isolated interview secret if configured
+        interview_secret = settings.interview_jwt_secret or settings.jwt_secret
         token = create_access_token(
             data={"sub": str(interview.id), "role": "interview"},
-            expires_delta=token_expiry_delta
+            expires_delta=token_expiry_delta,
+            secret=interview_secret
         )
         
         is_ready = existing_count >= expected_count if existing_count > 0 else False
@@ -355,8 +376,8 @@ async def generate_test_token(
     TEST-ONLY endpoint: generate a raw access key for an interview.
     This avoids having to bypass bcrypt-hashed keys in automated E2E tests.
     """
-    if settings.env == "production":
-        raise HTTPException(status_code=403, detail="Test token generation is disabled in production.")
+    if settings.env not in ["development", "test"]:
+        raise HTTPException(status_code=403, detail="Test token generation is disabled in this environment.")
 
     interview = db.query(Interview).filter(Interview.id == interview_id).first()
     if not interview:
@@ -1743,7 +1764,8 @@ async def transcribe_interview_audio(
     except Exception as e:
         logger.error(f"Transcription failure for interview {interview_id}: {e}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to process voice audio: {str(e)}")
+        logger.error(f"Failed to process voice audio: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while processing voice audio. Please try again.")
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -1840,7 +1862,8 @@ async def upload_interview_video(
         return out
     except Exception as e:
         logger.error(f"Video cloud upload failure: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to save video to cloud storage: {str(e)}")
+        logger.error(f"Failed to save video to cloud storage: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while saving the interview video. Please try again.")
     finally:
         file.file.close()
 

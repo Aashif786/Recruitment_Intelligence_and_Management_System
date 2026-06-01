@@ -1,6 +1,6 @@
 import os
 import io
-from jinja2 import Template
+from jinja2 import Template, Environment, select_autoescape
 from xhtml2pdf import pisa
 from datetime import datetime
 from app.core.config import get_settings
@@ -15,7 +15,9 @@ def generate_offer_letter_pdf(template_html: str, data: dict, output_path: str):
     Writes result to output_path on disk.
     """
     try:
-        template = Template(template_html)
+        # C-22: Enable autoescaping for candidate-supplied data to prevent XSS in PDF
+        env = Environment(autoescape=select_autoescape(['html', 'xml']))
+        template = env.from_string(template_html)
         rendered_html = template.render(**data)
         
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -41,7 +43,9 @@ def generate_offer_letter_pdf_bytes(template_html: str, data: dict) -> bytes:
     Returns the raw PDF bytes on success.
     Raises RuntimeError if the PDF engine reports errors.
     """
-    template = Template(template_html)
+    # C-22: Enable autoescaping for candidate-supplied data to prevent XSS in PDF
+    env = Environment(autoescape=select_autoescape(['html', 'xml']))
+    template = env.from_string(template_html)
     rendered_html = template.render(**data)
 
     buffer = io.BytesIO()

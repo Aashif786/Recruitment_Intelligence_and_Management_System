@@ -98,8 +98,9 @@ async def background_generate_questions(interview_id: int, job_id_db: int, appli
         application = db.query(Application).filter(Application.id == application_id).first()
         
         if interview.interview_stage == STAGE_APTITUDE:
-            await _generate_aptitude_questions(interview, job_obj, db)
-            if job_obj.first_level_enabled:
+            if job_obj and job_obj.aptitude_enabled:
+                await _generate_aptitude_questions(interview, job_obj, db)
+                # After aptitude, we might also want to pre-generate first-level
                 await _generate_first_level_questions(interview, job_obj, application, db)
         else:
             await _generate_first_level_questions(interview, job_obj, application, db)
@@ -108,13 +109,14 @@ async def background_generate_questions(interview_id: int, job_id_db: int, appli
     except Exception as e:
         logger.error(f"Failed background generation for {ai_job_id}: {e}")
         fail_job(ai_job_id, str(e))
+    finally:
         try:
+            # Always clear the generation lock so the candidate isn't stuck if a retry is needed
             from app.domain.models import GlobalSettings
             db.query(GlobalSettings).filter(GlobalSettings.key == f"lock_gen_{interview_id}").delete()
             db.commit()
         except Exception as lock_err:
-            logger.warning(f"Failed to clear generation lock on failure for interview {interview_id}: {lock_err}")
-    finally:
+            logger.warning(f"Failed to clear generation lock for interview {interview_id}: {lock_err}")
         db.close()
 
 # ─── Stage Constants ──────────────────────────────────────────────────────────

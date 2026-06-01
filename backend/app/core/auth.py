@@ -31,7 +31,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     # if this is exceeded. Since bcrypt ignores bytes beyond 72, we truncate manually.
     return pwd_context.verify(plain_password[:72], hashed_password)
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+import secrets
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None, secret: Optional[str] = None) -> str:
     """Create JWT access token"""
     to_encode = data.copy()
     
@@ -40,16 +42,24 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = get_ist_now() + timedelta(minutes=settings.jwt_expiration_minutes)
     
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    to_encode.update({
+        "exp": expire,
+        "jti": secrets.token_hex(16)
+    })
+    
+    # Use specified secret or fall back to global staff secret
+    sign_secret = secret or settings.jwt_secret
+    encoded_jwt = jwt.encode(to_encode, sign_secret, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
-def verify_token(token: str) -> dict:
+def verify_token(token: str, secret: Optional[str] = None) -> dict:
     """Verify JWT token and return payload"""
     try:
+        # Use specified secret or fall back to global staff secret
+        verify_secret = secret or settings.jwt_secret
         payload = jwt.decode(
             token,
-            settings.jwt_secret,
+            verify_secret,
             algorithms=[settings.jwt_algorithm],
             # Explicitly validate expiration.
             options={"verify_exp": True},
@@ -112,7 +122,23 @@ def get_current_user(
         )
         
     try:
-        payload = verify_token(token)
+        # Staff tokens always use the primary JWT secret
+        payload = verify_token(token, secret=settings.jwt_secret)
+
+        # ── Token Blocklist Check (Revocation) ─────────────────────────────
+        jti = payload.get("jti")
+        if jti:
+            from app.core.redis_store import get_redis_client
+            redis_client = get_redis_client()
+            if redis_client and redis_client.exists(f"token_blocklist:{jti}"):
+                logger.warning(f"Rejected revoked token JTI: {jti}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="This session has been logged out. Please log in again.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        # ──────────────────────────────────────────────────────────────────
+
         sub = payload.get("sub")
         role = payload.get("role")
         
@@ -216,7 +242,9 @@ def get_current_interview(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        payload = verify_token(token)
+        # Use interview-specific isolated secret for candidate sessions
+        interview_secret = settings.interview_jwt_secret or settings.jwt_secret
+        payload = verify_token(token, secret=interview_secret)
 
         # Debug info to validate we decoded what the frontend is sending.
         logger.info(
@@ -347,7 +375,9 @@ def get_current_interview_any_status(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        payload = verify_token(token)
+        # Use interview-specific isolated secret for candidate sessions
+        interview_secret = settings.interview_jwt_secret or settings.jwt_secret
+        payload = verify_token(token, secret=interview_secret)
 
         logger.info(
             "Interview auth token source (any status) "

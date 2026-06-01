@@ -36,6 +36,7 @@ desktop.ini
 .env.staging.local
 .env.*
 !.env.example
+setup/production_schema.sql
 
 # ------------------------------------------------------------------------------
 # Python / Backend

@@ -68,8 +68,10 @@ class SecurityHeadersMiddleware:
                 set_header(b"referrer-policy", b"strict-origin-when-cross-origin")
                 set_header(b"strict-transport-security", b"max-age=31536000; includeSubDomains")
                 set_header(b"content-security-policy",
-                           b"default-src 'self'; script-src 'self'; "
-                           b"img-src 'self' data: blob:; connect-src 'self'; "
+                           b"default-src 'self'; "
+                           b"script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                           b"img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com; "
+                           b"connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com https://api.groq.com; "
                            b"frame-ancestors 'none'; object-src 'none'")
 
             await send(message)

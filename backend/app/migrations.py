@@ -502,10 +502,21 @@ def encrypt_existing_plaintext_data(engine: Engine):
             if not encrypted_cols:
                 continue
                 
+            # C-10: Sanitize SQL by validating against known metadata to prevent injection
+            if tablename not in Base.metadata.tables:
+                logger.warning(f"Skipping unknown table '{tablename}' during encryption migration.")
+                continue
+
             logger.info(f"Checking table '{tablename}' for legacy plaintext values in columns: {encrypted_cols}")
             for col_name in encrypted_cols:
+                # Double check col_name is valid for this table
+                if col_name not in Base.metadata.tables[tablename].columns:
+                    logger.warning(f"Skipping unknown column '{col_name}' in table '{tablename}'.")
+                    continue
+                
                 try:
                     # Select raw database values without ORM decryption
+                    # SQL interpolation is safe here because both tablename and col_name are verified against metadata
                     result = conn.execute(text(f"SELECT id, {col_name} FROM {tablename} WHERE {col_name} IS NOT NULL"))
                     rows = result.fetchall()
                     
@@ -518,6 +529,7 @@ def encrypt_existing_plaintext_data(engine: Engine):
                     
                     if updates:
                         # Perform bulk update
+                        # SQL interpolation is safe here because both tablename and col_name are verified against metadata
                         for encrypted_val, row_id in updates:
                             conn.execute(
                                 text(f"UPDATE {tablename} SET {col_name} = :val WHERE id = :id"),
