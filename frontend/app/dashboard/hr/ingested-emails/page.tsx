@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,7 +43,6 @@ import {
     Loader2,
     CheckCircle2,
     AlertTriangle,
-    Download,
     Search,
     RefreshCw,
     FileText,
@@ -51,6 +50,7 @@ import {
     Settings,
     Save,
     Zap,
+    WifiOff,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/app/dashboard/lib/auth-context'
@@ -100,14 +100,14 @@ export default function IngestedEmailsPage() {
 
     const { user } = useAuth()
 
-    // Load current settings on mount — only fetch safe, non-sensitive metadata
+    // Load current settings on mount — use /sensitive endpoint so we get real IMAP values
     useEffect(() => {
         const loadSettings = async () => {
             if (user?.role !== 'super_admin') return
             try {
-                const settings = await APIClient.get('/api/settings') as any
-                // BUG-002 Fix: Only load email address (safe) and configured flag.
-                // Password is NEVER loaded into state — write-only.
+                // BUG-A Fix: Must call /sensitive to get actual imap_email, imap_configured,
+                // and auto_sync_enabled. The public GET /api/settings strips all these fields.
+                const settings = await APIClient.get('/api/settings/sensitive') as any
                 if (settings.imap_email) setImapUser(settings.imap_email)
                 setImapConfigured(!!settings.imap_configured)
                 setAutoSyncEnabled(!!settings.auto_sync_enabled)
@@ -295,7 +295,8 @@ export default function IngestedEmailsPage() {
             setTimeout(() => mutate(), 30000)
         } catch (err: any) {
             console.error('Sync error:', err)
-            toast.error(err.response?.data?.detail || 'Mailbox sync failed. Please verify your email address and App Password, then try again.', { id: toastId })
+            // BUG-E Fix: APIClient throws plain Error — message is in err.message, not err.response.data.detail
+            toast.error(err.message || 'Mailbox sync failed. Please verify your email address and App Password, then try again.', { id: toastId })
         } finally {
             setIsSyncing(false)
         }
@@ -322,7 +323,8 @@ export default function IngestedEmailsPage() {
             mutate()
         } catch (err: any) {
             console.error('Assignment error:', err)
-            toast.error(err.response?.data?.detail || 'Could not assign the candidate to the selected job. Please try again.', { id: toastId })
+            // BUG-F Fix: APIClient throws plain Error — message is in err.message
+            toast.error(err.message || 'Could not assign the candidate to the selected job. Please try again.', { id: toastId })
         } finally {
             setIsAssigning(false)
         }
@@ -330,7 +332,14 @@ export default function IngestedEmailsPage() {
 
     const getInitials = (sender: string) => {
         const cleaned = sender.split('<')[0].trim()
-        if (!cleaned || cleaned.toLowerCase() === 'emailed candidate') {
+        // BUG-J Fix: If display name is missing, an email address, or a placeholder,
+        // fall back to the local-part of the email address for meaningful initials.
+        if (!cleaned || cleaned.includes('@') || cleaned.toLowerCase() === 'emailed candidate') {
+            const emailMatch = sender.match(/<([^>]+)>/) || sender.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+)/)
+            if (emailMatch) {
+                const localPart = emailMatch[1].split('@')[0].replace(/[._-]/g, ' ')
+                return localPart.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'
+            }
             return 'U'
         }
         return cleaned.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -540,7 +549,17 @@ export default function IngestedEmailsPage() {
             </div>
 
             {/* Data Table */}
-            {isLoading ? (
+            {/* BUG-L Fix: Render SWR error state so user knows when data failed to load */}
+            {error ? (
+                <div className="text-center py-20 flex flex-col items-center justify-center gap-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-2xl shadow-sm">
+                    <WifiOff className="h-10 w-10 text-red-400" />
+                    <div>
+                        <h3 className="font-bold text-lg text-red-700 dark:text-red-400">Failed to Load Inbox</h3>
+                        <p className="text-sm text-red-500 mt-1 max-w-sm">Could not fetch ingested emails. Please check your connection and refresh.</p>
+                    </div>
+                    <button onClick={() => mutate()} className="text-xs font-bold text-red-600 underline underline-offset-2 hover:text-red-700">Retry</button>
+                </div>
+            ) : isLoading ? (
                 <div className="text-center py-20 flex flex-col items-center justify-center gap-4 bg-card border border-border rounded-2xl shadow-sm">
                     <Loader2 className="h-10 w-10 animate-spin text-primary" />
                     <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest animate-pulse">Loading Ingestion Box...</p>
@@ -549,9 +568,21 @@ export default function IngestedEmailsPage() {
                 <div className="text-center py-20 bg-card rounded-2xl border border-border shadow-sm flex flex-col items-center justify-center gap-4">
                     <Inbox className="h-12 w-12 text-muted-foreground/45" />
                     <div>
-                        <h3 className="font-bold text-lg text-foreground">No ingested resumes found</h3>
+                        {/* BUG-I Fix: Context-aware empty state based on active filter / search */}
+                        <h3 className="font-bold text-lg text-foreground">
+                            {statusFilter === 'mapped' ? 'No auto-mapped resumes'
+                                : statusFilter === 'unmapped' ? 'No pending resumes'
+                                : debouncedSearch ? 'No results found'
+                                : 'Inbox is empty'}
+                        </h3>
                         <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                            Click 'Sync Emails' to connect to your configured recruiter mailbox and fetch applicant resumes.
+                            {statusFilter === 'mapped'
+                                ? 'No resumes have been automatically matched to an open job yet. Sync emails to trigger AI mapping.'
+                                : statusFilter === 'unmapped'
+                                ? 'All ingested resumes have been assigned — nothing pending.'
+                                : debouncedSearch
+                                ? `No emails match "${debouncedSearch}". Try a different search term.`
+                                : "Click 'Sync Emails' to connect to your configured recruiter mailbox and fetch applicant resumes."}
                         </p>
                     </div>
                 </div>
@@ -651,14 +682,22 @@ export default function IngestedEmailsPage() {
                                                     View Candidate
                                                 </Button>
                                             ) : (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => setSelectedResume(item)}
-                                                    className="h-9 px-3 text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-500/10 border-amber-500/30 rounded-xl shadow-none"
-                                                >
-                                                    Assign to Job
-                                                </Button>
+                                                // SEC-1 Fix: Backend /assign requires super_admin.
+                                                // Hide button for regular HR to avoid confusing 403 errors.
+                                                user?.role === 'super_admin' ? (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => setSelectedResume(item)}
+                                                        className="h-9 px-3 text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-500/10 border-amber-500/30 rounded-xl shadow-none"
+                                                    >
+                                                        Assign to Job
+                                                    </Button>
+                                                ) : (
+                                                    <Badge className="bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-semibold px-2 py-0.5">
+                                                        Unassigned
+                                                    </Badge>
+                                                )
                                             )}
                                         </TableCell>
                                     </TableRow>

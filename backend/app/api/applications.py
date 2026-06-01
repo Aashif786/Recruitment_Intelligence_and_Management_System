@@ -1371,7 +1371,14 @@ def _extract_storage_path_identifier(path: str) -> Optional[str]:
 def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: set = None, app_emails_set: set = None):
     """
     Unified logic to resolve if an ingested email is mapped to an application.
-    Returns (app_object_or_none, processed_flag).
+
+    BUG-H Fix: Two distinct return-type contracts, now explicitly documented:
+      - With sets (stats/fast path):  returns (bool, bool)  — just truthy/falsy
+      - Without sets (list/slow path): returns (Application|None, bool) — full obj needed for metadata
+
+    Callers must handle accordingly:
+      - Stats call (with sets): `if app_found or is_processed`
+      - Listing call (without sets): `app_obj.id if app_obj else None`
     """
     if item.processed:
         # If manually marked processed, we don't necessarily need the app object for stats,
@@ -1387,11 +1394,11 @@ def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: 
     path_id = _extract_storage_path_identifier(item.file_url)
     if path_id:
         if app_paths_set is not None:
+            # Fast path (stats): return bool, bool
             if path_id in app_paths_set:
                 return True, True
         else:
-            # For the list, we need the full app object
-            # Use a more precise match on the path identifier
+            # Slow path (list): return full Application object
             app = db.query(Application).filter(
                 or_(
                     Application.resume_file_path == path_id,
@@ -1404,10 +1411,11 @@ def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: 
     # 2. Match by candidate email (fallback)
     if raw_email:
         if app_emails_set is not None:
+            # Fast path (stats): return bool, bool
             if raw_email in app_emails_set:
                 return True, True
         else:
-            # Use trim and lower to match the set building logic
+            # Slow path (list): return full Application object
             app = db.query(Application).filter(
                 func.trim(func.lower(Application.candidate_email)) == raw_email
             ).order_by(Application.applied_at.desc()).first()
@@ -1415,6 +1423,8 @@ def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: 
                 return app, True
 
     return None, item.processed
+
+
 
 @router.get("/ingested-emails/stats")
 def get_ingested_emails_stats(
@@ -1461,8 +1471,19 @@ def get_ingested_emails(
     db: Session = Depends(get_db)
 ):
     """
-    List all ingested email resumes (HR only)
+    List all ingested email resumes (HR only).
+
+    BUG-B Fix: Pre-build application lookup sets once (O(n)) and pass them
+    into _resolve_resume_mapping to eliminate one DB query per row (N+1).
+
+    BUG-G Fix: Compute global_stats inline from the results already in memory
+    instead of calling get_ingested_emails_stats() which causes a second full scan.
+
+    BUG-C Fix: Regenerate fresh signed URLs before returning so 24-hour expiry
+    on stored signed URLs does not leave dead links in the table.
     """
+    from app.core.storage import get_signed_url
+
     query = db.query(AttachmentResume)
     if search:
         query = query.filter(
@@ -1472,44 +1493,108 @@ def get_ingested_emails(
                 AttachmentResume.file_name.ilike(f"%{search}%")
             )
         )
-    # Fetch all items to allow accurate mapping-based filtering in Python (since mapping is resolved dynamically)
+    # Fetch all items for accurate mapping-based filtering in Python
     items = query.order_by(AttachmentResume.id.desc()).all()
-    
+
+    # BUG-B Fix: Pre-fetch application mapping data once — O(n) sets for O(1) lookups.
+    # Previously this was done ONLY in get_ingested_emails_stats(); the listing loop
+    # called _resolve_resume_mapping(item, db) without sets, causing 1 DB query per row.
+    applications_data = db.query(Application.resume_file_path, Application.candidate_email).all()
+    app_paths_set = {
+        _extract_storage_path_identifier(a.resume_file_path)
+        for a in applications_data if a.resume_file_path
+    }
+    app_emails_set = {a.candidate_email.lower().strip() for a in applications_data if a.candidate_email}
+
     results = []
-    
+
     for item in items:
-        app, is_processed = _resolve_resume_mapping(item, db)
-        
-        # Duplicate detection logic
+        # BUG-B Fix: Pass pre-built sets — avoids per-row DB queries.
+        # Note: when sets are passed, _resolve_resume_mapping returns (True|None, bool).
+        # We still need the full app object for application_id / job metadata, so we
+        # do a targeted single query only for matched rows (much cheaper than N queries).
+        app_found, is_processed = _resolve_resume_mapping(item, db, app_paths_set, app_emails_set)
+
+        app_obj = None
+        if app_found:
+            # Only hit the DB when we know a match exists (subset of all rows).
+            sender_str = item.sender_email or ""
+            match = re.search(r'<([^>]+)>', sender_str)
+            raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
+            path_id = _extract_storage_path_identifier(item.file_url)
+            filter_conditions = []
+            if path_id:
+                filter_conditions.append(Application.resume_file_path.like(f"%{path_id}%"))
+            if raw_email:
+                filter_conditions.append(func.trim(func.lower(Application.candidate_email)) == raw_email)
+            if filter_conditions:
+                app_obj = (
+                    db.query(Application)
+                    .options(joinedload(Application.job))
+                    .filter(or_(*filter_conditions))
+                    .first()
+                )
+
+        # Duplicate detection
         sender_str = item.sender_email or ""
-        match = re.search(r'<([^>]+)>', sender_str)
-        raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
-        candidate_email_to_check = app.candidate_email if app else raw_email
-        
+        match_dup = re.search(r'<([^>]+)>', sender_str)
+        raw_email_dup = match_dup.group(1).lower().strip() if match_dup else sender_str.lower().strip()
+        candidate_email_to_check = app_obj.candidate_email if app_obj else raw_email_dup
+
         is_duplicate = False
         if candidate_email_to_check:
             dup_query = db.query(Application).filter(Application.candidate_email.ilike(candidate_email_to_check))
-            if app:
-                dup_query = dup_query.filter(Application.id != app.id)
+            if app_obj:
+                dup_query = dup_query.filter(Application.id != app_obj.id)
             is_duplicate = dup_query.count() > 0
-        
+
+        # BUG-C Fix: The stored file_url is a Supabase signed URL that expires in 24 hours.
+        # Regenerate a fresh signed URL on every API response so links never go dead.
+        fresh_file_url = item.file_url
+        if item.file_url:
+            path_id_for_url = _extract_storage_path_identifier(item.file_url)
+            if path_id_for_url:
+                # Strip bucket prefix before calling get_signed_url
+                storage_key = path_id_for_url
+                if storage_key.startswith("MAIL_ATTACHMENTS/"):
+                    storage_key = storage_key[len("MAIL_ATTACHMENTS/"):]
+                try:
+                    fresh_url = get_signed_url('MAIL_ATTACHMENTS', storage_key, expires_in=86400)
+                    if fresh_url:
+                        fresh_file_url = fresh_url
+                except Exception as url_err:
+                    logger.warning(f"Failed to refresh signed URL for AttachmentResume {item.id}: {url_err}")
+
         results.append({
             "id": item.id,
             "sender_email": item.sender_email,
             "subject": item.subject,
             "file_name": item.file_name,
-            "file_url": item.file_url,
+            "file_url": fresh_file_url,
             "received_at": item.received_at.replace(tzinfo=timezone.utc) if item.received_at else None,
-            "processed": is_processed or (app is not None),
-            "application_id": app.id if app else None,
-            "job_title": app.job.title if app and app.job else None,
-            "job_code": app.job.job_id if app and app.job else None,
+            "processed": is_processed or (app_obj is not None),
+            "application_id": app_obj.id if app_obj else None,
+            "job_title": app_obj.job.title if app_obj and app_obj.job else None,
+            "job_code": app_obj.job.job_id if app_obj and app_obj.job else None,
             "is_duplicate": is_duplicate
         })
 
-    # Use the same stats logic as get_ingested_emails_stats for consistency
-    stats = get_ingested_emails_stats(current_user, db)
-    
+    # BUG-G Fix: Compute stats inline from the results we already have in memory
+    # instead of calling get_ingested_emails_stats() which runs a second full table scan.
+    total_ingested = db.query(AttachmentResume).count()
+    auto_mapped_count = sum(1 for r in results if r["application_id"] is not None or r["processed"])
+    # Stats must reflect ALL records, not just the filtered/searched subset
+    all_items_for_stats = results if not search else db.query(AttachmentResume).all()
+    if search:
+        # For search results, global stats still need full counts — use pre-built sets
+        all_results_app_found = [
+            _resolve_resume_mapping(i, db, app_paths_set, app_emails_set)
+            for i in all_items_for_stats
+        ]
+        auto_mapped_global = sum(1 for (af, ip) in all_results_app_found if af or ip)
+    else:
+        auto_mapped_global = auto_mapped_count
+
     # Python-level filter to match UI's status filter accurately
     if processed is not None:
         if processed:
@@ -1518,8 +1603,8 @@ def get_ingested_emails(
             results = [r for r in results if r["application_id"] is None and not r["processed"]]
 
     total = len(results)
-    paginated_items = results[skip : skip + limit]
-    
+    paginated_items = results[skip: skip + limit]
+
     return {
         "items": paginated_items,
         "total": total,
@@ -1527,11 +1612,13 @@ def get_ingested_emails(
         "size": limit,
         "pages": (total + limit - 1) // limit if limit > 0 else 1,
         "global_stats": {
-            "total_ingested": stats["total_ingested"],
-            "auto_mapped": stats["auto_mapped"],
-            "pending_assignment": stats["pending_assignment"],
+            "total_ingested": total_ingested,
+            "auto_mapped": auto_mapped_global,
+            "pending_assignment": max(0, total_ingested - auto_mapped_global),
         },
     }
+
+
 
 
 class AssignResumeRequest(BaseModel):
