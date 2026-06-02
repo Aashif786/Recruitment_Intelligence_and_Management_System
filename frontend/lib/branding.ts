@@ -29,18 +29,20 @@ export const BRANDING_DEFAULTS: BrandingConfig = {
 };
 
 export function getBranding(settings: any): BrandingConfig {
-  // DB has highest priority, then env variables, then default constants
-  const companyName = settings?.company_name || process.env.NEXT_PUBLIC_COMPANY_NAME || BRANDING_DEFAULTS.companyName;
-  const productName = settings?.product_name || process.env.NEXT_PUBLIC_PRODUCT_NAME || BRANDING_DEFAULTS.productName;
-  const logoUrl = settings?.company_logo_url || process.env.NEXT_PUBLIC_LOGO_URL || BRANDING_DEFAULTS.logoUrl;
-  const darkLogoUrl = settings?.dark_logo_url || process.env.NEXT_PUBLIC_DARK_LOGO_URL || BRANDING_DEFAULTS.darkLogoUrl;
-  const faviconUrl = settings?.favicon_url || process.env.NEXT_PUBLIC_FAVICON_URL || BRANDING_DEFAULTS.faviconUrl;
-  const footerText = settings?.footer_text || process.env.NEXT_PUBLIC_FOOTER_TEXT || BRANDING_DEFAULTS.footerText;
-  const supportEmail = settings?.support_email || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || BRANDING_DEFAULTS.supportEmail;
-  const themeColor = settings?.theme_color || process.env.NEXT_PUBLIC_THEME_COLOR || BRANDING_DEFAULTS.themeColor;
+  const isInvalid = (val: any) => !val || val === '[UNREADABLE]' || val === '[DECRYPTION_ERROR]';
+
+  // DB has highest priority (if valid), then env variables, then default constants
+  const companyName = !isInvalid(settings?.company_name) ? settings.company_name : (process.env.NEXT_PUBLIC_COMPANY_NAME || BRANDING_DEFAULTS.companyName);
+  const productName = !isInvalid(settings?.product_name) ? settings.product_name : (process.env.NEXT_PUBLIC_PRODUCT_NAME || BRANDING_DEFAULTS.productName);
+  const logoUrl = !isInvalid(settings?.company_logo_url) ? settings.company_logo_url : (process.env.NEXT_PUBLIC_LOGO_URL || BRANDING_DEFAULTS.logoUrl);
+  const darkLogoUrl = !isInvalid(settings?.dark_logo_url) ? settings.dark_logo_url : (process.env.NEXT_PUBLIC_DARK_LOGO_URL || BRANDING_DEFAULTS.darkLogoUrl);
+  const faviconUrl = !isInvalid(settings?.favicon_url) ? settings.favicon_url : (process.env.NEXT_PUBLIC_FAVICON_URL || BRANDING_DEFAULTS.faviconUrl);
+  const footerText = !isInvalid(settings?.footer_text) ? settings.footer_text : (process.env.NEXT_PUBLIC_FOOTER_TEXT || BRANDING_DEFAULTS.footerText);
+  const supportEmail = !isInvalid(settings?.support_email) ? settings.support_email : (process.env.NEXT_PUBLIC_SUPPORT_EMAIL || BRANDING_DEFAULTS.supportEmail);
+  const themeColor = !isInvalid(settings?.theme_color) ? settings.theme_color : (process.env.NEXT_PUBLIC_THEME_COLOR || BRANDING_DEFAULTS.themeColor);
   
-  let termsUrl = settings?.terms_url || process.env.NEXT_PUBLIC_TERMS_URL || BRANDING_DEFAULTS.termsUrl;
-  let privacyUrl = settings?.privacy_url || process.env.NEXT_PUBLIC_PRIVACY_URL || BRANDING_DEFAULTS.privacyUrl;
+  let termsUrl = !isInvalid(settings?.terms_url) ? settings.terms_url : (process.env.NEXT_PUBLIC_TERMS_URL || BRANDING_DEFAULTS.termsUrl);
+  let privacyUrl = !isInvalid(settings?.privacy_url) ? settings.privacy_url : (process.env.NEXT_PUBLIC_PRIVACY_URL || BRANDING_DEFAULTS.privacyUrl);
   
   if (termsUrl.startsWith('/calrims/')) {
     termsUrl = termsUrl.substring('/calrims'.length);
@@ -49,8 +51,8 @@ export function getBranding(settings: any): BrandingConfig {
     privacyUrl = privacyUrl.substring('/calrims'.length);
   }
 
-  const seoTitleDefault = settings?.seo_title_default || process.env.NEXT_PUBLIC_SEO_TITLE_DEFAULT || BRANDING_DEFAULTS.seoTitleDefault;
-  const seoDescriptionDefault = settings?.seo_description_default || process.env.NEXT_PUBLIC_SEO_DESCRIPTION_DEFAULT || BRANDING_DEFAULTS.seoDescriptionDefault;
+  const seoTitleDefault = !isInvalid(settings?.seo_title_default) ? settings.seo_title_default : (process.env.NEXT_PUBLIC_SEO_TITLE_DEFAULT || BRANDING_DEFAULTS.seoTitleDefault);
+  const seoDescriptionDefault = !isInvalid(settings?.seo_description_default) ? settings.seo_description_default : (process.env.NEXT_PUBLIC_SEO_DESCRIPTION_DEFAULT || BRANDING_DEFAULTS.seoDescriptionDefault);
 
   return {
     companyName,

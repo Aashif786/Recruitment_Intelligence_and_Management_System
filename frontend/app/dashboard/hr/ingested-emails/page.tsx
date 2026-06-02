@@ -202,8 +202,6 @@ export default function IngestedEmailsPage() {
                 return
             }
         }
-            return
-        }
 
         setIsSavingSettings(true)
         const toastId = toast.loading('Verifying mailbox credentials and saving configuration...')

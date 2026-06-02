@@ -28,7 +28,7 @@ def get_branding_value(db: Session, key: str) -> str:
     # 1. Try DB
     try:
         setting = db.query(GlobalSettings).filter(GlobalSettings.key == key).first()
-        if setting and setting.value is not None:
+        if setting and setting.value is not None and setting.value not in ("[UNREADABLE]", "[DECRYPTION_ERROR]"):
             return setting.value
     except Exception:
         pass
@@ -58,6 +58,8 @@ def get_all_branding(db: Session) -> dict:
     for key, default_val in BRANDING_DEFAULTS.items():
         # Precedence: DB -> Env -> Default
         val = db_settings.get(key)
+        if val in ("[UNREADABLE]", "[DECRYPTION_ERROR]"):
+            val = None
         if val is None or val == "":
             val = os.getenv(key.upper())
         if val is None or val == "":
