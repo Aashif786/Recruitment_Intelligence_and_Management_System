@@ -248,7 +248,6 @@ class Settings(BaseSettings):
             "SUPABASE_KEY": self.supabase_key,
             "GROQ_API_KEY": self.groq_api_key,
             "ENCRYPTION_KEY": self.encryption_key,
-            "REDIS_URL": self.redis_url,
         }
         missing_critical = [k for k, v in critical_required.items() if not v or v == ""]
         if missing_critical:
@@ -269,10 +268,8 @@ class Settings(BaseSettings):
                 logger.warning("SECURITY WARNING: Permissive CORS found in production (localhost/*).")
 
         # 4. Functional Warnings (Non-blocking)
-        optional_warnings = {}
-        for k, v in optional_warnings.items():
-            if not v or v == "":
-                logger.warning(f"CONFIG WARNING: '{k}' is missing. Some features (encryption) will be degraded.")
+        if not self.redis_url or self.redis_url == "":
+            logger.warning("CONFIG WARNING: 'REDIS_URL' is missing. Idempotency replay cache will fall back to local in-process memory.")
 
         # Email provider check
         smtp_configured = bool(self.smtp_host and self.smtp_user and self.smtp_password)
