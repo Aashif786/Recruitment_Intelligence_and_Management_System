@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     base_dir: Path = BASE_DIR
     # Database
     database_url: str = "" # Mandatory via validate_config
+    db_pool_size: Optional[int] = None
+    db_max_overflow: Optional[int] = None
 
 
     # JWT

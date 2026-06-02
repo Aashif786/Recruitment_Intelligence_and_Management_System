@@ -115,7 +115,8 @@ async def access_interview(
         
         if not interviews:
             logger.warning(f"Access attempt failed: No interview found for email {email_clean}")
-            pwd_context.verify(data.access_key, "$2b$12$XzQyJkG9aBcDeFgHiJkLmOpQrStUvWxYz0123456789abcdefghij")
+            from app.core.auth import verify_password
+            verify_password(data.access_key, "$2b$12$XzQyJkG9aBcDeFgHiJkLmOpQrStUvWxYz0123456789abcdefghij")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or access key. Please check your invitation email."
@@ -123,9 +124,10 @@ async def access_interview(
             
         matched_interview = None
         for inv in interviews:
-            if pwd_context.verify(data.access_key, inv.access_key_hash):
+            from app.core.auth import verify_password
+            if verify_password(data.access_key, inv.access_key_hash):
                 matched_interview = inv
-                break
+                # DO NOT break here to equalize timing for enumeration resistance
                 
         if not matched_interview:
             logger.warning(f"Access attempt failed: Invalid access key for email {email_clean}")
@@ -384,6 +386,7 @@ async def check_job_status(job_id: str):
 
 @router.post("/{interview_id}/generate-test-token")
 async def generate_test_token(
+    request: Request,
     interview_id: int,
     interview_requester: User = Depends(get_current_hr),
     db: Session = Depends(get_db),
@@ -392,8 +395,12 @@ async def generate_test_token(
     TEST-ONLY endpoint: generate a raw access key for an interview.
     This avoids having to bypass bcrypt-hashed keys in automated E2E tests.
     """
-    if settings.env not in ["development", "test"]:
-        raise HTTPException(status_code=403, detail="Test token generation is disabled in this environment.")
+    if settings.env == "production":
+        raise HTTPException(status_code=403, detail="Test token generation is strictly disabled in production.")
+    
+    test_secret = request.headers.get("TEST_ADMIN_SECRET")
+    if not test_secret or test_secret != settings.supabase_service_role_key: # Just use a known secret like supabase key or require it in env
+        raise HTTPException(status_code=403, detail="Invalid test admin secret.")
 
     interview = db.query(Interview).filter(Interview.id == interview_id).first()
     if not interview:
@@ -1288,15 +1295,13 @@ async def fail_device_test(
     interview_id: int,
     background_tasks: BackgroundTasks,
     data: dict = Body(...),
-    interview_session: Interview = Depends(get_current_interview_any_status),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Invalidates access keys and deactivates the session immediately if a candidate
     fails or attempts to bypass device hardware verification.
     """
-    if interview_session.id != interview_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     interview = db.query(Interview).filter(
         Interview.id == interview_id
@@ -1345,15 +1350,13 @@ async def report_security_violation(
     interview_id: int,
     background_tasks: BackgroundTasks,
     data: dict = Body(...),
-    interview_session: Interview = Depends(get_current_interview_any_status),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Report a proctoring security violation (tab switch, face not detected, multiple people, etc.)
     Used by the frontend proctoring engine as a REST replacement for the WS security_violation action.
     """
-    if interview_session.id != interview_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     # Normalise empty/whitespace reasons so the default is always recorded
     reason = (data.get("reason") or "").strip() or "Proctoring violation"
@@ -1890,7 +1893,7 @@ async def create_monitoring_event(
     request: Request,
     interview_id: int,
     event_data: MonitoringEventCreate,
-    interview_session: Interview = Depends(get_current_interview_any_status),
+    interview_session: Interview = Depends(get_current_interview),
     db: Session = Depends(get_db)
 ):
     """

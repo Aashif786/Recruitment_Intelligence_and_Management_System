@@ -1,4 +1,5 @@
 import smtplib
+import html
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -97,8 +98,8 @@ def _send_via_smtp(to_email: str, subject: str, html_body: str, attachments: lis
         
         dev_recipient = settings.smtp_from or settings.smtp_user
         if is_mock and dev_recipient:
-            logger.info(f"[DEV EMAIL REDIRECT] Rerouting mock email '{to_email}' to developer's inbox '{dev_recipient}'")
-            subject = f"[DEV][to: {to_email}] {subject}"
+            logger.info(f"[DEV EMAIL REDIRECT] Rerouting mock email '{_safe_email_target(to_email)}' to developer's inbox '{dev_recipient}'")
+            subject = f"[DEV][to: {_safe_email_target(to_email)}] {subject}"
             to_email = dev_recipient
 
     try:
@@ -127,7 +128,7 @@ def _send_via_smtp(to_email: str, subject: str, html_body: str, attachments: lis
             server.send_message(msg)
         
         # LOG SUCCESS ONLY ONCE THE MESSAGE IS SENT
-        logger.info(f"[EMAIL SUCCESS] Mail definitely accepted by relay for {to_email}")
+        logger.info(f"[EMAIL SUCCESS] Mail definitely accepted by relay for {_safe_email_target(to_email)}")
         _audit_email_event(
             "EMAIL_SEND_SUCCESS",
             to_email=to_email,
@@ -142,7 +143,7 @@ def _send_via_smtp(to_email: str, subject: str, html_body: str, attachments: lis
         error_msg = str(e)
         deferred = _is_gmail_quota_error(e)
         logger.error(
-            f"[EMAIL ATTEMPT FAILED] provider=smtp to={to_email} deferred={deferred} "
+            f"[EMAIL ATTEMPT FAILED] provider=smtp to={_safe_email_target(to_email)} deferred={deferred} "
             f"exc_class={e.__class__.__name__} error={error_msg}",
             exc_info=True,
         )
@@ -185,7 +186,7 @@ async def _send_via_resend(to_email: str, subject: str, html_body: str) -> dict:
             resp = await client.post("https://api.resend.com/emails", json=payload, headers=headers)
 
         if resp.status_code in (200, 201):
-            logger.info(f"[EMAIL SUCCESS] Resend accepted message for {to_email}")
+            logger.info(f"[EMAIL SUCCESS] Resend accepted message for {_safe_email_target(to_email)}")
             _audit_email_event(
                 "EMAIL_SEND_SUCCESS",
                 to_email=to_email,
@@ -199,7 +200,7 @@ async def _send_via_resend(to_email: str, subject: str, html_body: str) -> dict:
         # Avoid returning huge bodies to logs.
         err_preview = (resp.text or "").strip()[:500]
         logger.error(
-            f"[EMAIL ATTEMPT FAILED] provider=resend to={to_email} http_status={resp.status_code} "
+            f"[EMAIL ATTEMPT FAILED] provider=resend to={_safe_email_target(to_email)} http_status={resp.status_code} "
             f"error_preview={err_preview}"
         )
         _audit_email_event(
@@ -213,7 +214,7 @@ async def _send_via_resend(to_email: str, subject: str, html_body: str) -> dict:
         )
         return {"success": False, "error": f"Resend failed with HTTP {resp.status_code}", "status_code": resp.status_code}
     except Exception as e:
-        logger.error(f"[EMAIL ATTEMPT FAILED] Resend {to_email}: {e}", exc_info=True)
+        logger.error(f"[EMAIL ATTEMPT FAILED] Resend {_safe_email_target(to_email)}: {e}", exc_info=True)
         _audit_email_event(
             "EMAIL_SEND_FAILED",
             to_email=to_email,
@@ -253,7 +254,7 @@ async def _send_via_smtp_helper(to_email: str, subject: str, html_body: str, att
         last_error = result["error"]
         if attempt < max_retries:
             wait_time = (attempt + 1) * 2  # Exponential-ish backoff: 2s, 4s
-            logger.warning(f"Retrying SMTP email to {to_email} in {wait_time}s (Attempt {attempt + 1}/{max_retries})...")
+            logger.warning(f"Retrying SMTP email to {_safe_email_target(to_email)} in {wait_time}s (Attempt {attempt + 1}/{max_retries})...")
             await asyncio.sleep(wait_time)
 
     return {"success": False, "provider": "smtp", "error": f"Failed after {max_retries + 1} attempts: {last_error}", "deferred": False}
@@ -275,7 +276,7 @@ async def _send_via_resend_helper(to_email: str, subject: str, html_body: str) -
     smtp_configured = bool(settings.smtp_host and settings.smtp_user and settings.smtp_password)
     if smtp_configured:
         logger.warning(
-            f"[EMAIL FALLBACK TO SMTP] Resend failed for {to_email} ({last_error}); falling back to SMTP."
+            f"[EMAIL FALLBACK TO SMTP] Resend failed for {_safe_email_target(to_email)} ({last_error}); falling back to SMTP."
         )
         return await _send_via_smtp_helper(to_email, subject, html_body, None)
 
@@ -390,7 +391,7 @@ async def execute_email_with_retries(
         except Exception as e:
             logger.warning(f"Failed to update email status for application {application.id}: {e}")
 
-    logger.error(f"[EMAIL][PERMANENT_FAILURE] (Event: {event_id}) Failed after {max_retries} attempts for {to_email}")
+    logger.error(f"[EMAIL][PERMANENT_FAILURE] (Event: {event_id}) Failed after {max_retries} attempts for {_safe_email_target(to_email)}")
     return False
 
 # --- Email Templates ---
@@ -401,7 +402,7 @@ async def send_otp_email(to_email: str, otp: str):
     <html><body>
       <h2>Account Verification</h2>
       <p>Use the OTP below to verify your account. Expires in 30 minutes.</p>
-      <h3 style="background:#f4f4f4; padding:10px; display:inline-block; letter-spacing:5px;">{otp}</h3>
+      <h3 style="background:#f4f4f4; padding:10px; display:inline-block; letter-spacing:5px;">{html.escape(str(otp))}</h3>
     </body></html>
     """
     return await execute_email_with_retries(to_email, subject, body, event_type="OTP_VERIFICATION")
@@ -415,7 +416,7 @@ async def send_password_reset_email(to_email: str, otp: str):
       <h2>Password Reset</h2>
       <p>We received a request to reset your password. Use the OTP below to proceed, or click the button to go directly to the reset page. This OTP will expire in 30 minutes.</p>
       <div style="margin: 20px 0; text-align: center;">
-        <h3 style="background:#f4f4f4; padding:15px; display:inline-block; letter-spacing:5px; border-radius:5px; border:1px solid #ddd;">{otp}</h3>
+        <h3 style="background:#f4f4f4; padding:15px; display:inline-block; letter-spacing:5px; border-radius:5px; border:1px solid #ddd;">{html.escape(str(otp))}</h3>
       </div>
       <div style="margin: 20px 0; text-align: center;">
         <a href="{reset_link}" style="background-color: #2563eb; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
@@ -438,7 +439,7 @@ async def send_application_received_email(to_email_or_app: Any, job_title: str =
     body = f"""
     <html><body>
       <h2>Thank You for Applying!</h2>
-      <p>We received your application for <strong>{job_title}</strong>.</p>
+      <p>We received your application for <strong>{html.escape(str(job_title))}</strong>.</p>
       <p>Our team will review your profile shortly!</p>
     </body></html>
     """
@@ -466,19 +467,19 @@ async def send_interview_invitation_email(application: Any, raw_access_key: str 
     body = f"""
     <html><body style="font-family:sans-serif; color:#333; line-height:1.6;">
       <h2 style="color:#2563eb;">Interview Invitation</h2>
-      <p>Your application for <strong>{application.job.title}</strong> has been approved!</p>
+      <p>Your application for <strong>{html.escape(str(application.job.title))}</strong> has been approved!</p>
       <p>Please use the secure link below to access the interview portal. This link is unique to you.</p>
       <div style="margin: 20px 0; text-align: center;">
-        <a href="{access_url}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Begin Interview</a>
+        <a href="{html.escape(str(access_url))}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Begin Interview</a>
       </div>
       <p>If the button doesn't work, copy and paste this link into your browser:</p>
-      <p><a href="{access_url}" style="color:#2563eb; word-break:break-all;">{access_url}</a></p>
+      <p><a href="{html.escape(str(access_url))}" style="color:#2563eb; word-break:break-all;">{html.escape(str(access_url))}</a></p>
       <hr style="border:none; border-top:1px solid #eee; margin: 24px 0;"/>
       <div style="background:#f8fafc; border-left:4px solid #f59e0b; padding:16px; border-radius:4px; margin-bottom:16px;">
         <p style="margin:0 0 8px 0; font-weight:700; color:#92400e;">&#128197; Need to Reschedule?</p>
         <p style="margin:0 0 8px 0; color:#555;">If you are unable to attend the interview at this time or encountered a technical issue, please contact us via the Support Portal below.</p>
         <p style="margin:0;">
-          👉 <a href="{support_url}" style="color:#2563eb; font-weight:700;">Support Portal &amp; Reschedule Request</a>
+          👉 <a href="{html.escape(str(support_url))}" style="color:#2563eb; font-weight:700;">Support Portal &amp; Reschedule Request</a>
         </p>
       </div>
       <p style="font-size:0.9em; color:#888;">If you did not apply for this role, please disregard this email.</p>
@@ -507,18 +508,18 @@ async def send_approved_for_interview_email(to_email: str, job_title: str, raw_a
     body = f"""
     <html><body style="font-family:sans-serif; color:#333;">
       <h2>Interview Invitation</h2>
-      <p>Your application for <strong>{job_title}</strong> has been approved!</p>
+      <p>Your application for <strong>{html.escape(str(job_title))}</strong> has been approved!</p>
       <p>Please use the secure link below to access the interview portal. This link is unique to you and expires in 10 days.</p>
       <div style="margin: 20px 0; text-align: center;">
-        <a href="{access_url}" style="background-color: #2563eb; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Begin Interview</a>
+        <a href="{html.escape(str(access_url))}" style="background-color: #2563eb; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Begin Interview</a>
       </div>
       <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-      <p><a href="{access_url}" style="color:#2563eb;">{access_url}</a></p>
+      <p><a href="{html.escape(str(access_url))}" style="color:#2563eb;">{html.escape(str(access_url))}</a></p>
       <hr style="border:none; border-top:1px solid #eee; margin: 20px 0;"/>
       <p style="margin: 0 0 6px 0; font-weight:600;">Need help with your interview experience?</p>
       <p style="margin: 0 0 8px 0;">If you faced a technical issue, unexpected termination, or need to raise a grievance, use the Support Portal:</p>
       <p style="margin: 0 0 12px 0;">
-         <a href="{support_url}" style="color:#2563eb; font-weight:700;">Support Portal Link</a>
+         <a href="{html.escape(str(support_url))}" style="color:#2563eb; font-weight:700;">Support Portal Link</a>
       </p>
       <p style="margin: 0; font-size:0.95em; color:#555;">Our HR team will review your request promptly and reach out if more details are needed.</p>
       <hr style="border:none; border-top:1px solid #eee; margin: 20px 0;"/>
@@ -534,7 +535,7 @@ async def send_hired_email(to_email: str, job_title: str, interview=None, offer_
     body = f"""
     <html><body style="font-family:sans-serif; color:#333;">
       <h2 style="color:#10b981;">Congratulations!</h2>
-      <p>You have been selected for the <strong>{job_title}</strong> position!</p>
+      <p>You have been selected for the <strong>{html.escape(str(job_title))}</strong> position!</p>
       <p>Please find your Offer Letter attached.</p>
       <p>Our HR team will contact you within 24-48 hours for onboarding.</p>
       <br><p>Best Regards,<br>The Recruitment Team</p>
@@ -584,7 +585,7 @@ async def send_hired_email(to_email: str, job_title: str, interview=None, offer_
 
 async def send_simple_email(to_email: str, subject: str, message: str):
     """Utility for sending internal/simple notification emails."""
-    body = f"<html><body><p>{message}</p></body></html>"
+    body = f"<html><body><p>{html.escape(str(message))}</p></body></html>"
     result = await send_email_async(to_email, subject, body)
     return result["success"]
 
@@ -597,21 +598,21 @@ async def send_offer_letter_email(to_email: str, candidate_name: str, company_na
     
     body = f"""
     <html><body style="font-family:sans-serif; color:#333; line-height: 1.6;">
-      <h2 style="color: #2563eb;">Hello {candidate_name},</h2>
-      <p>Congratulations! We are pleased to offer you a position at <strong>{company_name}</strong>.</p>
+      <h2 style="color: #2563eb;">Hello {html.escape(str(candidate_name))},</h2>
+      <p>Congratulations! We are pleased to offer you a position at <strong>{html.escape(str(company_name))}</strong>.</p>
       <p>Please find the attached offer letter for your review. We are excited about the possibility of you joining our team!</p>
       
       <div style="margin: 30px 0; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
         <h4 style="margin-top: 0;">Please respond to this offer:</h4>
-        <a href="{accept_link}" style="background-color: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-right: 15px; display: inline-block;">Accept Offer</a>
-        <a href="{reject_link}" style="background-color: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reject Offer</a>
+        <a href="{html.escape(str(accept_link))}" style="background-color: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-right: 15px; display: inline-block;">Accept Offer</a>
+        <a href="{html.escape(str(reject_link))}" style="background-color: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reject Offer</a>
       </div>
 
       <p>If the buttons above do not work, use these links:</p>
-      <p>Accept: <a href="{accept_link}">{accept_link}</a></p>
-      <p>Reject: <a href="{reject_link}">{reject_link}</a></p>
+      <p>Accept: <a href="{html.escape(str(accept_link))}">{html.escape(str(accept_link))}</a></p>
+      <p>Reject: <a href="{html.escape(str(reject_link))}">{html.escape(str(reject_link))}</a></p>
       
-      <br><p>Best Regards,<br>HR Team, {company_name}</p>
+      <br><p>Best Regards,<br>HR Team, {html.escape(str(company_name))}</p>
     </body></html>
     """
     attachments = []
@@ -653,7 +654,7 @@ async def send_screened_email(to_email: str, job_title: str, application: Any = 
     body = f"""
     <html><body style="font-family:sans-serif; color:#333;">
       <h2>Application Update</h2>
-      <p>We are writing to let you know that your application for the <strong>{job_title}</strong> position has been successfully screened by our team.</p>
+      <p>We are writing to let you know that your application for the <strong>{html.escape(str(job_title))}</strong> position has been successfully screened by our team.</p>
       <p>Your profile is currently under review, and we will get back to you with the next steps soon.</p>
       <br><p>Best Regards,<br>The Recruitment Team</p>
     </body></html>
@@ -666,8 +667,8 @@ async def send_rejected_email(to_email: str, job_title: str, is_ai_auto_reject: 
     body = f"""
     <html><body>
       <h2>Application Update</h2>
-      <p>Thank you for applying to <strong>{job_title}</strong>.</p>
-      <p>Unfortunately, {reason}</p>
+      <p>Thank you for applying to <strong>{html.escape(str(job_title))}</strong>.</p>
+      <p>Unfortunately, {html.escape(str(reason))}</p>
       <p>We encourage you to apply for future roles that match your skills!</p>
     </body></html>
     """
@@ -678,13 +679,13 @@ async def send_call_for_interview_email(to_email: str, job_title: str):
     body = f"""
     <html><body>
       <h2>You're Invited for an Interview!</h2>
-      <p>Based on your AI assessment, you're invited for an interview for <strong>{job_title}</strong>.</p>
+      <p>Based on your AI assessment, you're invited for an interview for <strong>{html.escape(str(job_title))}</strong>.</p>
       <p>Our HR team will contact you shortly to schedule it.</p>
     </body></html>
     """
     result = await send_email_async(to_email, subject, body)
     if not result["success"]:
-        logger.warning(f"Call for Interview Email failed for {to_email}: {result['error']}")
+        logger.warning(f"Call for Interview Email failed for {_safe_email_target(to_email)}: {result['error']}")
     return result["success"]
 
 async def send_ticket_resolved_email(to_email: str, issue_type: str, hr_response: str, job_title: str = "your applied position"):
@@ -703,10 +704,10 @@ async def send_ticket_resolved_email(to_email: str, issue_type: str, hr_response
     body = f"""
     <html><body style="font-family:sans-serif; color:#333;">
       <h2 style="color:#2563eb;">Support Ticket Update</h2>
-      <p>Your support ticket regarding <strong>{issue_type.replace('_', ' ')}</strong> for the <strong>{job_title}</strong> position has been reviewed.</p>
+      <p>Your support ticket regarding <strong>{html.escape(str(issue_type.replace('_', ' ')))}</strong> for the <strong>{html.escape(str(job_title))}</strong> position has been reviewed.</p>
       <div style="background:#f9f9f9; padding:15px; border-left:4px solid #3b82f6; margin:10px 0;">
         <strong>Resolution:</strong><br/>
-        {hr_response}
+        {html.escape(str(hr_response))}
       </div>
       {link_html}
       <p>Thank you for your patience.</p>
@@ -714,7 +715,7 @@ async def send_ticket_resolved_email(to_email: str, issue_type: str, hr_response
     """
     result = await send_email_async(to_email, subject, body)
     if not result["success"]:
-        logger.warning(f"Ticket Resolved Email failed for {to_email}: {result['error']}")
+        logger.warning(f"Ticket Resolved Email failed for {_safe_email_target(to_email)}: {result['error']}")
     return result["success"]
 
 async def send_key_reissued_email(to_email: str, job_title: str, new_key: str, hr_response: str):
@@ -724,18 +725,18 @@ async def send_key_reissued_email(to_email: str, job_title: str, new_key: str, h
     body = f"""
     <html><body style="font-family:sans-serif; color:#333; line-height:1.6;">
       <h2 style="color:#2563eb;">Access Key Re-issued</h2>
-      <p>Your request for <strong>{job_title}</strong> has been approved.</p>
-      <div style="background:#f9f9f9; padding:15px; border-left:4px solid #10b981; margin:10px 0;">{hr_response}</div>
-      <p><strong>New Access Key:</strong> <span style="background:#f4f4f4; padding:8px 12px; font-family:monospace; font-weight:bold;">{new_key}</span></p>
+      <p>Your request for <strong>{html.escape(str(job_title))}</strong> has been approved.</p>
+      <div style="background:#f9f9f9; padding:15px; border-left:4px solid #10b981; margin:10px 0;">{html.escape(str(hr_response))}</div>
+      <p><strong>New Access Key:</strong> <span style="background:#f4f4f4; padding:8px 12px; font-family:monospace; font-weight:bold;">{html.escape(str(new_key))}</span></p>
       <div style="margin: 25px 0; text-align: center;">
-        <a href="{access_url}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Resume Interview</a>
+        <a href="{html.escape(str(access_url))}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Resume Interview</a>
       </div>
-      <p style="font-size: 0.85em; color: #777;">If the button above doesn't work, copy and paste this link: {access_url}</p>
+      <p style="font-size: 0.85em; color: #777;">If the button above doesn't work, copy and paste this link: {html.escape(str(access_url))}</p>
     </body></html>
     """
     result = await send_email_async(to_email, subject, body)
     if not result["success"]:
-        logger.warning(f"Key Reissued Email failed for {to_email}: {result['error']}")
+        logger.warning(f"Key Reissued Email failed for {_safe_email_target(to_email)}: {result['error']}")
     return result["success"]
 
 async def send_onboarding_reminder_email(to_email: str, candidate_name: str, joining_date: str, job_title: str):
@@ -743,7 +744,7 @@ async def send_onboarding_reminder_email(to_email: str, candidate_name: str, joi
     body = f"""
     <html><body style="font-family:sans-serif; color:#333;">
       <h2>Onboarding Reminder</h2>
-      <p>This is a reminder that <strong>{candidate_name}</strong> is scheduled to join the company in 7 days on <strong>{joining_date}</strong> for the <strong>{job_title}</strong> role.</p>
+      <p>This is a reminder that <strong>{html.escape(str(candidate_name))}</strong> is scheduled to join the company in 7 days on <strong>{html.escape(str(joining_date))}</strong> for the <strong>{html.escape(str(job_title))}</strong> role.</p>
       <p>Please ensure all necessary preparations (IT access, workspace setup) are completed ahead of time.</p>
     </body></html>
     """
@@ -764,9 +765,9 @@ async def send_onboarding_summary_email(to_email: str, candidates_list: list):
     rows_html = "".join(
         f"""
         <tr style="border-bottom:1px solid #e5e7eb;">
-          <td style="padding:10px 14px; font-weight:600; color:#111827;">{c['name']}</td>
-          <td style="padding:10px 14px; color:#374151;">{c['job_title']}</td>
-          <td style="padding:10px 14px; color:#059669; font-weight:600;">{c['joining_date']}</td>
+          <td style="padding:10px 14px; font-weight:600; color:#111827;">{html.escape(str(c['name']))}</td>
+          <td style="padding:10px 14px; color:#374151;">{html.escape(str(c['job_title']))}</td>
+          <td style="padding:10px 14px; color:#059669; font-weight:600;">{html.escape(str(c['joining_date']))}</td>
         </tr>
         """
         for c in candidates_list
@@ -781,7 +782,7 @@ async def send_onboarding_summary_email(to_email: str, candidates_list: list):
         <div style="background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%); padding:28px 32px;">
           <h1 style="margin:0; font-size:22px; color:#ffffff; font-weight:700;">📅 Upcoming Joinings — Next 7 Days</h1>
           <p style="margin:8px 0 0 0; color:#bfdbfe; font-size:14px;">
-            {len(candidates_list)} candidate{'s are' if len(candidates_list) != 1 else ' is'} scheduled to join in the next 7 days.
+            {html.escape(str(len(candidates_list)))} candidate{'s are' if len(candidates_list) != 1 else ' is'} scheduled to join in the next 7 days.
             Please ensure all preparations (IT access, workspace, credentials) are completed well in advance.
           </p>
         </div>
@@ -820,7 +821,7 @@ async def send_joining_confirmation_email(to_email: str, candidate_name: str, jo
     body = f"""
     <html><body style="font-family:sans-serif; color:#333;">
       <h2>Candidate Joined Today</h2>
-      <p>This is to confirm that <strong>{candidate_name}</strong> has officially joined the company today for the <strong>{job_title}</strong> role.</p>
+      <p>This is to confirm that <strong>{html.escape(str(candidate_name))}</strong> has officially joined the company today for the <strong>{html.escape(str(job_title))}</strong> role.</p>
       <p>Please find the live photograph of the candidate attached.</p>
     </body></html>
     """
@@ -863,7 +864,7 @@ async def send_interview_completed_email(application: Any):
     <html><body style="font-family:sans-serif; color:#333;">
       <h2 style="color:#2563eb;">Interview Successfully Completed</h2>
       <p>Hello {application.candidate_name},</p>
-      <p>Thank you for completing your interview for the <strong>{application.job.title}</strong> position.</p>
+      <p>Thank you for completing your interview for the <strong>{html.escape(str(application.job.title))}</strong> position.</p>
       <p>Your responses and technical assessment have been successfully recorded. Our HR team will review your report and get back to you with the next steps.</p>
       <p>Best Regards,<br>The Recruitment Team</p>
     </body></html>
@@ -889,7 +890,7 @@ async def send_interview_terminated_email(application: Any, reason: str):
     <html><body style="font-family:sans-serif; color:#333;">
       <h2 style="color:#ef4444;">Session Terminated</h2>
       <p>Hello {application.candidate_name},</p>
-      <p>Your interview session for <strong>{application.job.title}</strong> has been automatically terminated due to <strong>{reason_text}</strong>.</p>
+      <p>Your interview session for <strong>{html.escape(str(application.job.title))}</strong> has been automatically terminated due to <strong>{reason_text}</strong>.</p>
       <p>If you believe this was a technical error, please reach out to our support team immediately via the support portal or reply to this email.</p>
       <p>Best Regards,<br>Recruitment Compliance Team</p>
     </body></html>

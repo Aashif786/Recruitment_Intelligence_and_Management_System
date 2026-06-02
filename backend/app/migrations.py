@@ -461,7 +461,22 @@ def run_startup_migrations(engine: Engine):
             "uq_interview_application_id",
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_interview_application_id ON interviews(application_id)",
         ),
+        (
+            "applications",
+            "ix_applications_candidate_email",
+            "CREATE INDEX IF NOT EXISTS ix_applications_candidate_email ON applications(candidate_email)",
+        ),
     ]
+
+    with engine.connect() as conn:
+        try:
+            if "postgresql" in str(engine.url):
+                conn.execute(text("ALTER TABLE applications ALTER COLUMN candidate_email SET NOT NULL"))
+                conn.commit()
+                logger.info("Migration completed: applications.candidate_email set to NOT NULL")
+        except Exception as exc:
+            _safe_rollback(conn)
+            logger.warning(f"Error setting candidate_email NOT NULL: {exc}")
 
     with engine.connect() as conn:
         for table, constraint_name, create_sql in required_constraints:

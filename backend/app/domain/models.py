@@ -116,7 +116,7 @@ class Application(Base):
     job_id = Column(Integer, ForeignKey('jobs.id', ondelete="CASCADE"), nullable=False, index=True)
     hr_id = Column(Integer, ForeignKey('users.id', ondelete="SET NULL"), nullable=True, index=True) # Denormalized for speed
     candidate_name = Column(String(255), nullable=False)
-    candidate_email = Column(String(255), nullable=True, index=True)
+    candidate_email = Column(String(255), nullable=False, index=True)
     candidate_phone = Column(EncryptedText)
     candidate_phone_hash = Column(String(64), nullable=True, index=True)
     # plain digits for easier debugging/validation

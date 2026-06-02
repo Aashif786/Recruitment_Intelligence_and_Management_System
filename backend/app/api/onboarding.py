@@ -241,7 +241,10 @@ async def get_hr_offer_preview(
         gs.get("company_address", "")
     )
     
-    template = Template(template_str)
+    from jinja2.sandbox import SandboxedEnvironment as Environment
+    from jinja2 import select_autoescape, StrictUndefined
+    env = Environment(autoescape=select_autoescape(['html', 'xml']), undefined=StrictUndefined)
+    template = env.from_string(template_str)
     return {"html": template.render(**data)}
 
 @router.get("/candidates", response_model=None)
@@ -342,7 +345,7 @@ async def request_offer_approval(
     application.offer_template_snapshot = gs.get("offer_letter_template")
     application.offer_token = str(uuid.uuid4())
     application.offer_short_id = generate_short_id()
-    application.offer_token_expiry = get_ist_now() + timedelta(days=7)
+    application.offer_token_expiry = get_ist_now() + timedelta(days=30)
     application.offer_token_used = False
 
     if auto_approve:
@@ -369,11 +372,12 @@ async def request_offer_approval(
                 company_address=gs.get("company_address", "")
             )
             
-            from jinja2 import Template
+            from jinja2 import Environment, select_autoescape, StrictUndefined
             template_str = application.offer_template_snapshot or gs.get("offer_letter_template", "")
             if not template_str:
                 raise Exception("No offer template found in settings.")
-            template = Template(template_str)
+            env = Environment(autoescape=select_autoescape(['html', 'xml']), undefined=StrictUndefined)
+            template = env.from_string(template_str)
             rendered_html = template.render(**data)
             
             final_path = await generate_pdf_via_puppeteer(rendered_html, filename, settings.supabase_bucket_offers)
@@ -496,8 +500,10 @@ async def approve_offer_letter(
         if not template_str:
             raise Exception("Offer template missing")
             
-        from jinja2 import Template
-        template = Template(template_str)
+        from jinja2.sandbox import SandboxedEnvironment as Environment
+        from jinja2 import select_autoescape, StrictUndefined
+        env = Environment(autoescape=select_autoescape(['html', 'xml']), undefined=StrictUndefined)
+        template = env.from_string(template_str)
         rendered_html = template.render(**data)
         
         # Call Puppeteer (Phase 7 implementation)
@@ -688,7 +694,7 @@ async def capture_photo(
     return {"status": "success", "candidate_photo_path": application.candidate_photo_path}
 
 @router.post("/cron/check-reminders")
-def check_onboarding_reminders(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def check_onboarding_reminders(background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)):
     """
     (System/Admin) Check for candidates joining in the next 7 days.
     - Sends a consolidated summary email to all super_admins and HR users.
@@ -795,7 +801,8 @@ async def generate_id_card(
 
     # 2. Premium PDF Generation with Puppeteer
     try:
-        from jinja2 import Environment, FileSystemLoader
+        from jinja2.sandbox import SandboxedEnvironment as Environment
+        from jinja2 import FileSystemLoader
         templates_dir = os.path.join(os.path.dirname(__file__), "..", "resources", "templates")
         env = Environment(loader=FileSystemLoader(templates_dir))
         template = env.get_template("id_card_template.html")
@@ -853,10 +860,12 @@ def download_id_card(
 
     return {"status": "success", "url": signed_url}
 
+from app.core.rate_limiter import limiter
+
 @router.post("/respond")
+@limiter.limit("5/minute")
 async def respond_to_offer(request: Request, response_req: OfferResponseRequest, db: Session = Depends(get_db)):
     """Public response with Row Locking & Short ID support (Point 1, 2, 6)."""
-    rate_limit(request.client.host if request.client else "unknown")
     
     # Use offer_token (UUID) lookup with ROW LOCKING
     from app.domain.models import Offer
@@ -1022,7 +1031,7 @@ def complete_onboarding(
     return {"status": "success"}
 
 @router.post("/cron/check-arrivals")
-def check_candidate_arrivals(db: Session = Depends(get_db)):
+def check_candidate_arrivals(db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)):
     """
     (System/Admin) Auto-transition candidates to 'onboarded' if joining date is today.
     Task 2 Requirement.

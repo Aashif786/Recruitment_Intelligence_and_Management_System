@@ -135,8 +135,12 @@ def _check_smtp_connect_and_auth() -> ProviderHealth:
         return ProviderHealth(configured=True, ok=False, detail=f"SMTP health check exception: {e}", extra={"host": host, "port": port, "exc_class": e.__class__.__name__})
 
 
+from app.core.rate_limiter import limiter
+from fastapi import Request
+
 @router.get("/health", response_model=EmailHealthResponse)
-async def email_health_check(current_admin: User = Depends(get_current_admin)):
+@limiter.limit("10/minute")
+async def email_health_check(request: Request, current_admin: User = Depends(get_current_admin)):
     resend_health = await _check_resend_domain_verified()
     smtp_health = _check_smtp_connect_and_auth()
     return EmailHealthResponse(
@@ -147,7 +151,8 @@ async def email_health_check(current_admin: User = Depends(get_current_admin)):
 
 
 @router.get("/health-v2", response_model=EmailHealthOut)
-async def email_health_check_v2(current_admin: User = Depends(get_current_admin)):
+@limiter.limit("10/minute")
+async def email_health_check_v2(request: Request, current_admin: User = Depends(get_current_admin)):
     resend_health = await _check_resend_domain_verified()
     smtp_health = _check_smtp_connect_and_auth()
 
@@ -169,7 +174,8 @@ async def email_health_check_v2(current_admin: User = Depends(get_current_admin)
 
 
 @router.post("/test")
-async def send_test_email(payload: EmailTestRequest, current_admin: User = Depends(get_current_admin)):
+@limiter.limit("10/minute")
+async def send_test_email(request: Request, payload: EmailTestRequest, current_admin: User = Depends(get_current_admin)):
     provider = (payload.provider or "").strip().lower() or None
 
     if provider not in (None, "resend", "smtp"):

@@ -187,21 +187,7 @@ def list_question_sets(
         )
 
 
-@router.get("/debug-auth")
-@limiter.limit("60/minute")
-def debug_auth(request: Request, current_user=Depends(get_current_hr)):
-    """Diagnostic endpoint to verify HR authentication state."""
-    if get_settings().env == "production":
-        raise HTTPException(status_code=404, detail="Not Found")
-    return {
-        "success": True,
-        "data": {
-            "id": current_user.id,
-            "email": current_user.email,
-            "role": current_user.role,
-            "approval_status": current_user.approval_status
-        }
-    }
+
 
 @router.get("/sets/{set_id}", response_model=QuestionSetDetail)
 @limiter.limit("60/minute")

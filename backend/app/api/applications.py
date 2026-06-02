@@ -157,19 +157,19 @@ def build_application_detail_response(application: Application, current_user_id:
     
     resume_url = None
     if application.resume_file_path:
-        resume_url = get_signed_url(settings.supabase_bucket_resumes, application.resume_file_path)
+        resume_url = get_signed_url(settings.supabase_bucket_resumes, application.resume_file_path, expires_in=900)
     
     photo_url = None
     if application.candidate_photo_path:
-        photo_url = get_signed_url(settings.supabase_bucket_id_photos, application.candidate_photo_path)
+        photo_url = get_signed_url(settings.supabase_bucket_id_photos, application.candidate_photo_path, expires_in=900)
              
     id_card_url = None
     if getattr(application, 'id_card_url', None):
-        id_card_url = get_signed_url(settings.supabase_bucket_id_cards, application.id_card_url)
+        id_card_url = get_signed_url(settings.supabase_bucket_id_cards, application.id_card_url, expires_in=900)
 
     video_url = None
     if application.interview and application.interview.video_recording_path:
-        video_url = get_signed_url(settings.supabase_bucket_videos, application.interview.video_recording_path)
+        video_url = get_signed_url(settings.supabase_bucket_videos, application.interview.video_recording_path, expires_in=900)
 
     detail = ApplicationDetailResponse.model_validate(application, from_attributes=True)
     raw_notes = application.hr_notes or ""
@@ -283,11 +283,11 @@ async def apply_for_job(
     db: Session = Depends(get_db)
 ):
     """Apply for a job with resume (Public endpoint)"""
-    # Name validation: just ensure it is not empty to support bulk uploads
-    if not candidate_name :
+    # Name validation
+    if not candidate_name or len(candidate_name.strip()) < 2 or candidate_name.strip().isdigit():
         raise HTTPException(
             status_code=400,
-            detail="Valid full name required "#(at least two words, containing letters, hyphens, or apostrophes)."
+            detail="Valid full name required (must be at least 2 characters and cannot be purely numeric)."
         )
 
     request_id = None
@@ -1069,6 +1069,7 @@ def has_applied_for_job(
 
     # 3. Check for duplicates (OR logic)
     if not candidate_email and not candidate_phone_hash:
+        db.query(Application.id).filter(Application.id == -1).first() # Dummy query to equalize timing
         return HasAppliedResponse(hasApplied=False)
 
     existing = (
@@ -1314,7 +1315,7 @@ async def ingest_email_resumes(
     request: Request,
     req: EmailIngestRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_hr),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -1323,13 +1324,16 @@ async def ingest_email_resumes(
     """
     # Read IMAP credentials from server-side settings (never from request body)
     from app.domain.models import GlobalSettings
+    from app.core.encryption import decrypt_field
     settings_records = db.query(GlobalSettings).filter(
         GlobalSettings.key.in_(["imap_email", "imap_password"])
     ).all()
     settings_dict = {s.key: s.value for s in settings_records}
 
     imap_email = settings_dict.get("imap_email") or settings.imap_email or ""
-    imap_password = settings_dict.get("imap_password") or settings.imap_password or ""
+    enc_password = settings_dict.get("imap_password") or settings.imap_password or ""
+    
+    imap_password = decrypt_field(enc_password) if enc_password else ""
 
     if not imap_email or not imap_password:
         raise HTTPException(
@@ -1837,15 +1841,30 @@ def get_application(
                 application.resume_file_path
             )
     
-    # Sanitize paths
-    if application.candidate_photo_path and ":" in application.candidate_photo_path:
-        idx = application.candidate_photo_path.find("uploads")
-        if idx != -1:
-            application.candidate_photo_path = application.candidate_photo_path[idx:].replace("\\", "/")
-    if application.resume_file_path and ":" in application.resume_file_path:
-        idx = application.resume_file_path.find("uploads")
-        if idx != -1:
-            application.resume_file_path = application.resume_file_path[idx:].replace("\\", "/")
+    # Sanitize paths using pathlib.Path.resolve() and a safe root check
+    def sanitize_path(path_str):
+        if not path_str or not (":" in path_str or "\\" in path_str or ".." in path_str):
+            return path_str
+        try:
+            from pathlib import Path
+            base_dir = Path("uploads").resolve()
+            idx = path_str.find("uploads")
+            if idx != -1:
+                rel_path = path_str[idx + len("uploads"):].lstrip("\\/")
+                full_path = (base_dir / rel_path).resolve()
+            else:
+                full_path = Path(path_str).resolve()
+            
+            # Safe root check
+            if base_dir in full_path.parents or full_path == base_dir:
+                return "uploads/" + full_path.relative_to(base_dir).as_posix()
+            else:
+                return full_path.name
+        except Exception:
+            return path_str.replace("\\", "/").split("/")[-1]
+
+    application.candidate_photo_path = sanitize_path(application.candidate_photo_path)
+    application.resume_file_path = sanitize_path(application.resume_file_path)
 
     return build_application_detail_response(application, current_user.id)
 

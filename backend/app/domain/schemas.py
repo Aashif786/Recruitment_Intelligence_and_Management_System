@@ -129,6 +129,40 @@ class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     profile_image_url: Optional[str] = None
 
+    @field_validator('profile_image_url')
+    @classmethod
+    def validate_profile_image_url(cls, v):
+        if v is not None:
+            if not v.startswith("https://"):
+                raise ValueError("Profile image URL must be HTTPS")
+            from urllib.parse import urlparse
+            parsed = urlparse(v)
+            if not parsed.netloc.endswith("supabase.co") and "supabase.co" not in parsed.netloc:
+                raise ValueError("Only Supabase storage URLs are permitted for profile images")
+        return v
+
+class UserListResponse(BaseModel):
+    id: int
+    full_name: str
+    role: str
+    is_active: bool
+    is_verified: bool
+    approval_status: str
+    created_at: datetime
+    
+    @field_validator('created_at', mode='before')
+    @classmethod
+    def parse_created_at(cls, v):
+        if isinstance(v, str):
+             try:
+                 return datetime.fromisoformat(v.replace('Z', '+00:00'))
+             except:
+                 pass
+        return v
+        
+    class Config:
+        from_attributes = True
+
 # ============================================================================
 # Job Schemas
 # ============================================================================
@@ -180,6 +214,13 @@ class JobCreate(BaseModel):
              raise ValueError("Job Title must contain meaningful content")
              
         return title_trimmed
+
+    @field_validator('experience_level')
+    def validate_experience_level(cls, v):
+        valid_levels = {'intern', 'junior', 'mid', 'senior', 'lead'}
+        if not v or v.strip().lower() not in valid_levels:
+            raise ValueError(f"Invalid experience level. Must be one of {valid_levels}")
+        return v.strip().lower()
 
     @field_validator('description')
     def validate_description(cls, v):
@@ -246,6 +287,15 @@ class JobUpdate(BaseModel):
             if len(re.sub(r'[^a-zA-Z0-9]', '', title_trimmed)) < 1:
                 raise ValueError("Job Title must contain meaningful content")
             return title_trimmed
+        return v
+
+    @field_validator('experience_level')
+    def validate_experience_level(cls, v):
+        if v is not None:
+            valid_levels = {'intern', 'junior', 'mid', 'senior', 'lead'}
+            if not v or v.strip().lower() not in valid_levels:
+                raise ValueError(f"Invalid experience level. Must be one of {valid_levels}")
+            return v.strip().lower()
         return v
 
     @field_validator('description')

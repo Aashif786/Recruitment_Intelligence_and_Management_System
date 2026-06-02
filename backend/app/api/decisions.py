@@ -20,9 +20,18 @@ from fastapi import Request
 from app.core.rate_limiter import limiter
 
 
+from pydantic import BaseModel, Field, validator
+from datetime import datetime
+
 class HireRequest(BaseModel):
-    joining_date: str
-    notes: Optional[str] = None
+    joining_date: datetime
+    notes: Optional[str] = Field(None, max_length=2000)
+
+    @validator('joining_date')
+    def validate_joining_date(cls, v):
+        if v.year < 2000 or v.year > 2100:
+            raise ValueError('Year must be between 2000 and 2100')
+        return v
 
 @router.put("/applications/{application_id}/decide", response_model=HiringDecisionResponse)
 @limiter.limit("60/minute")
@@ -124,7 +133,7 @@ async def hire_candidate(
     from app.services.offer_letter_service import get_offer_letter_data, generate_offer_letter_pdf_bytes
     from app.core.storage import upload_file
     from app.core.config import get_settings
-    from jinja2 import Template
+    from app.core.config import get_settings
     settings = get_settings()
 
     application = db.query(Application).filter(Application.id == application_id).with_for_update().first()
@@ -132,11 +141,8 @@ async def hire_candidate(
         raise HTTPException(status_code=404, detail="Application not found")
     validate_hr_ownership(application, current_user, resource_name="application")
 
-    # 1. Parse and store the joining date
-    try:
-        jdate = datetime.fromisoformat(hire_data.joining_date.replace('Z', '+00:00'))
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid joining date format. Please select a valid date.")
+    # 1. Store the joining date (already validated by Pydantic)
+    jdate = hire_data.joining_date
 
     # Convert to naive IST for database compatibility and uniform comparison
     jdate_ist = to_naive_ist(jdate)

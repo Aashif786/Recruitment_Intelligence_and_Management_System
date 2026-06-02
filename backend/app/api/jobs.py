@@ -237,13 +237,10 @@ async def upload_aptitude_questions(
     ALLOWED_EXCEL_MIMES = {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
         "application/vnd.ms-excel",
-        "application/wps-office.xlsx",
-        "application/octet-stream"
+        "application/wps-office.xlsx"
     }
     if file.content_type not in ALLOWED_EXCEL_MIMES:
-        # Extra check: if it's octet-stream, we trust the extension we already validated
-        if file.content_type != "application/octet-stream":
-             raise HTTPException(status_code=400, detail=f"Invalid MIME type '{file.content_type}'. File is not a valid Excel document.")
+        raise HTTPException(status_code=400, detail=f"Invalid MIME type '{file.content_type}'. File is not a valid Excel document.")
     
     content = await file.read()
     if len(content) > MAX_QUESTION_FILE_SIZE:
@@ -251,6 +248,10 @@ async def upload_aptitude_questions(
             status_code=400,
             detail=f"File too large. Maximum size is {MAX_QUESTION_FILE_SIZE // (1024*1024)}MB."
         )
+        
+    # Validate magic bytes for XLSX
+    if ext == ".xlsx" and not content.startswith(b"PK\x03\x04"):
+        raise HTTPException(status_code=400, detail="Invalid Excel file. File signature does not match.")
     try:
         import pandas as pd
         import io

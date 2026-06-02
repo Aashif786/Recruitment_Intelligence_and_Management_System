@@ -91,7 +91,7 @@ def verify_token(token: str, secret: Optional[str] = None) -> dict:
     except JWTError as e:
         # Avoid logging the full token (may contain sensitive material); log only a short preview.
         preview = token[:10] + "..." if token else "<empty>"
-        logger.warning(f"JWT decode failed: {str(e)} token_preview={preview}")
+        logger.warning(f"[SECURITY] JWT decode failed (manipulation or expiration): {str(e)} token_preview={preview}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",

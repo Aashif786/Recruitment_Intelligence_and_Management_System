@@ -385,6 +385,12 @@ def export_interview_reports_csv(
             ["Candidate", "Date", "Role", "Score", "Status", "Experience", "Skills"]
         )
 
+        def sanitize_csv(val: str) -> str:
+            val = str(val) if val is not None else ""
+            if val and val[0] in ('=', '+', '-', '@', '\t', '\r'):
+                return "'" + val
+            return val
+
         for row in rows:
             name = row.candidate_name or "Unknown"
             dt = row[1].strftime("%b %d, %Y") if row[1] else ""
@@ -398,7 +404,9 @@ def export_interview_reports_csv(
                 skills = "; ".join(parsed) if isinstance(parsed, list) else str(skills_raw)
             except Exception:
                 skills = str(skills_raw) if skills_raw else "N/A"
-            writer.writerow([name, dt, role, score, st, exp, skills])
+            
+            safe_row = [sanitize_csv(c) for c in [name, dt, role, score, st, exp, skills]]
+            writer.writerow(safe_row)
 
         # Digital Watermark in CSV footer (P2-H06)
         writer.writerow([])
