@@ -26,6 +26,20 @@ echo "📥 Syncing code from GitHub..."
 git fetch --all
 git reset --hard origin/main
 
+# 0.5 Ensure INTERVIEW_JWT_SECRET exists in backend/.env (production validation requires it)
+echo "🔧 Checking environment variables..."
+ENV_FILE="backend/.env"
+if [ -f "$ENV_FILE" ]; then
+    if ! grep -q "INTERVIEW_JWT_SECRET" "$ENV_FILE"; then
+        echo "Adding INTERVIEW_JWT_SECRET to $ENV_FILE..."
+        RAND_SECRET=$(openssl rand -hex 32 2>/dev/null || echo "default_interview_secret_secure_random_key_12345")
+        echo "" >> "$ENV_FILE"
+        echo "INTERVIEW_JWT_SECRET=$RAND_SECRET" >> "$ENV_FILE"
+    fi
+else
+    echo "⚠️ Warning: backend/.env file not found. Skipping auto-injection."
+fi
+
 # 1. Determine active environment
 # Use grep -oP to extract exactly 'blue' or 'green' from the container name
 # e.g., "rims-frontend_blue-1" → "blue"
