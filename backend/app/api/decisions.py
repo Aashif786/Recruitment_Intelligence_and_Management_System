@@ -31,6 +31,13 @@ class HireRequest(BaseModel):
     def validate_joining_date(cls, v):
         if v.year < 2000 or v.year > 2100:
             raise ValueError('Year must be between 2000 and 2100')
+        
+        # LOW-02: Prevent selecting a past date
+        from app.core.timezone import get_ist_now
+        v_naive = v.replace(tzinfo=None)
+        if v_naive.date() < get_ist_now().date():
+            raise ValueError('Joining date cannot be in the past')
+            
         return v
 
 @router.put("/applications/{application_id}/decide", response_model=HiringDecisionResponse)

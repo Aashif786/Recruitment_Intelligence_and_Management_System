@@ -34,6 +34,7 @@ function InterviewAccessForm() {
       if (!res.ok) throw new Error(data.detail || 'Access failed')
       // Store interview JWT separately to avoid clobbering global HR/admin auth.
       sessionStorage.setItem('interview_token', data.access_token)
+      document.cookie = `interview_token=${data.access_token}; path=/; max-age=14400; SameSite=Strict`;
       router.push('/interview/' + data.interview_id)
     } catch (err: any) {
       setError(err.message)

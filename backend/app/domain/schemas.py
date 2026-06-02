@@ -143,12 +143,18 @@ class UserProfileUpdate(BaseModel):
 
 class UserListResponse(BaseModel):
     id: int
+    email: str
     full_name: str
     role: str
     is_active: bool
     is_verified: bool
     approval_status: str
     created_at: datetime
+
+    @field_validator('email')
+    @classmethod
+    def sanitize_email(cls, v):
+        return v.strip().lower()
     
     @field_validator('created_at', mode='before')
     @classmethod

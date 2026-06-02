@@ -22,38 +22,34 @@ settings = get_settings()
 
 from app.core.rate_limiter import limiter
 
-@router.get("/debug/data-health")
-# BUG-030 Fix: Enforce admin auth via FastAPI Depends, not manual try/except.
-# The old pattern could be bypassed if get_current_user returned normally but get_current_admin raised.
-def data_health(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin),  # BUG-030: always requires super_admin
-):
-    """Phase 9: Enhanced Safety & Monitoring Debugging Endpoint - Super Admin only"""
-    if settings.env == "production":
-        raise HTTPException(status_code=404, detail="Not Found")
-    
-    from sqlalchemy import func, or_
-    from app.domain.models import Application, Job, User, Interview
-    return {
-        "counts": {
-            "applications": db.query(func.count(Application.id)).scalar(),
-            "jobs": db.query(func.count(Job.id)).scalar(),
-            "users": db.query(func.count(User.id)).scalar(),
-            "interviews": db.query(func.count(Interview.id)).scalar()
-        },
-        "monitoring": {
-            "stuck_resume_parsing": db.query(func.count(Application.id)).filter(
-                Application.resume_status == "parsing",
-                Application.parsing_started_at < get_ist_now() - timedelta(hours=1)
-            ).scalar(),
-            "failed_resume_parsing": db.query(func.count(Application.id)).filter(
-                Application.resume_status == "failed"
-            ).scalar(),
-        },
-        "timestamp": get_ist_now().isoformat()
-    }
+if settings.env.lower().strip() not in ("production", "staging"):
+    @router.get("/debug/data-health")
+    def data_health(
+        request: Request,
+        db: Session = Depends(get_db),
+        current_admin: User = Depends(get_current_admin),
+    ):
+        """Phase 9: Enhanced Safety & Monitoring Debugging Endpoint - Super Admin only"""
+        from sqlalchemy import func
+        from app.domain.models import Application, Job, User, Interview
+        return {
+            "counts": {
+                "applications": db.query(func.count(Application.id)).scalar(),
+                "jobs": db.query(func.count(Job.id)).scalar(),
+                "users": db.query(func.count(User.id)).scalar(),
+                "interviews": db.query(func.count(Interview.id)).scalar()
+            },
+            "monitoring": {
+                "stuck_resume_parsing": db.query(func.count(Application.id)).filter(
+                    Application.resume_status == "parsing",
+                    Application.parsing_started_at < get_ist_now() - timedelta(hours=1)
+                ).scalar(),
+                "failed_resume_parsing": db.query(func.count(Application.id)).filter(
+                    Application.resume_status == "failed"
+                ).scalar(),
+            },
+            "timestamp": get_ist_now().isoformat()
+        }
 
 @router.post("/register", response_model=UserResponse)
 @limiter.limit("20/minute")
@@ -511,9 +507,6 @@ def logout(request: Request, response: Response):
                     now = int(get_ist_now().timestamp())
                     ttl = int(exp - now)
                     if ttl > 0:
-                        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-                        r.setex(f"blocklist:{token_hash}", ttl, "1")
-                        logger.info(f"[BUG-010 Fix] Token successfully blocklisted for {ttl}s: {token_hash[:10]}...")
                         if jti:
                             r.setex(f"token_blocklist:{jti}", ttl, "true")
                             logger.info(f"[BUG-010 Fix] Token JTI successfully blocklisted for {ttl}s: {jti}")
@@ -649,6 +642,7 @@ def reset_password(request: Request, data: ResetPasswordRequest, db: Session = D
         
     try:
         user.password_hash = hash_password(data.new_password)
+        user.password_changed_at = get_ist_now()
         user.otp_code = None
         user.otp_expiry = None
         user.otp_attempt_count = 0

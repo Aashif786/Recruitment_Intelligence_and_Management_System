@@ -399,7 +399,7 @@ async def generate_test_token(
         raise HTTPException(status_code=403, detail="Test token generation is strictly disabled in production.")
     
     test_secret = request.headers.get("TEST_ADMIN_SECRET")
-    if not test_secret or test_secret != settings.supabase_service_role_key: # Just use a known secret like supabase key or require it in env
+    if not test_secret or test_secret != settings.test_admin_secret:
         raise HTTPException(status_code=403, detail="Invalid test admin secret.")
 
     interview = db.query(Interview).filter(Interview.id == interview_id).first()
@@ -1350,7 +1350,6 @@ async def report_security_violation(
     interview_id: int,
     background_tasks: BackgroundTasks,
     data: dict = Body(...),
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -1358,9 +1357,41 @@ async def report_security_violation(
     Used by the frontend proctoring engine as a REST replacement for the WS security_violation action.
     """
 
+    # Auth verification: Allow candidate (interview JWT) or Super Admin (staff JWT) (CRIT-01 & CRIT-02)
+    interview_session = None
+    is_super_admin = False
+    current_admin_user = None
+    
+    try:
+        interview_session = get_current_interview(request, db)
+    except HTTPException as e:
+        try:
+            current_admin_user = get_current_user(request, db)
+            if current_admin_user and current_admin_user.role == "super_admin":
+                is_super_admin = True
+        except Exception:
+            raise e # Raise the candidate auth exception if neither passes
+            
+    if interview_session:
+        if interview_session.id != interview_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: interview token does not match interview_id."
+            )
+        proctoring_source = "candidate_proctoring_engine"
+        triggering_user_id = None
+    elif is_super_admin:
+        proctoring_source = f"super_admin_override_{current_admin_user.email}"
+        triggering_user_id = current_admin_user.id
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: invalid authentication source."
+        )
+
     # Normalise empty/whitespace reasons so the default is always recorded
     reason = (data.get("reason") or "").strip() or "Proctoring violation"
-    logger.warning(f"SECURITY_VIOLATION: Terminating interview {interview_id}. Reason: {reason}")
+    logger.warning(f"SECURITY_VIOLATION: Terminating interview {interview_id}. Source: {proctoring_source}. Reason: {reason}")
 
     interview = db.query(Interview).filter(
         Interview.id == interview_id
@@ -1384,10 +1415,28 @@ async def report_security_violation(
             fsm.transition(
                 interview.application,
                 TransitionAction.REJECT,
-                notes=f"Interview auto-terminated by proctoring system. Reason: {reason}",
+                notes=f"Interview auto-terminated by proctoring system. Source: {proctoring_source}. Reason: {reason}",
             )
     except Exception as fsm_err:
         logger.error(f"FSM transition failed on security violation: {fsm_err}")
+
+    # Add audit log record (CRIT-02)
+    try:
+        from app.domain.models import AuditLog
+        audit_entry = AuditLog(
+            user_id=triggering_user_id,
+            action="INTERVIEW_TERMINATED_VIOLATION",
+            resource_type="Interview",
+            resource_id=interview_id,
+            details=json.dumps({
+                "reason": reason,
+                "proctoring_source": proctoring_source
+            }),
+            is_critical=True
+        )
+        db.add(audit_entry)
+    except Exception as audit_err:
+        logger.error(f"Failed to record security violation audit log: {audit_err}")
 
     db.commit()
 

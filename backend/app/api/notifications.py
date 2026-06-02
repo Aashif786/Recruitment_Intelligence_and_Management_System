@@ -18,6 +18,7 @@ def get_my_notifications(
 ):
     """Get notifications for current user with pagination"""
     limit = max(1, min(100, limit))
+    skip = max(0, min(skip, 10000))
     notifications = db.query(Notification).filter(
         Notification.user_id == current_user.id
     ).order_by(Notification.created_at.desc(), Notification.id.desc()).offset(skip).limit(limit).all()

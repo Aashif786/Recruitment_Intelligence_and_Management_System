@@ -74,9 +74,18 @@ def rate_limit(ip: str):
         raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
     RATE_LIMIT_STORAGE[ip].append(now)
 
-def generate_short_id():
-    """Point 1: Secure URL-safe short IDs."""
-    return secrets.token_urlsafe(8)
+def generate_short_id(db: Session = None):
+    """Point 1: Secure URL-safe short IDs with collision protection."""
+    from app.domain.models import Offer
+    for _ in range(10):
+        short_id = secrets.token_urlsafe(8)
+        if db:
+            exists = db.query(Offer).filter(Offer.offer_short_id == short_id).first()
+            if not exists:
+                return short_id
+        else:
+            return short_id
+    raise RuntimeError("Failed to generate unique short ID after 10 attempts")
 
 def log_audit(db: Session, action: str, resource_id: int, user_id: Optional[int], details: dict, ip: str = "unknown", is_critical: bool = False):
     """Helper to record audit logs without repeating logic."""
@@ -344,7 +353,7 @@ async def request_offer_approval(
     application.joining_date = jdate_ist
     application.offer_template_snapshot = gs.get("offer_letter_template")
     application.offer_token = str(uuid.uuid4())
-    application.offer_short_id = generate_short_id()
+    application.offer_short_id = generate_short_id(db)
     application.offer_token_expiry = get_ist_now() + timedelta(days=30)
     application.offer_token_used = False
 

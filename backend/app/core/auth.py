@@ -67,6 +67,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None, s
     
     to_encode.update({
         "exp": expire,
+        "iat": get_ist_now(),
         "jti": secrets.token_hex(16)
     })
     
@@ -130,12 +131,14 @@ def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """Dependency to get current authenticated user"""
+    used_cookie = False
     token = request.cookies.get("access_token") or request.cookies.get("hr_token")
-    if not token:
+    if token:
+        used_cookie = True
+    else:
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
-            
 
     if not token:
         raise HTTPException(
@@ -143,56 +146,65 @@ def get_current_user(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
-    # BUG-010 Fix: Fail closed when Redis blocklist is unavailable.
-    # Checks if the current token has been blocklisted (user logged out).
-    if settings.redis_url:
-        from app.core.redis_store import get_redis_client
-        import hashlib
-        r = get_redis_client()
-        if not r:
-            logger.error("[BUG-010 Fix] Redis is configured but client is unavailable. Failing closed.")
+
+    # Enforce CSRF protection on mutating cookie-based calls (HIGH-01)
+    if used_cookie and request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        csrf_passed = False
+        requested_with = request.headers.get("X-Requested-With")
+        if requested_with:
+            csrf_passed = True
+        else:
+            origin = request.headers.get("Origin") or request.headers.get("Referer")
+            if origin:
+                allowed = settings.get_allowed_origins()
+                from urllib.parse import urlparse
+                try:
+                    parsed_origin = urlparse(origin)
+                    origin_str = f"{parsed_origin.scheme}://{parsed_origin.netloc}"
+                    if "*" in allowed or origin_str in allowed or any(o.startswith(origin_str) for o in allowed):
+                        csrf_passed = True
+                except Exception:
+                    pass
+        if not csrf_passed:
+            logger.warning("CSRF check failed: state-mutating request using cookie without X-Requested-With or valid Origin.")
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Authentication service temporarily offline.",
-                headers={"WWW-Authenticate": "Bearer"},
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Action forbidden: CSRF validation failed."
             )
-        try:
-            token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-            if r.get(f"blocklist:{token_hash}"):
-                logger.warning(f"[BUG-010 Fix] Blocked token attempted access: {token_hash[:10]}...")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Token has been blacklisted (logged out).",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-        except Exception as e:
-            if isinstance(e, HTTPException):
-                raise e
-            logger.error(f"[BUG-010 Fix] Redis error during blocklist check (failing closed): {e}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Authentication service temporarily offline.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
     try:
         # Staff tokens always use the primary JWT secret
         payload = verify_token(token, secret=settings.jwt_secret)
 
-        # ── Token Blocklist Check (Revocation) ─────────────────────────────
-        jti = payload.get("jti")
-        if jti:
+        # Enforce JTI revocation check with fail-closed policy (HIGH-05)
+        if settings.redis_url:
             from app.core.redis_store import get_redis_client
-            redis_client = get_redis_client()
-            if redis_client and redis_client.exists(f"token_blocklist:{jti}"):
-                logger.warning(f"Rejected revoked token JTI: {jti}")
+            r = get_redis_client()
+            if not r:
+                logger.error("Redis is configured but client is unavailable. Failing closed.")
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="This session has been logged out. Please log in again.",
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily offline.",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-        # ──────────────────────────────────────────────────────────────────
+            jti = payload.get("jti")
+            if jti:
+                try:
+                    if r.exists(f"token_blocklist:{jti}"):
+                        logger.warning(f"Rejected revoked token JTI: {jti}")
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="This session has been logged out. Please log in again.",
+                            headers={"WWW-Authenticate": "Bearer"},
+                        )
+                except Exception as e:
+                    if isinstance(e, HTTPException):
+                        raise e
+                    logger.error(f"Redis error during blocklist check (failing closed): {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Authentication service temporarily offline.",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
 
         sub = payload.get("sub")
         role = payload.get("role")
@@ -215,6 +227,30 @@ def get_current_user(
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+        # Enforce password changed session revocation check (MED-03)
+        iat = payload.get("iat")
+        if iat and user.password_changed_at:
+            token_iat_dt = datetime.fromtimestamp(iat, tz=timezone.utc).replace(tzinfo=None)
+            if token_iat_dt < user.password_changed_at:
+                logger.warning(f"Rejected token for user (id redacted) issued at {token_iat_dt} before password_changed_at {user.password_changed_at}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Password has been changed. Please log in again.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+        # Enforce password changed session revocation check (MED-03)
+        iat = payload.get("iat")
+        if iat and user.password_changed_at:
+            token_iat_dt = datetime.fromtimestamp(iat, tz=timezone.utc).replace(tzinfo=None)
+            if token_iat_dt < user.password_changed_at:
+                logger.warning(f"Rejected token for user (id redacted) issued at {token_iat_dt} before password_changed_at {user.password_changed_at}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Password has been changed. Please log in again.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
 
         # ── Phase 2 Fix: Row Level Security Identity ──
         set_db_identity(db, user.id)
@@ -297,8 +333,19 @@ def get_current_interview(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Use interview-specific isolated secret for candidate sessions
-        interview_secret = settings.interview_jwt_secret or settings.jwt_secret
+        # Use interview-specific isolated secret for candidate sessions (HIGH-02)
+        if not settings.interview_jwt_secret:
+            if settings.env != "production":
+                interview_secret = settings.jwt_secret + "_interview"
+            else:
+                logger.error("INTERVIEW_JWT_SECRET is missing in production. Failing token verification.")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Server configuration error: missing token validation key."
+                )
+        else:
+            interview_secret = settings.interview_jwt_secret
+
         payload = verify_token(token, secret=interview_secret)
 
         # Debug info to validate we decoded what the frontend is sending.
@@ -430,8 +477,19 @@ def get_current_interview_any_status(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Use interview-specific isolated secret for candidate sessions
-        interview_secret = settings.interview_jwt_secret or settings.jwt_secret
+        # Use interview-specific isolated secret for candidate sessions (HIGH-02)
+        if not settings.interview_jwt_secret:
+            if settings.env != "production":
+                interview_secret = settings.jwt_secret + "_interview"
+            else:
+                logger.error("INTERVIEW_JWT_SECRET is missing in production. Failing token verification.")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Server configuration error: missing token validation key."
+                )
+        else:
+            interview_secret = settings.interview_jwt_secret
+
         payload = verify_token(token, secret=interview_secret)
 
         logger.info(

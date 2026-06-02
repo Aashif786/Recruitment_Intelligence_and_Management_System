@@ -499,6 +499,7 @@ def create_job(
             location=new_job.location,
             experience_level=new_job.experience_level,
             frontend_base_url=settings.frontend_base_url,
+            db=db,
         )
         # ─────────────────────────────────────────────────────────────────────
 

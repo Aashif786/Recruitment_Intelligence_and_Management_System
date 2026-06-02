@@ -104,6 +104,8 @@ class Settings(BaseSettings):
     # Company branding
     company_name: str = "Company"
     hr_allowed_domains: str = ""
+    test_admin_secret: str = ""
+    disposable_email_domains: str = "fengnu.com,mailinator.com,guerrillamail.com,10minutemail.com,tempmail.com,yopmail.com,sharklasers.com,getnada.com,dispostable.com,trashmail.com,mail.tm,mail.gw,temp-mail.org"
 
     # Server
     host: str = "127.0.0.1"
@@ -192,10 +194,13 @@ class Settings(BaseSettings):
                 )
                 object.__setattr__(self, "enable_linkedin_posting", False)
 
+        if not self.test_admin_secret and (self.env or "").strip().lower() not in ("production", "staging"):
+            object.__setattr__(self, "test_admin_secret", "test_admin_dev_secret")
+
         explicit = os.environ.get("WS_ENFORCE_INTERVIEW_JWT")
         if explicit is not None:
             return self
-        if (self.env or "").strip().lower() == "production":
+        if (self.env or "").strip().lower() not in ("development", "local"):
             object.__setattr__(self, "ws_enforce_interview_jwt", True)
         return self
 
@@ -222,6 +227,9 @@ class Settings(BaseSettings):
             "DATABASE_URL": self.database_url,
             "JWT_SECRET": self.jwt_secret,
         }
+        if (self.env or "").strip().lower() == "production":
+            fatal_required["INTERVIEW_JWT_SECRET"] = self.interview_jwt_secret
+
         missing_fatal = [k for k, v in fatal_required.items() if not v or v == ""]
         if missing_fatal:
             error_msg = f"FATAL CONFIG ERROR: Missing mandatory environment variables: {', '.join(missing_fatal)}. The server cannot start."
@@ -240,6 +248,7 @@ class Settings(BaseSettings):
             "SUPABASE_KEY": self.supabase_key,
             "GROQ_API_KEY": self.groq_api_key,
             "ENCRYPTION_KEY": self.encryption_key,
+            "REDIS_URL": self.redis_url,
         }
         missing_critical = [k for k, v in critical_required.items() if not v or v == ""]
         if missing_critical:

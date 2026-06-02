@@ -203,12 +203,21 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
 
         email_ids = messages[0].split()
         
+        # BUG-003 Fix: Add detailed logging to track email fetch counts
+        total_unseen = len(email_ids)
+        logger.info(f"🔍 IMAP Search Result: Found {total_unseen} UNSEEN emails in inbox")
+        
         # Process 100 most recent emails
         if len(email_ids) > 100:
             email_ids = email_ids[-100:]
+            logger.warning(f"⚠️  Inbox has {total_unseen} UNSEEN emails. Limiting to 100 most recent for this sync.")
             
         saved_count = 0
-        logger.info(f"Scanning {len(email_ids)} emails for resume attachments. (Total in folder: {len(messages[0].split())})")
+        duplicate_count = 0
+        error_count = 0
+        processed_count = 0
+        
+        logger.info(f"📧 Processing {len(email_ids)} email(s) for resume attachments...")
         
         for email_id in reversed(email_ids):
             try:
@@ -251,7 +260,8 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                 ).first()
                 
                 if existing:
-                    logger.info(f"Skipping duplicate email (Message-ID): {subject} from {raw_email}")
+                    duplicate_count += 1
+                    logger.debug(f"⏭️  Skipping duplicate email (Message-ID): {subject} from {raw_email}")
                     continue
                 
                 # Secondary duplicate check - more specific composite key
@@ -266,7 +276,8 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                     ).first()
                     
                     if existing:
-                        logger.info(f"Skipping duplicate email (composite key): {subject} from {raw_email}")
+                        duplicate_count += 1
+                        logger.debug(f"⏭️  Skipping duplicate email (composite key): {subject} from {raw_email}")
                         continue
                 
                 # Fetch full email
@@ -437,8 +448,17 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
 
             except Exception as e:
                 logger.error(f"Error processing email {email_id.decode() if isinstance(email_id, bytes) else email_id}: {e}", exc_info=True)
+                error_count += 1
                 db.rollback()
 
+        # BUG-003 Fix: Comprehensive summary logging
+        logger.info(f"📊 Email Sync Summary:")
+        logger.info(f"   • Total UNSEEN: {total_unseen}")
+        logger.info(f"   • Processed: {len(email_ids)}")
+        logger.info(f"   • ✅ Saved: {saved_count}")
+        logger.info(f"   • ⏭️  Duplicates: {duplicate_count}")
+        logger.info(f"   • ❌ Errors: {error_count}")
+        
         mail.close()
         mail.logout()
         return {"success": True, "count": saved_count}

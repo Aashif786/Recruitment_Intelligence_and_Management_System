@@ -283,11 +283,17 @@ async def apply_for_job(
     db: Session = Depends(get_db)
 ):
     """Apply for a job with resume (Public endpoint)"""
-    # Name validation
+    # Name validation & XSS protection (MED-01)
     if not candidate_name or len(candidate_name.strip()) < 2 or candidate_name.strip().isdigit():
         raise HTTPException(
             status_code=400,
             detail="Valid full name required (must be at least 2 characters and cannot be purely numeric)."
+        )
+    import re
+    if not re.match(r"^[A-Za-z\s\-\.\']+$", candidate_name.strip()):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid characters in candidate name. Only letters, spaces, hyphens, periods, and apostrophes are allowed."
         )
 
     request_id = None
@@ -332,12 +338,16 @@ async def apply_for_job(
     is_disposable = False # Initialize to avoid UnboundLocalError
     if candidate_email:
         try:
-            # Expanded list of disposable email domains (C-23)
-            DISPOSABLE_DOMAINS = {
-                "fengnu.com", "mailinator.com", "guerrillamail.com", "10minutemail.com", 
-                "tempmail.com", "yopmail.com", "sharklasers.com", "getnada.com", 
-                "dispostable.com", "trashmail.com", "mail.tm", "mail.gw", "temp-mail.org"
-            }
+            from app.core.config import get_settings
+            settings = get_settings()
+            if settings.disposable_email_domains:
+                DISPOSABLE_DOMAINS = {d.strip().lower() for d in settings.disposable_email_domains.split(",") if d.strip()}
+            else:
+                DISPOSABLE_DOMAINS = {
+                    "fengnu.com", "mailinator.com", "guerrillamail.com", "10minutemail.com", 
+                    "tempmail.com", "yopmail.com", "sharklasers.com", "getnada.com", 
+                    "dispostable.com", "trashmail.com", "mail.tm", "mail.gw", "temp-mail.org"
+                }
             _, domain_part = candidate_email.rsplit("@", 1)
             domain_part = domain_part.lower().strip()
             if domain_part in DISPOSABLE_DOMAINS:
@@ -402,7 +412,7 @@ async def apply_for_job(
         )
 
     request_id_header = request.headers.get("X-Request-ID")
-    idempotency_key = f"{candidate_email or candidate_phone_normalized}:{job_id}"
+    idempotency_key = f"{candidate_email or candidate_phone_hash}:{job_id}"
     if settings.enable_request_id_idempotency and is_duplicate_request(
         request_id=request_id_header,
         scope="applications.apply",
@@ -557,7 +567,7 @@ async def apply_for_job(
     # We flush first to get the ID, then upload to storage using that ID as a prefix.
     user_agent = request.headers.get("user-agent")
     filename = generate_hashed_resume_filename(
-        candidate_email=candidate_email or f"phone_{candidate_phone_normalized}",
+        candidate_email=candidate_email or f"phone_{candidate_phone_hash}",
         job_id=job_id,
         resume_ext=resume_ext,
         content=content,
@@ -575,8 +585,9 @@ async def apply_for_job(
         hr_id=job.hr_id,
         candidate_name=candidate_name,
         candidate_email=candidate_email,
-        candidate_phone_normalized=candidate_phone_normalized,
-        candidate_phone_raw=candidate_phone_raw,
+        candidate_phone=candidate_phone_normalized,
+        candidate_phone_normalized=None,
+        candidate_phone_raw=None,
         candidate_phone_hash=candidate_phone_hash,
         resume_file_name=resume_file.filename,
         resume_hash=resume_hash,
@@ -1357,9 +1368,14 @@ async def ingest_email_resumes(
             
     background_tasks.add_task(run_batch_in_background)
     
+    # BUG-004 Fix: Frontend expects "saved_count" key, backend was returning "count"
+    saved_count = result.get("count", 0)
+    logger.info(f"✅ Email sync complete: {saved_count} new resumes saved, background AI processing triggered")
+    
     return {
-        "message": "Ingestion complete. Processing applications in background.", 
-        "saved_count": result.get("count"),
+        "success": True,
+        "saved_count": saved_count,
+        "message": f"Found {saved_count} new resume(s). AI mapping and analysis started in background.",
         "processing_triggered": True
     }
 
@@ -1603,6 +1619,9 @@ def get_ingested_emails(
     # instead of calling get_ingested_emails_stats() which runs a second full table scan.
     total_ingested = db.query(AttachmentResume).count()
     auto_mapped_count = sum(1 for r in results if r["application_id"] is not None or (r["processed"] and not r["mapping_failed"]))
+    
+    logger.debug(f"📊 Stats (partial - from filtered results): Total={total_ingested}, Auto-Mapped={auto_mapped_count}")
+    
     # Stats must reflect ALL records, not just the filtered/searched subset
     all_items_for_stats = results if not search else db.query(AttachmentResume).all()
     if search:
@@ -1686,11 +1705,16 @@ async def assign_ingested_email(
     is_disposable = False
     if raw_email:
         try:
-            DISPOSABLE_DOMAINS = {
-                "fengnu.com", "mailinator.com", "guerrillamail.com", "10minutemail.com", 
-                "tempmail.com", "yopmail.com", "sharklasers.com", "getnada.com", 
-                "dispostable.com", "trashmail.com", "mail.tm", "mail.gw", "temp-mail.org"
-            }
+            from app.core.config import get_settings
+            settings = get_settings()
+            if settings.disposable_email_domains:
+                DISPOSABLE_DOMAINS = {d.strip().lower() for d in settings.disposable_email_domains.split(",") if d.strip()}
+            else:
+                DISPOSABLE_DOMAINS = {
+                    "fengnu.com", "mailinator.com", "guerrillamail.com", "10minutemail.com", 
+                    "tempmail.com", "yopmail.com", "sharklasers.com", "getnada.com", 
+                    "dispostable.com", "trashmail.com", "mail.tm", "mail.gw", "temp-mail.org"
+                }
             _, domain_part = raw_email.rsplit("@", 1)
             if domain_part.lower().strip() in DISPOSABLE_DOMAINS:
                 is_disposable = True
@@ -1760,13 +1784,18 @@ async def assign_ingested_email(
     resume_hash = hashlib.sha256(content).hexdigest() if content else f"manual_hash_{resume.id}_{int(time.time())}"
     
     # ── Create Application ─────────────────────────────────────────
+    logger.info(f"🔗 Manual Assignment: Creating application for resume {resume_id} → job {job.id} ({job.title})")
+    logger.info(f"   • Candidate: {candidate_name} <{raw_email}>")
+    logger.info(f"   • Resume file: {resume_file_path}")
+    
     new_application = Application(
         job_id=job.id,
         hr_id=job.hr_id,
         candidate_name=candidate_name,
         candidate_email=raw_email,
-        candidate_phone_normalized=candidate_phone_normalized,
-        candidate_phone_raw=candidate_phone_raw,
+        candidate_phone=candidate_phone_normalized,
+        candidate_phone_normalized=None,
+        candidate_phone_raw=None,
         candidate_phone_hash=candidate_phone_hash,
         resume_file_name=resume.file_name,
         resume_hash=resume_hash,
@@ -1778,11 +1807,22 @@ async def assign_ingested_email(
         hr_notes="Manually assigned from Ingested Email Recruiter Channel."
     )
     
+    logger.info(f"   • Adding application to database...")
     db.add(new_application)
+    
+    logger.info(f"   • Updating AttachmentResume {resume_id}: processed=True, mapping_failed=False")
     resume.processed = True
     resume.mapping_failed = False
+    
+    logger.info(f"   • Committing transaction...")
     db.commit()
     db.refresh(new_application)
+    
+    logger.info(f"✅ Manual Assignment Complete:")
+    logger.info(f"   • Application ID: {new_application.id}")
+    logger.info(f"   • Status: {new_application.status}")
+    logger.info(f"   • Resume Processed: {resume.processed}")
+    logger.info(f"   • Mapping Failed: {resume.mapping_failed}")
     
     # Trigger background AI analysis
     from app.api.applications import process_application_background
