@@ -20,7 +20,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { isAuthenticated, isLoading, isOffline } = useAuth()
+  const { user, isAuthenticated, isLoading, isOffline } = useAuth()
   const router = useRouter()
   const [isMounted, setIsMounted] = useState(false)
 
@@ -33,11 +33,13 @@ export default function DashboardLayout({
 
   useEffect(() => {
     // Only redirect to login if we are CERTAIN that the user is not authenticated
-    // and the loading process has finished without network errors.
-    if (isMounted && !isLoading && !isOffline && !isAuthenticated) {
-      router.push('/auth/login?expired=true')
+    // (or is not an HR / Admin) and the loading process has finished without network errors.
+    if (isMounted && !isLoading && !isOffline) {
+      if (!isAuthenticated || (user && user.role !== 'hr' && user.role !== 'super_admin')) {
+        router.push('/auth/login?expired=true')
+      }
     }
-  }, [isAuthenticated, isLoading, isOffline, isMounted, router])
+  }, [isAuthenticated, user, isLoading, isOffline, isMounted, router])
 
   useEffect(() => {
     const handleDataMutation = (event: Event) => {
@@ -67,8 +69,10 @@ export default function DashboardLayout({
     )
   }
 
-  // Prevent rendering protected content for unauthenticated users
-  if (!isAuthenticated && !isOffline) {
+  const isUserAuthorized = isAuthenticated && user && (user.role === 'hr' || user.role === 'super_admin')
+
+  // Prevent rendering protected content for unauthenticated or unauthorized users
+  if (!isUserAuthorized && !isOffline) {
     return null;
   }
 
@@ -94,7 +98,7 @@ export default function DashboardLayout({
     )
   }
 
-  if (!isAuthenticated) {
+  if (!isUserAuthorized) {
     // Fallback while redirecting
     return null
   }

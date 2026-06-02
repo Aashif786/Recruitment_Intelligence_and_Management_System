@@ -629,36 +629,51 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const deviceChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initCameraRef = useRef<(() => Promise<void>) | null>(null);
 
-  // Handle device reconnection with debouncing
+  // Handle device reconnection with debouncing and exponential backoff retry
   const handleDeviceChange = useCallback(async () => {
     // Clear any pending debounce timeout
     if (deviceChangeTimeoutRef.current) {
       clearTimeout(deviceChangeTimeoutRef.current);
     }
 
-    // Debounce: wait 100ms before attempting reconnection
+    // Debounce: wait 1000ms before attempting reconnection
     deviceChangeTimeoutRef.current = setTimeout(async () => {
       // Only attempt reconnection if:
       // 1. Camera is currently disconnected
       // 2. Interview is not finished (allow reconnection during preview and active interview)
       if (!cameraInitializedRef.current && !isFinishedRef.current) {
-        try {
-          // Enumerate devices to confirm video input is available
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const hasVideoInput = devices.some(device => device.kind === 'videoinput');
-          
-          if (hasVideoInput) {
-            console.log('[Camera] Video device detected, attempting reinitialization...');
-            // Call initCamera to reinitialize the stream
-            if (initCameraRef.current) {
-              await initCameraRef.current();
+        let attempts = 0;
+        const maxAttempts = 3;
+        const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+        while (attempts < maxAttempts && !cameraInitializedRef.current && !isFinishedRef.current) {
+          attempts++;
+          try {
+            // Enumerate devices to confirm video input is available
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const hasVideoInput = devices.some(device => device.kind === 'videoinput');
+            
+            if (hasVideoInput) {
+              console.log(`[Camera] Video device detected (attempt ${attempts}/${maxAttempts}), attempting reinitialization...`);
+              // Call initCamera to reinitialize the stream
+              if (initCameraRef.current) {
+                await initCameraRef.current();
+              }
+              if (cameraInitializedRef.current) {
+                console.log('[Camera] Reconnection successful!');
+                break;
+              }
             }
+          } catch (err) {
+            console.error(`[Camera] Reconnection attempt ${attempts} failed:`, err);
           }
-        } catch (err) {
-          console.error('[Camera] Device enumeration failed:', err);
+          if (!cameraInitializedRef.current && attempts < maxAttempts && !isFinishedRef.current) {
+            console.log(`[Camera] Waiting before retry attempt ${attempts + 1}...`);
+            await delay(1000 * attempts); // 1s, 2s backoff
+          }
         }
       }
-    }, 100);
+    }, 1000);
   }, []);
 
   useEffect(() => {
