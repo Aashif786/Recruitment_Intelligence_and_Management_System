@@ -1,12 +1,6 @@
 #!/bin/bash
 set -e
 
-# Register exit trap to upload debug logs to Supabase on script completion or failure
-cleanup() {
-    echo "📤 Uploading VPS debug logs to Supabase..."
-    python3 backend/scripts/vps_debug.py || true
-}
-trap cleanup EXIT
 
 echo "🚀 Initiating Zero-Downtime Deployment (Blue/Green)"
 
