@@ -108,7 +108,14 @@ def validate_email_strict_enterprise(
     try:
         valid = validate_email(normalized_email, check_deliverability=False)
         domain = valid.domain
-        if domain in DISPOSABLE_DOMAINS:
+        
+        from app.core.config import get_settings
+        settings = get_settings()
+        allowed_disposable = DISPOSABLE_DOMAINS
+        if settings.disposable_email_domains:
+            allowed_disposable = {d.strip().lower() for d in settings.disposable_email_domains.split(",") if d.strip()}
+            
+        if domain in allowed_disposable:
             log_json(
                 logger,
                 "email_validation_rejected",

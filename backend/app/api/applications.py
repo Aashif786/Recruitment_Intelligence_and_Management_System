@@ -157,19 +157,19 @@ def build_application_detail_response(application: Application, current_user_id:
     
     resume_url = None
     if application.resume_file_path:
-        resume_url = get_signed_url(settings.supabase_bucket_resumes, application.resume_file_path)
+        resume_url = get_signed_url(settings.supabase_bucket_resumes, application.resume_file_path, expires_in=900)
     
     photo_url = None
     if application.candidate_photo_path:
-        photo_url = get_signed_url(settings.supabase_bucket_id_photos, application.candidate_photo_path)
+        photo_url = get_signed_url(settings.supabase_bucket_id_photos, application.candidate_photo_path, expires_in=900)
              
     id_card_url = None
     if getattr(application, 'id_card_url', None):
-        id_card_url = get_signed_url(settings.supabase_bucket_id_cards, application.id_card_url)
+        id_card_url = get_signed_url(settings.supabase_bucket_id_cards, application.id_card_url, expires_in=900)
 
     video_url = None
     if application.interview and application.interview.video_recording_path:
-        video_url = get_signed_url(settings.supabase_bucket_videos, application.interview.video_recording_path)
+        video_url = get_signed_url(settings.supabase_bucket_videos, application.interview.video_recording_path, expires_in=900)
 
     detail = ApplicationDetailResponse.model_validate(application, from_attributes=True)
     raw_notes = application.hr_notes or ""
@@ -283,11 +283,17 @@ async def apply_for_job(
     db: Session = Depends(get_db)
 ):
     """Apply for a job with resume (Public endpoint)"""
-    # Name validation: just ensure it is not empty to support bulk uploads
-    if not candidate_name :
+    # Name validation & XSS protection (MED-01)
+    if not candidate_name or len(candidate_name.strip()) < 2 or candidate_name.strip().isdigit():
         raise HTTPException(
             status_code=400,
-            detail="Valid full name required "#(at least two words, containing letters, hyphens, or apostrophes)."
+            detail="Valid full name required (must be at least 2 characters and cannot be purely numeric)."
+        )
+    import re
+    if not re.match(r"^[A-Za-z\s\-\.\']+$", candidate_name.strip()):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid characters in candidate name. Only letters, spaces, hyphens, periods, and apostrophes are allowed."
         )
 
     request_id = None
@@ -332,12 +338,16 @@ async def apply_for_job(
     is_disposable = False # Initialize to avoid UnboundLocalError
     if candidate_email:
         try:
-            # Expanded list of disposable email domains (C-23)
-            DISPOSABLE_DOMAINS = {
-                "fengnu.com", "mailinator.com", "guerrillamail.com", "10minutemail.com", 
-                "tempmail.com", "yopmail.com", "sharklasers.com", "getnada.com", 
-                "dispostable.com", "trashmail.com", "mail.tm", "mail.gw", "temp-mail.org"
-            }
+            from app.core.config import get_settings
+            settings = get_settings()
+            if settings.disposable_email_domains:
+                DISPOSABLE_DOMAINS = {d.strip().lower() for d in settings.disposable_email_domains.split(",") if d.strip()}
+            else:
+                DISPOSABLE_DOMAINS = {
+                    "fengnu.com", "mailinator.com", "guerrillamail.com", "10minutemail.com", 
+                    "tempmail.com", "yopmail.com", "sharklasers.com", "getnada.com", 
+                    "dispostable.com", "trashmail.com", "mail.tm", "mail.gw", "temp-mail.org"
+                }
             _, domain_part = candidate_email.rsplit("@", 1)
             domain_part = domain_part.lower().strip()
             if domain_part in DISPOSABLE_DOMAINS:
@@ -402,7 +412,7 @@ async def apply_for_job(
         )
 
     request_id_header = request.headers.get("X-Request-ID")
-    idempotency_key = f"{candidate_email or candidate_phone_normalized}:{job_id}"
+    idempotency_key = f"{candidate_email or candidate_phone_hash}:{job_id}"
     if settings.enable_request_id_idempotency and is_duplicate_request(
         request_id=request_id_header,
         scope="applications.apply",
@@ -557,7 +567,7 @@ async def apply_for_job(
     # We flush first to get the ID, then upload to storage using that ID as a prefix.
     user_agent = request.headers.get("user-agent")
     filename = generate_hashed_resume_filename(
-        candidate_email=candidate_email or f"phone_{candidate_phone_normalized}",
+        candidate_email=candidate_email or f"phone_{candidate_phone_hash}",
         job_id=job_id,
         resume_ext=resume_ext,
         content=content,
@@ -575,8 +585,9 @@ async def apply_for_job(
         hr_id=job.hr_id,
         candidate_name=candidate_name,
         candidate_email=candidate_email,
-        candidate_phone_normalized=candidate_phone_normalized,
-        candidate_phone_raw=candidate_phone_raw,
+        candidate_phone=candidate_phone_normalized,
+        candidate_phone_normalized=None,
+        candidate_phone_raw=None,
         candidate_phone_hash=candidate_phone_hash,
         resume_file_name=resume_file.filename,
         resume_hash=resume_hash,
@@ -648,6 +659,21 @@ async def apply_for_job(
             logger.error(f"[EMAIL][FAILED] Application email for App #{getattr(new_application, 'id', 'UNKNOWN')}: {str(e)}")
 
 
+    except IntegrityError as e:
+        db.rollback()
+        logger.warning(f"Duplicate application integrity violation: {e}")
+        from app.core.storage import delete_file
+        try:
+            if resume_storage_path:
+                delete_file(settings.supabase_bucket_resumes, resume_storage_path)
+            if photo_storage_path:
+                delete_file(settings.supabase_bucket_id_photos, photo_storage_path)
+        except Exception as del_err:
+            logger.warning(f"Failed to clean up files on IntegrityError: {del_err}")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already applied for this job."
+        )
     except Exception as e:
         db.rollback()
         logger.error(f"Application submission failed: {e}")
@@ -658,8 +684,8 @@ async def apply_for_job(
                 delete_file(settings.supabase_bucket_resumes, resume_storage_path)
             if photo_storage_path and new_application.candidate_photo_path:
                 delete_file(settings.supabase_bucket_id_photos, photo_storage_path)
-        except Exception as e:
-            logger.warning(f"Failed to clean up files for application: {e}")
+        except Exception as cleanup_err:
+            logger.warning(f"Failed to clean up files for application: {cleanup_err}")
         raise HTTPException(status_code=500, detail="Failed to submit application securely.")
 
     background_tasks.add_task(
@@ -1054,6 +1080,7 @@ def has_applied_for_job(
 
     # 3. Check for duplicates (OR logic)
     if not candidate_email and not candidate_phone_hash:
+        db.query(Application.id).filter(Application.id == -1).first() # Dummy query to equalize timing
         return HasAppliedResponse(hasApplied=False)
 
     existing = (
@@ -1299,7 +1326,7 @@ async def ingest_email_resumes(
     request: Request,
     req: EmailIngestRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_hr),
+    current_user: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -1308,13 +1335,16 @@ async def ingest_email_resumes(
     """
     # Read IMAP credentials from server-side settings (never from request body)
     from app.domain.models import GlobalSettings
+    from app.core.encryption import decrypt_field
     settings_records = db.query(GlobalSettings).filter(
         GlobalSettings.key.in_(["imap_email", "imap_password"])
     ).all()
     settings_dict = {s.key: s.value for s in settings_records}
 
     imap_email = settings_dict.get("imap_email") or settings.imap_email or ""
-    imap_password = settings_dict.get("imap_password") or settings.imap_password or ""
+    enc_password = settings_dict.get("imap_password") or settings.imap_password or ""
+    
+    imap_password = decrypt_field(enc_password) if enc_password else ""
 
     if not imap_email or not imap_password:
         raise HTTPException(
@@ -1338,9 +1368,14 @@ async def ingest_email_resumes(
             
     background_tasks.add_task(run_batch_in_background)
     
+    # BUG-004 Fix: Frontend expects "saved_count" key, backend was returning "count"
+    saved_count = result.get("count", 0)
+    logger.info(f"✅ Email sync complete: {saved_count} new resumes saved, background AI processing triggered")
+    
     return {
-        "message": "Ingestion complete. Processing applications in background.", 
-        "saved_count": result.get("count"),
+        "success": True,
+        "saved_count": saved_count,
+        "message": f"Found {saved_count} new resume(s). AI mapping and analysis started in background.",
         "processing_triggered": True
     }
 
@@ -1371,7 +1406,14 @@ def _extract_storage_path_identifier(path: str) -> Optional[str]:
 def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: set = None, app_emails_set: set = None):
     """
     Unified logic to resolve if an ingested email is mapped to an application.
-    Returns (app_object_or_none, processed_flag).
+
+    BUG-H Fix: Two distinct return-type contracts, now explicitly documented:
+      - With sets (stats/fast path):  returns (bool, bool)  — just truthy/falsy
+      - Without sets (list/slow path): returns (Application|None, bool) — full obj needed for metadata
+
+    Callers must handle accordingly:
+      - Stats call (with sets): `if app_found or is_processed`
+      - Listing call (without sets): `app_obj.id if app_obj else None`
     """
     if item.processed:
         # If manually marked processed, we don't necessarily need the app object for stats,
@@ -1387,11 +1429,11 @@ def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: 
     path_id = _extract_storage_path_identifier(item.file_url)
     if path_id:
         if app_paths_set is not None:
+            # Fast path (stats): return bool, bool
             if path_id in app_paths_set:
                 return True, True
         else:
-            # For the list, we need the full app object
-            # Use a more precise match on the path identifier
+            # Slow path (list): return full Application object
             app = db.query(Application).filter(
                 or_(
                     Application.resume_file_path == path_id,
@@ -1404,10 +1446,11 @@ def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: 
     # 2. Match by candidate email (fallback)
     if raw_email:
         if app_emails_set is not None:
+            # Fast path (stats): return bool, bool
             if raw_email in app_emails_set:
                 return True, True
         else:
-            # Use trim and lower to match the set building logic
+            # Slow path (list): return full Application object
             app = db.query(Application).filter(
                 func.trim(func.lower(Application.candidate_email)) == raw_email
             ).order_by(Application.applied_at.desc()).first()
@@ -1415,6 +1458,8 @@ def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: 
                 return app, True
 
     return None, item.processed
+
+
 
 @router.get("/ingested-emails/stats")
 def get_ingested_emails_stats(
@@ -1441,7 +1486,7 @@ def get_ingested_emails_stats(
     auto_mapped = 0
     for item in items:
         app_found, is_processed = _resolve_resume_mapping(item, db, app_paths, app_emails)
-        if app_found or is_processed:
+        if app_found or (is_processed and not getattr(item, 'mapping_failed', False)):
             auto_mapped += 1
                 
     return {
@@ -1461,8 +1506,19 @@ def get_ingested_emails(
     db: Session = Depends(get_db)
 ):
     """
-    List all ingested email resumes (HR only)
+    List all ingested email resumes (HR only).
+
+    BUG-B Fix: Pre-build application lookup sets once (O(n)) and pass them
+    into _resolve_resume_mapping to eliminate one DB query per row (N+1).
+
+    BUG-G Fix: Compute global_stats inline from the results already in memory
+    instead of calling get_ingested_emails_stats() which causes a second full scan.
+
+    BUG-C Fix: Regenerate fresh signed URLs before returning so 24-hour expiry
+    on stored signed URLs does not leave dead links in the table.
     """
+    from app.core.storage import get_signed_url
+
     query = db.query(AttachmentResume)
     if search:
         query = query.filter(
@@ -1472,54 +1528,122 @@ def get_ingested_emails(
                 AttachmentResume.file_name.ilike(f"%{search}%")
             )
         )
-    # Fetch all items to allow accurate mapping-based filtering in Python (since mapping is resolved dynamically)
+    # Fetch all items for accurate mapping-based filtering in Python
     items = query.order_by(AttachmentResume.id.desc()).all()
-    
+
+    # BUG-B Fix: Pre-fetch application mapping data once — O(n) sets for O(1) lookups.
+    # Previously this was done ONLY in get_ingested_emails_stats(); the listing loop
+    # called _resolve_resume_mapping(item, db) without sets, causing 1 DB query per row.
+    applications_data = db.query(Application.resume_file_path, Application.candidate_email).all()
+    app_paths_set = {
+        _extract_storage_path_identifier(a.resume_file_path)
+        for a in applications_data if a.resume_file_path
+    }
+    app_emails_set = {a.candidate_email.lower().strip() for a in applications_data if a.candidate_email}
+
     results = []
-    
+
     for item in items:
-        app, is_processed = _resolve_resume_mapping(item, db)
-        
-        # Duplicate detection logic
+        # BUG-B Fix: Pass pre-built sets — avoids per-row DB queries.
+        # Note: when sets are passed, _resolve_resume_mapping returns (True|None, bool).
+        # We still need the full app object for application_id / job metadata, so we
+        # do a targeted single query only for matched rows (much cheaper than N queries).
+        app_found, is_processed = _resolve_resume_mapping(item, db, app_paths_set, app_emails_set)
+
+        app_obj = None
+        if app_found:
+            # Only hit the DB when we know a match exists (subset of all rows).
+            sender_str = item.sender_email or ""
+            match = re.search(r'<([^>]+)>', sender_str)
+            raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
+            path_id = _extract_storage_path_identifier(item.file_url)
+            filter_conditions = []
+            if path_id:
+                filter_conditions.append(Application.resume_file_path.like(f"%{path_id}%"))
+            if raw_email:
+                filter_conditions.append(func.trim(func.lower(Application.candidate_email)) == raw_email)
+            if filter_conditions:
+                app_obj = (
+                    db.query(Application)
+                    .options(joinedload(Application.job))
+                    .filter(or_(*filter_conditions))
+                    .first()
+                )
+
+        # Duplicate detection
         sender_str = item.sender_email or ""
-        match = re.search(r'<([^>]+)>', sender_str)
-        raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
-        candidate_email_to_check = app.candidate_email if app else raw_email
-        
+        match_dup = re.search(r'<([^>]+)>', sender_str)
+        raw_email_dup = match_dup.group(1).lower().strip() if match_dup else sender_str.lower().strip()
+        candidate_email_to_check = app_obj.candidate_email if app_obj else raw_email_dup
+
         is_duplicate = False
         if candidate_email_to_check:
             dup_query = db.query(Application).filter(Application.candidate_email.ilike(candidate_email_to_check))
-            if app:
-                dup_query = dup_query.filter(Application.id != app.id)
+            if app_obj:
+                dup_query = dup_query.filter(Application.id != app_obj.id)
             is_duplicate = dup_query.count() > 0
-        
+
+        # BUG-C Fix: The stored file_url is a Supabase signed URL that expires in 24 hours.
+        # Regenerate a fresh signed URL on every API response so links never go dead.
+        fresh_file_url = item.file_url
+        if item.file_url:
+            path_id_for_url = _extract_storage_path_identifier(item.file_url)
+            if path_id_for_url:
+                # Strip bucket prefix before calling get_signed_url
+                storage_key = path_id_for_url
+                if storage_key.startswith("MAIL_ATTACHMENTS/"):
+                    storage_key = storage_key[len("MAIL_ATTACHMENTS/"):]
+                try:
+                    fresh_url = get_signed_url('MAIL_ATTACHMENTS', storage_key, expires_in=86400)
+                    if fresh_url:
+                        fresh_file_url = fresh_url
+                except Exception as url_err:
+                    logger.warning(f"Failed to refresh signed URL for AttachmentResume {item.id}: {url_err}")
+
         results.append({
             "id": item.id,
             "sender_email": item.sender_email,
             "subject": item.subject,
             "file_name": item.file_name,
-            "file_url": item.file_url,
+            "file_url": fresh_file_url,
             "received_at": item.received_at.replace(tzinfo=timezone.utc) if item.received_at else None,
-            "processed": is_processed or (app is not None),
-            "application_id": app.id if app else None,
-            "job_title": app.job.title if app and app.job else None,
-            "job_code": app.job.job_id if app and app.job else None,
+            "processed": is_processed or (app_obj is not None),
+            "mapping_failed": getattr(item, 'mapping_failed', False),
+            "application_id": app_obj.id if app_obj else None,
+            "job_title": app_obj.job.title if app_obj and app_obj.job else None,
+            "job_code": app_obj.job.job_id if app_obj and app_obj.job else None,
             "is_duplicate": is_duplicate
         })
 
-    # Use the same stats logic as get_ingested_emails_stats for consistency
-    stats = get_ingested_emails_stats(current_user, db)
+    # BUG-G Fix: Compute stats inline from the results we already have in memory
+    # instead of calling get_ingested_emails_stats() which runs a second full table scan.
+    total_ingested = db.query(AttachmentResume).count()
+    auto_mapped_count = sum(1 for r in results if r["application_id"] is not None or (r["processed"] and not r["mapping_failed"]))
     
+    logger.debug(f"📊 Stats (partial - from filtered results): Total={total_ingested}, Auto-Mapped={auto_mapped_count}")
+    
+    # Stats must reflect ALL records, not just the filtered/searched subset
+    all_items_for_stats = results if not search else db.query(AttachmentResume).all()
+    if search:
+        # For search results, global stats still need full counts — use pre-built sets
+        all_results_app_found = [
+            (i, _resolve_resume_mapping(i, db, app_paths_set, app_emails_set))
+            for i in all_items_for_stats
+        ]
+        auto_mapped_global = sum(1 for (i, (af, ip)) in all_results_app_found if af or (ip and not getattr(i, 'mapping_failed', False)))
+    else:
+        auto_mapped_global = auto_mapped_count
+
     # Python-level filter to match UI's status filter accurately
     if processed is not None:
         if processed:
-            results = [r for r in results if r["application_id"] is not None or r["processed"]]
+            results = [r for r in results if r["application_id"] is not None or (r["processed"] and not r["mapping_failed"])]
         else:
-            results = [r for r in results if r["application_id"] is None and not r["processed"]]
+            results = [r for r in results if r["application_id"] is None and (not r["processed"] or r["mapping_failed"])]
 
     total = len(results)
-    paginated_items = results[skip : skip + limit]
-    
+    paginated_items = results[skip: skip + limit]
+
     return {
         "items": paginated_items,
         "total": total,
@@ -1527,11 +1651,13 @@ def get_ingested_emails(
         "size": limit,
         "pages": (total + limit - 1) // limit if limit > 0 else 1,
         "global_stats": {
-            "total_ingested": stats["total_ingested"],
-            "auto_mapped": stats["auto_mapped"],
-            "pending_assignment": stats["pending_assignment"],
+            "total_ingested": total_ingested,
+            "auto_mapped": auto_mapped_global,
+            "pending_assignment": max(0, total_ingested - auto_mapped_global),
         },
     }
+
+
 
 
 class AssignResumeRequest(BaseModel):
@@ -1579,11 +1705,16 @@ async def assign_ingested_email(
     is_disposable = False
     if raw_email:
         try:
-            DISPOSABLE_DOMAINS = {
-                "fengnu.com", "mailinator.com", "guerrillamail.com", "10minutemail.com", 
-                "tempmail.com", "yopmail.com", "sharklasers.com", "getnada.com", 
-                "dispostable.com", "trashmail.com", "mail.tm", "mail.gw", "temp-mail.org"
-            }
+            from app.core.config import get_settings
+            settings = get_settings()
+            if settings.disposable_email_domains:
+                DISPOSABLE_DOMAINS = {d.strip().lower() for d in settings.disposable_email_domains.split(",") if d.strip()}
+            else:
+                DISPOSABLE_DOMAINS = {
+                    "fengnu.com", "mailinator.com", "guerrillamail.com", "10minutemail.com", 
+                    "tempmail.com", "yopmail.com", "sharklasers.com", "getnada.com", 
+                    "dispostable.com", "trashmail.com", "mail.tm", "mail.gw", "temp-mail.org"
+                }
             _, domain_part = raw_email.rsplit("@", 1)
             if domain_part.lower().strip() in DISPOSABLE_DOMAINS:
                 is_disposable = True
@@ -1653,13 +1784,18 @@ async def assign_ingested_email(
     resume_hash = hashlib.sha256(content).hexdigest() if content else f"manual_hash_{resume.id}_{int(time.time())}"
     
     # ── Create Application ─────────────────────────────────────────
+    logger.info(f"🔗 Manual Assignment: Creating application for resume {resume_id} → job {job.id} ({job.title})")
+    logger.info(f"   • Candidate: {candidate_name} <{raw_email}>")
+    logger.info(f"   • Resume file: {resume_file_path}")
+    
     new_application = Application(
         job_id=job.id,
         hr_id=job.hr_id,
         candidate_name=candidate_name,
         candidate_email=raw_email,
-        candidate_phone_normalized=candidate_phone_normalized,
-        candidate_phone_raw=candidate_phone_raw,
+        candidate_phone=candidate_phone_normalized,
+        candidate_phone_normalized=None,
+        candidate_phone_raw=None,
         candidate_phone_hash=candidate_phone_hash,
         resume_file_name=resume.file_name,
         resume_hash=resume_hash,
@@ -1671,10 +1807,22 @@ async def assign_ingested_email(
         hr_notes="Manually assigned from Ingested Email Recruiter Channel."
     )
     
+    logger.info(f"   • Adding application to database...")
     db.add(new_application)
+    
+    logger.info(f"   • Updating AttachmentResume {resume_id}: processed=True, mapping_failed=False")
     resume.processed = True
+    resume.mapping_failed = False
+    
+    logger.info(f"   • Committing transaction...")
     db.commit()
     db.refresh(new_application)
+    
+    logger.info(f"✅ Manual Assignment Complete:")
+    logger.info(f"   • Application ID: {new_application.id}")
+    logger.info(f"   • Status: {new_application.status}")
+    logger.info(f"   • Resume Processed: {resume.processed}")
+    logger.info(f"   • Mapping Failed: {resume.mapping_failed}")
     
     # Trigger background AI analysis
     from app.api.applications import process_application_background
@@ -1696,6 +1844,7 @@ async def assign_ingested_email(
 @router.get("/{application_id}", response_model=ApplicationDetailResponse)
 def get_application(
     application_id: int,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
@@ -1725,30 +1874,37 @@ def get_application(
             db.commit()
             db.refresh(application)
             
-            import threading
-            import asyncio
-            def run_healing():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    loop.run_until_complete(retry_application_background(application_id, application.job_id, application.resume_file_path))
-                except Exception as ex:
-                    logger.error(f"Error in self-healing thread: {ex}")
-                finally:
-                    loop.close()
-                    
-            t = threading.Thread(target=run_healing)
-            t.start()
+            background_tasks.add_task(
+                retry_application_background,
+                application_id,
+                application.job_id,
+                application.resume_file_path
+            )
     
-    # Sanitize paths
-    if application.candidate_photo_path and ":" in application.candidate_photo_path:
-        idx = application.candidate_photo_path.find("uploads")
-        if idx != -1:
-            application.candidate_photo_path = application.candidate_photo_path[idx:].replace("\\", "/")
-    if application.resume_file_path and ":" in application.resume_file_path:
-        idx = application.resume_file_path.find("uploads")
-        if idx != -1:
-            application.resume_file_path = application.resume_file_path[idx:].replace("\\", "/")
+    # Sanitize paths using pathlib.Path.resolve() and a safe root check
+    def sanitize_path(path_str):
+        if not path_str or not (":" in path_str or "\\" in path_str or ".." in path_str):
+            return path_str
+        try:
+            from pathlib import Path
+            base_dir = Path("uploads").resolve()
+            idx = path_str.find("uploads")
+            if idx != -1:
+                rel_path = path_str[idx + len("uploads"):].lstrip("\\/")
+                full_path = (base_dir / rel_path).resolve()
+            else:
+                full_path = Path(path_str).resolve()
+            
+            # Safe root check
+            if base_dir in full_path.parents or full_path == base_dir:
+                return "uploads/" + full_path.relative_to(base_dir).as_posix()
+            else:
+                return full_path.name
+        except Exception:
+            return path_str.replace("\\", "/").split("/")[-1]
+
+    application.candidate_photo_path = sanitize_path(application.candidate_photo_path)
+    application.resume_file_path = sanitize_path(application.resume_file_path)
 
     return build_application_detail_response(application, current_user.id)
 
@@ -2246,6 +2402,12 @@ async def delete_application(
         raise HTTPException(status_code=404, detail="Application not found")
     validate_hr_ownership(app, current_user, resource_name="application")
 
+    # Fetch file paths before deletion
+    resume_path = app.resume_file_path
+    photo_path = app.candidate_photo_path
+    id_card_path = getattr(app, 'id_card_url', None)
+    video_path = app.interview.video_recording_path if app.interview else None
+
     try:
         # Explicitly delete ResumeExtraction to prevent ForeignKeyViolation
         # (Table missing ON DELETE CASCADE and relationship has passive_deletes=True)
@@ -2254,6 +2416,18 @@ async def delete_application(
         
         db.delete(app)
         db.commit()
+
+        # Delete cloud files after successful commit
+        from app.core.storage import delete_file
+        if resume_path:
+            delete_file(settings.supabase_bucket_resumes, resume_path)
+        if photo_path:
+            delete_file(settings.supabase_bucket_id_photos, photo_path)
+        if id_card_path:
+            delete_file(settings.supabase_bucket_id_cards, id_card_path)
+        if video_path:
+            delete_file(settings.supabase_bucket_videos, video_path)
+
     except Exception as e:
         db.rollback()
         logger.error(f"Error deleting application {application_id}: {e}")
@@ -2289,6 +2463,19 @@ async def bulk_delete_applications(
     for app in apps:
         validate_hr_ownership(app, current_user, resource_name="application")
 
+    # Collect all file paths before deletion
+    file_deletions = []
+    for app in apps:
+        if app.resume_file_path:
+            file_deletions.append((settings.supabase_bucket_resumes, app.resume_file_path))
+        if app.candidate_photo_path:
+            file_deletions.append((settings.supabase_bucket_id_photos, app.candidate_photo_path))
+        id_card = getattr(app, 'id_card_url', None)
+        if id_card:
+            file_deletions.append((settings.supabase_bucket_id_cards, id_card))
+        if app.interview and app.interview.video_recording_path:
+            file_deletions.append((settings.supabase_bucket_videos, app.interview.video_recording_path))
+
     try:
         from app.domain.models import ResumeExtraction
         # Delete associated data first
@@ -2298,6 +2485,15 @@ async def bulk_delete_applications(
         db.query(Application).filter(Application.id.in_(application_ids)).delete(synchronize_session=False)
         
         db.commit()
+
+        # Delete cloud files after successful commit
+        from app.core.storage import delete_file
+        for bucket, path in file_deletions:
+            try:
+                delete_file(bucket, path)
+            except Exception as f_err:
+                logger.warning(f"Bulk delete: failed to remove cloud file {bucket}/{path}: {f_err}")
+
     except Exception as e:
         db.rollback()
         logger.error(f"Error in bulk delete: {e}")

@@ -6,21 +6,23 @@ from app.core.config import get_settings
 settings = get_settings()
 
 # Create database engine
+db_echo = False if settings.env == "production" else settings.debug
+
 if settings.database_url.startswith("sqlite"):
     engine = create_engine(
         settings.database_url,
         connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
-        echo=settings.debug
+        echo=db_echo
     )
 else:
     # PgBouncer detection: standard port is 6543 or we can check port/key in URL
     is_pgbouncer = "6543" in settings.database_url or "pgbouncer" in settings.database_url.lower()
     if is_pgbouncer:
-        p_size = 1
-        m_overflow = 1
+        p_size = settings.db_pool_size if settings.db_pool_size is not None else 1
+        m_overflow = settings.db_max_overflow if settings.db_max_overflow is not None else 1
     else:
-        p_size = 2
-        m_overflow = 3
+        p_size = settings.db_pool_size if settings.db_pool_size is not None else 2
+        m_overflow = settings.db_max_overflow if settings.db_max_overflow is not None else 3
 
     engine = create_engine(
         settings.database_url,
@@ -28,7 +30,7 @@ else:
         pool_size=p_size,
         max_overflow=m_overflow,
         pool_recycle=300,    # Recycle connections every 5 minutes (ideal for Supabase/PG poolers)
-        echo=settings.debug
+        echo=db_echo
     )
 
 

@@ -85,12 +85,6 @@ function migrateFromLegacy(): SessionData | null {
   if (typeof window === 'undefined') return null;
 
   try {
-    const offlineRaw = localStorage.getItem(OFFLINE_CACHE_KEY);
-    if (offlineRaw) {
-      const parsed = JSON.parse(offlineRaw);
-      if (parsed.version === 4) return parsed as SessionData; 
-    }
-
     let raw = sessionStorage.getItem(LEGACY_KEY_V3);
     if (!raw) {
       raw = sessionStorage.getItem(LEGACY_KEY_V2);
@@ -108,7 +102,6 @@ function migrateFromLegacy(): SessionData | null {
       }
     } else {
       sessionStorage.removeItem(LEGACY_KEY_V3);
-      localStorage.removeItem('rims_offline_cache_v3');
     }
 
     const old = JSON.parse(raw) as any;
@@ -352,13 +345,6 @@ export function clearSession(): void {
   sessionStorage.removeItem(LEGACY_KEY_V1);
   sessionStorage.removeItem(LEGACY_KEY_V0);
   
-  localStorage.removeItem(OFFLINE_CACHE_KEY);
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem(LEGACY_KEY_V3);
-  localStorage.removeItem(LEGACY_KEY_V2);
-  localStorage.removeItem(LEGACY_KEY_V1);
-  localStorage.removeItem(LEGACY_KEY_V0);
-
   _cachedSession = null;
   if (DEBUG) console.debug('[Session v4] Session cleared.');
 }
@@ -374,7 +360,6 @@ function saveSession(session: SessionData): void {
     try {
       const data = JSON.stringify(session);
       sessionStorage.setItem(SESSION_KEY, data);
-      localStorage.setItem(OFFLINE_CACHE_KEY, data);
     } catch {
       // sessionStorage quota exceeded — silently degrade
     }

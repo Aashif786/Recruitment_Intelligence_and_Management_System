@@ -73,6 +73,7 @@ _REQUIRED_COLUMNS = [
     ("resume_extractions", "reasoning", "TEXT"), # Cast to JSONB happens in models/postgres if column exists
     # Missing Interview columns
     ("interviews", "current_difficulty", "VARCHAR(20) DEFAULT 'medium'"),
+    ("users", "password_changed_at", "TIMESTAMP"),
     ("interviews", "questions_asked", "INTEGER DEFAULT 0"),
     ("interviews", "total_questions", "INTEGER DEFAULT 20"),
     ("interviews", "locked_skill", "VARCHAR(50)"),
@@ -88,6 +89,7 @@ _REQUIRED_COLUMNS = [
     # Email inbox edge cases fix - retry tracking
     ("attachment_resumes", "retry_count", "INTEGER DEFAULT 0"),
     ("attachment_resumes", "last_error", "TEXT"),
+    ("attachment_resumes", "mapping_failed", "BOOLEAN DEFAULT FALSE"),
     # OTP brute-force protection (added after initial schema)
     ("users", "otp_attempt_count", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "otp_locked_until", "TIMESTAMP WITH TIME ZONE"),
@@ -235,6 +237,20 @@ def run_startup_migrations(engine: Engine):
         except Exception as e:
             _safe_rollback(conn)
             logger.warning(f"Failed to update application status constraint: {e}")
+
+        # 1cd. CRIT-03 Migration: set candidate_phone_normalized and candidate_phone_raw to NULL for privacy/data minimization
+        try:
+            if column_exists(conn, "applications", "candidate_phone_normalized"):
+                conn.execute(text("UPDATE applications SET candidate_phone_normalized = NULL WHERE candidate_phone_normalized IS NOT NULL"))
+                conn.commit()
+                logger.info("Cleared candidate_phone_normalized from all applications (CRIT-03 data minimization).")
+            if column_exists(conn, "applications", "candidate_phone_raw"):
+                conn.execute(text("UPDATE applications SET candidate_phone_raw = NULL WHERE candidate_phone_raw IS NOT NULL"))
+                conn.commit()
+                logger.info("Cleared candidate_phone_raw from all applications (MED-06 data minimization).")
+        except Exception as e:
+            _safe_rollback(conn)
+            logger.warning(f"Failed to clear plaintext phone numbers: {e}")
 
         # 1d. Create global_settings table if not exists
         try:
@@ -460,7 +476,22 @@ def run_startup_migrations(engine: Engine):
             "uq_interview_application_id",
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_interview_application_id ON interviews(application_id)",
         ),
+        (
+            "applications",
+            "ix_applications_candidate_email",
+            "CREATE INDEX IF NOT EXISTS ix_applications_candidate_email ON applications(candidate_email)",
+        ),
     ]
+
+    with engine.connect() as conn:
+        try:
+            if "postgresql" in str(engine.url):
+                conn.execute(text("ALTER TABLE applications ALTER COLUMN candidate_email SET NOT NULL"))
+                conn.commit()
+                logger.info("Migration completed: applications.candidate_email set to NOT NULL")
+        except Exception as exc:
+            _safe_rollback(conn)
+            logger.warning(f"Error setting candidate_email NOT NULL: {exc}")
 
     with engine.connect() as conn:
         for table, constraint_name, create_sql in required_constraints:

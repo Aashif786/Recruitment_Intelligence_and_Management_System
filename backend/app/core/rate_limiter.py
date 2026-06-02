@@ -4,6 +4,11 @@ Uses slowapi (built on top of limits library).
 """
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from fastapi import Request
 
-# Global rate limiter instance — keyed by client IP
-limiter = Limiter(key_func=get_remote_address)
+def custom_key_func(request: Request) -> str:
+    """Rate limit by client IP only to prevent header injection bypasses."""
+    return get_remote_address(request)
+
+# Global rate limiter instance — keyed by client IP only
+limiter = Limiter(key_func=custom_key_func)

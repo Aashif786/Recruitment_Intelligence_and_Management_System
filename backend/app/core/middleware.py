@@ -66,7 +66,12 @@ class SecurityHeadersMiddleware:
                 set_header(b"x-content-type-options", b"nosniff")
                 set_header(b"x-xss-protection", b"1; mode=block")
                 set_header(b"referrer-policy", b"strict-origin-when-cross-origin")
-                set_header(b"strict-transport-security", b"max-age=31536000; includeSubDomains")
+                
+                from app.core.config import get_settings
+                settings = get_settings()
+                if scope.get("scheme") == "https" or settings.env == "production":
+                    set_header(b"strict-transport-security", b"max-age=31536000; includeSubDomains")
+                
                 set_header(b"content-security-policy",
                            # BUG-026 Fix: Removed 'unsafe-inline' from script-src.
                            # This was a CSP bypass that allowed arbitrary inline script execution.

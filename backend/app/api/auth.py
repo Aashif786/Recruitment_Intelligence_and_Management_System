@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from app.infrastructure.database import get_db
 from app.domain.models import User
-from app.domain.schemas import UserRegister, UserLogin, TokenResponse, UserResponse, UserVerifyOTP, ForgotPasswordRequest, ResetPasswordRequest, UserProfileUpdate
+from app.domain.schemas import UserRegister, UserLogin, TokenResponse, UserResponse, UserVerifyOTP, ForgotPasswordRequest, ResetPasswordRequest, UserProfileUpdate, UserListResponse
 from app.core.auth import hash_password, verify_password, create_access_token, get_current_user, get_current_admin, pwd_context
 from app.services.email_service import send_otp_email, send_password_reset_email
 from app.core.config import get_settings
@@ -22,38 +22,34 @@ settings = get_settings()
 
 from app.core.rate_limiter import limiter
 
-@router.get("/debug/data-health")
-# BUG-030 Fix: Enforce admin auth via FastAPI Depends, not manual try/except.
-# The old pattern could be bypassed if get_current_user returned normally but get_current_admin raised.
-def data_health(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin),  # BUG-030: always requires super_admin
-):
-    """Phase 9: Enhanced Safety & Monitoring Debugging Endpoint - Super Admin only"""
-    if settings.env == "production":
-        raise HTTPException(status_code=404, detail="Not Found")
-    
-    from sqlalchemy import func, or_
-    from app.domain.models import Application, Job, User, Interview
-    return {
-        "counts": {
-            "applications": db.query(func.count(Application.id)).scalar(),
-            "jobs": db.query(func.count(Job.id)).scalar(),
-            "users": db.query(func.count(User.id)).scalar(),
-            "interviews": db.query(func.count(Interview.id)).scalar()
-        },
-        "monitoring": {
-            "stuck_resume_parsing": db.query(func.count(Application.id)).filter(
-                Application.resume_status == "parsing",
-                Application.parsing_started_at < get_ist_now() - timedelta(hours=1)
-            ).scalar(),
-            "failed_resume_parsing": db.query(func.count(Application.id)).filter(
-                Application.resume_status == "failed"
-            ).scalar(),
-        },
-        "timestamp": get_ist_now().isoformat()
-    }
+if settings.env.lower().strip() not in ("production", "staging"):
+    @router.get("/debug/data-health")
+    def data_health(
+        request: Request,
+        db: Session = Depends(get_db),
+        current_admin: User = Depends(get_current_admin),
+    ):
+        """Phase 9: Enhanced Safety & Monitoring Debugging Endpoint - Super Admin only"""
+        from sqlalchemy import func
+        from app.domain.models import Application, Job, User, Interview
+        return {
+            "counts": {
+                "applications": db.query(func.count(Application.id)).scalar(),
+                "jobs": db.query(func.count(Job.id)).scalar(),
+                "users": db.query(func.count(User.id)).scalar(),
+                "interviews": db.query(func.count(Interview.id)).scalar()
+            },
+            "monitoring": {
+                "stuck_resume_parsing": db.query(func.count(Application.id)).filter(
+                    Application.resume_status == "parsing",
+                    Application.parsing_started_at < get_ist_now() - timedelta(hours=1)
+                ).scalar(),
+                "failed_resume_parsing": db.query(func.count(Application.id)).filter(
+                    Application.resume_status == "failed"
+                ).scalar(),
+            },
+            "timestamp": get_ist_now().isoformat()
+        }
 
 @router.post("/register", response_model=UserResponse)
 @limiter.limit("20/minute")
@@ -148,6 +144,7 @@ def verify_otp(request: Request, verification_data: UserVerifyOTP, db: Session =
 
     user = db.query(User).filter(User.email == email).first()
     if not user:
+        verify_password("dummy_password", "$2b$12$XzQyJkG9aBcDeFgHiJkLmOpQrStUvWxYz0123456789abcdefghij")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     if user.approval_status == "rejected":
@@ -190,7 +187,7 @@ def verify_otp(request: Request, verification_data: UserVerifyOTP, db: Session =
             detail="OTP has expired. Please register again to receive a new OTP."
         )
 
-    if not user.otp_code or not pwd_context.verify(verification_data.otp, user.otp_code):
+    if not user.otp_code or not verify_password(verification_data.otp, user.otp_code):
         try:
             user.otp_attempt_count = (user.otp_attempt_count or 0) + 1
             if user.otp_attempt_count >= 5:
@@ -232,6 +229,7 @@ def login(request: Request, response: Response, credentials: UserLogin, db: Sess
 
     if not user:
         logger.warning("Login failed: User not found (email redacted)")
+        verify_password("dummy_password", "$2b$12$XzQyJkG9aBcDeFgHiJkLmOpQrStUvWxYz0123456789abcdefghij")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
@@ -336,7 +334,7 @@ def login(request: Request, response: Response, credentials: UserLogin, db: Sess
         }
     }
 
-@router.get("/hr-requests", response_model=List[UserResponse])
+@router.get("/hr-requests", response_model=List[UserListResponse])
 @limiter.limit("20/minute")
 def get_hr_requests(
     request: Request, 
@@ -382,17 +380,19 @@ def remove_hr_user(
 
 def _reassign_managed_resources(db: Session, old_hr_id: int, fallback_user_id: int):
     """
-    Find another active HR/Admin and reassign all jobs and applications.
-    If no other HR exists, fallback to the current admin.
+    Reassign all jobs and applications to the Super Admin (fallback_user_id).
+    Avoids randomly reassigning to another HR to maintain strict boundary isolation (H-05).
     """
+    new_owner_id = fallback_user_id
+    
     # 1. Update Jobs handler
-    db.query(Job).filter(Job.hr_id == old_hr_id).update({"hr_id": fallback_user_id})
+    db.query(Job).filter(Job.hr_id == old_hr_id).update({"hr_id": new_owner_id})
     # 2. Update Applications handler (active ones)
-    db.query(Application).filter(Application.hr_id == old_hr_id).update({"hr_id": fallback_user_id})
+    db.query(Application).filter(Application.hr_id == old_hr_id).update({"hr_id": new_owner_id})
     # This ensures RLS ownership is transferred
 
 
-@router.get("/pending-approvals", response_model=List[UserResponse])
+@router.get("/pending-approvals", response_model=List[UserListResponse])
 @limiter.limit("20/minute")
 def get_pending_approvals(request: Request, current_admin: User = Depends(get_current_admin), db: Session = Depends(get_db)):
     """List HR users waiting for Super Admin approval"""
@@ -507,9 +507,6 @@ def logout(request: Request, response: Response):
                     now = int(get_ist_now().timestamp())
                     ttl = int(exp - now)
                     if ttl > 0:
-                        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-                        r.setex(f"blocklist:{token_hash}", ttl, "1")
-                        logger.info(f"[BUG-010 Fix] Token successfully blocklisted for {ttl}s: {token_hash[:10]}...")
                         if jti:
                             r.setex(f"token_blocklist:{jti}", ttl, "true")
                             logger.info(f"[BUG-010 Fix] Token JTI successfully blocklisted for {ttl}s: {jti}")
@@ -598,7 +595,7 @@ def reset_password(request: Request, data: ResetPasswordRequest, db: Session = D
     if not user:
          # C-01: generic message same as forgot-password success to prevent email enumeration
          # Prevent email enumeration by always performing a dummy hash check
-         pwd_context.verify("dummy_password", "$2b$12$XzQyJkG9aBcDeFgHiJkLmOpQrStUvWxYz0123456789abcdefghij")
+         verify_password("dummy_password", "$2b$12$XzQyJkG9aBcDeFgHiJkLmOpQrStUvWxYz0123456789abcdefghij")
          return {"message": "Password has been successfully reset"}
     
     # C-02 OTP locked check
@@ -626,7 +623,7 @@ def reset_password(request: Request, data: ResetPasswordRequest, db: Session = D
             db.rollback()
         raise HTTPException(status_code=400, detail="Reset OTP has expired")
         
-    if not pwd_context.verify(data.otp, user.otp_code):
+    if not verify_password(data.otp, user.otp_code):
         try:
             user.otp_attempt_count = (user.otp_attempt_count or 0) + 1
             if user.otp_attempt_count >= 5:
@@ -645,6 +642,7 @@ def reset_password(request: Request, data: ResetPasswordRequest, db: Session = D
         
     try:
         user.password_hash = hash_password(data.new_password)
+        user.password_changed_at = get_ist_now()
         user.otp_code = None
         user.otp_expiry = None
         user.otp_attempt_count = 0

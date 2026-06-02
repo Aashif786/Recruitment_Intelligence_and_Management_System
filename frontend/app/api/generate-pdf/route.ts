@@ -67,64 +67,75 @@ export async function POST(req: NextRequest) {
       FORCE_BODY: false
     });
 
-    // Launch puppeteer with system chromium
-    browser = await puppeteer.launch({
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--font-render-hinting=none"],
-      headless: true,
-    })
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout after 30 seconds")), 30000)
+    );
 
-    const page = await browser.newPage()
-
-    // Set viewport to A4 dimensions at 96 DPI for layout calculation
-    await page.setViewport({
-      width: 794,
-      height: 1123,
-      deviceScaleFactor: 2, // Higher scale factor for better quality rendering (shadows, paths)
-    })
-
-    // Inject necessary CSS adjustments for printing
-    const styledHtml = `
-      <style>
-        body {
-          margin: 0 !important;
-          padding: 0 !important;
-          background: white !important;
-          display: block !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        * {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-      </style>
-      ${sanitizedHtml}
-    `
-
-    // Set content and wait for network to be idle (important for fonts/images from external URLs)
-    try {
-      await page.setContent(styledHtml, {
-        waitUntil: "networkidle2",
-        timeout: 10000, // 10-second limit to prevent hanging on hot-reload/WS connections
+    const generationPromise = (async () => {
+      // Launch puppeteer with system chromium
+      const b = await puppeteer.launch({
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--font-render-hinting=none"],
+        headless: true,
       })
-    } catch (loadError: any) {
-      console.warn("Puppeteer content loading timed out, proceeding to generate PDF anyway:", loadError.message)
-    }
+      browser = b
 
-    // Generate PDF - Respect CSS page size
-    const pdfBuffer = await page.pdf({
-      printBackground: true,
-      margin: {
-        top: "0px",
-        right: "0px",
-        bottom: "0px",
-        left: "0px",
-      },
-      preferCSSPageSize: true,
-    })
+      const page = await b.newPage()
 
-    await browser.close()
+      // Set viewport to A4 dimensions at 96 DPI for layout calculation
+      await page.setViewport({
+        width: 794,
+        height: 1123,
+        deviceScaleFactor: 2, // Higher scale factor for better quality rendering (shadows, paths)
+      })
+
+      // Inject necessary CSS adjustments for printing
+      const styledHtml = `
+        <style>
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            display: block !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        </style>
+        ${sanitizedHtml}
+      `
+
+      // Set content and wait for network to be idle (important for fonts/images from external URLs)
+      try {
+        await page.setContent(styledHtml, {
+          waitUntil: "networkidle2",
+          timeout: 10000, // 10-second limit to prevent hanging on hot-reload/WS connections
+        })
+      } catch (loadError: any) {
+        console.warn("Puppeteer content loading timed out, proceeding to generate PDF anyway:", loadError.message)
+      }
+
+      // Generate PDF - Respect CSS page size
+      const pdfBuffer = await page.pdf({
+        printBackground: true,
+        margin: {
+          top: "0px",
+          right: "0px",
+          bottom: "0px",
+          left: "0px",
+        },
+        preferCSSPageSize: true,
+      })
+
+      await b.close()
+      browser = null
+      return pdfBuffer
+    })();
+
+    const pdfBuffer = await Promise.race([generationPromise, timeoutPromise])
 
     // Return the PDF as response
     return new NextResponse(pdfBuffer as any, {

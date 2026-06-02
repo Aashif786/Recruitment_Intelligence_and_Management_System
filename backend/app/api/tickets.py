@@ -125,6 +125,7 @@ def report_grievance(request: Request, issue: GeneralGrievanceCreate, db: Sessio
 
     # Verify access key
     if not verify_password(issue.access_key, interview.access_key_hash):
+        logger.warning(f"[SECURITY] Invalid access key used for grievance report. Email: {issue.email}")
         raise generic_error
 
     # Input validation and XSS mitigation
@@ -253,12 +254,10 @@ def get_ticket_count(
     db: Session = Depends(get_db)
 ):
     """Lightweight endpoint returning just the pending ticket count for sidebar badges."""
-    from sqlalchemy import exists
     q = db.query(InterviewIssue).filter(InterviewIssue.status == "pending")
 
-    # Apply visibility isolation (Collaborative HR: all approved staff see the same support tickets)
-    pass
-    # Super Admin sees all.
+    if current_user.role.lower() != "super_admin":
+        q = q.join(Interview, InterviewIssue.interview_id == Interview.id).join(Application, Interview.application_id == Application.id).filter(Application.hr_id == current_user.id)
 
     count = q.count()
     return {"count": count}
@@ -288,9 +287,8 @@ def get_tickets(
         )
     )
 
-    # Apply visibility isolation (Collaborative HR: all approved staff see the same support tickets)
-    pass
-    # Super Admin sees all.
+    if current_user.role.lower() != "super_admin":
+        query = query.join(Interview, InterviewIssue.interview_id == Interview.id).join(Application, Interview.application_id == Application.id).filter(Application.hr_id == current_user.id)
 
     if status != 'all':
         query = query.filter(InterviewIssue.status == status)
@@ -360,10 +358,8 @@ def resolve_ticket(
     app = ticket.application or (ticket.interview.application if ticket.interview else None)
     job = app.job if app else None
 
-    # Apply visibility isolation (Collaborative HR: all approved staff can resolve support tickets)
-    pass
-    
-    # Removal of strict filtering: HR can now resolve any ticket.
+    if app:
+        validate_hr_ownership(app, current_user, resource_name="ticket's application")
 
     # Check if the ticket is already resolved/dismissed to prevent concurrency double-processing
     if ticket.status in ['resolved', 'dismissed'] and resolution.action in ['resolve', 'resolved', 'dismiss', 'dismissed', 'reissue_key']:

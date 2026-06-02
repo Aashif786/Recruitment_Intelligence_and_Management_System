@@ -41,6 +41,7 @@ class User(Base):
     otp_locked_until = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime, default=get_ist_now, server_default=func.now())
     updated_at = Column(DateTime, default=get_ist_now, server_default=func.now(), onupdate=get_ist_now)
+    password_changed_at = Column(DateTime, nullable=True)
 
     # Relationships
     jobs = relationship("Job", back_populates="hr")
@@ -116,16 +117,15 @@ class Application(Base):
     job_id = Column(Integer, ForeignKey('jobs.id', ondelete="CASCADE"), nullable=False, index=True)
     hr_id = Column(Integer, ForeignKey('users.id', ondelete="SET NULL"), nullable=True, index=True) # Denormalized for speed
     candidate_name = Column(String(255), nullable=False)
-    candidate_email = Column(String(255), nullable=True, index=True)
+    candidate_email = Column(String(255), nullable=False, index=True)
     candidate_phone = Column(EncryptedText)
     candidate_phone_hash = Column(String(64), nullable=True, index=True)
     # plain digits for easier debugging/validation
-    # TODO: Issue M-07: candidate_phone_normalized stores candidate phone numbers in plain text.
-    # In the future, this column should be removed or encrypted to avoid PII leak.
-    # We keep it for now due to database constraint requirements, but log a warning at startup.
+    # DEPRECATED (CRIT-03): candidate_phone_normalized is kept for schema compatibility but now always stores NULL.
+    # The phone digits are stored in the encrypted candidate_phone field instead.
     candidate_phone_normalized = Column(String(50), nullable=True, index=True)
-    # Original user-provided phone value (encrypted) for auditing/debugging.
-    # The normalized digits-only value is still stored in `candidate_phone`.
+    # Original user-provided phone value (DEPRECATED: MED-06)
+    # Stored as EncryptedText but now cleared (set to NULL) after normalization succeeds to minimize PII.
     candidate_phone_raw = Column(EncryptedText, nullable=True)
     resume_file_path = Column(String(500))
     resume_file_name = Column(String(255))
@@ -857,6 +857,7 @@ class AttachmentResume(Base):
     mime_type = Column(String(100))
     received_at = Column(DateTime, default=get_ist_now)
     processed = Column(Boolean, default=False)
+    mapping_failed = Column(Boolean, default=False, server_default="false")
     retry_count = Column(Integer, default=0)
     last_error = Column(Text, nullable=True) # Store error messages for debugging
 

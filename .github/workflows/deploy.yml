@@ -17,6 +17,8 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          connect_timeout: 60
           command_timeout: 40m
           script: |
             set -euo pipefail
@@ -26,7 +28,6 @@ jobs:
             chmod 600 ~/.ssh/id_* 2>/dev/null || true
             chmod 644 ~/.ssh/*.pub 2>/dev/null || true
             cd /var/www/rims
-            python3 backend/scripts/vps_debug.py || true
             git fetch origin main
             git reset --hard origin/main
             chmod +x deploy-zero-downtime.sh

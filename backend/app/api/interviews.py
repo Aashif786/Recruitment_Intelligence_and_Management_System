@@ -115,7 +115,8 @@ async def access_interview(
         
         if not interviews:
             logger.warning(f"Access attempt failed: No interview found for email {email_clean}")
-            pwd_context.verify(data.access_key, "$2b$12$XzQyJkG9aBcDeFgHiJkLmOpQrStUvWxYz0123456789abcdefghij")
+            from app.core.auth import verify_password
+            verify_password(data.access_key, "$2b$12$XzQyJkG9aBcDeFgHiJkLmOpQrStUvWxYz0123456789abcdefghij")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or access key. Please check your invitation email."
@@ -123,9 +124,10 @@ async def access_interview(
             
         matched_interview = None
         for inv in interviews:
-            if pwd_context.verify(data.access_key, inv.access_key_hash):
+            from app.core.auth import verify_password
+            if verify_password(data.access_key, inv.access_key_hash):
                 matched_interview = inv
-                break
+                # DO NOT break here to equalize timing for enumeration resistance
                 
         if not matched_interview:
             logger.warning(f"Access attempt failed: Invalid access key for email {email_clean}")
@@ -384,6 +386,7 @@ async def check_job_status(job_id: str):
 
 @router.post("/{interview_id}/generate-test-token")
 async def generate_test_token(
+    request: Request,
     interview_id: int,
     interview_requester: User = Depends(get_current_hr),
     db: Session = Depends(get_db),
@@ -392,8 +395,12 @@ async def generate_test_token(
     TEST-ONLY endpoint: generate a raw access key for an interview.
     This avoids having to bypass bcrypt-hashed keys in automated E2E tests.
     """
-    if settings.env not in ["development", "test"]:
-        raise HTTPException(status_code=403, detail="Test token generation is disabled in this environment.")
+    if settings.env == "production":
+        raise HTTPException(status_code=403, detail="Test token generation is strictly disabled in production.")
+    
+    test_secret = request.headers.get("TEST_ADMIN_SECRET")
+    if not test_secret or test_secret != settings.test_admin_secret:
+        raise HTTPException(status_code=403, detail="Invalid test admin secret.")
 
     interview = db.query(Interview).filter(Interview.id == interview_id).first()
     if not interview:
@@ -1288,15 +1295,13 @@ async def fail_device_test(
     interview_id: int,
     background_tasks: BackgroundTasks,
     data: dict = Body(...),
-    interview_session: Interview = Depends(get_current_interview_any_status),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Invalidates access keys and deactivates the session immediately if a candidate
     fails or attempts to bypass device hardware verification.
     """
-    if interview_session.id != interview_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     interview = db.query(Interview).filter(
         Interview.id == interview_id
@@ -1345,19 +1350,48 @@ async def report_security_violation(
     interview_id: int,
     background_tasks: BackgroundTasks,
     data: dict = Body(...),
-    interview_session: Interview = Depends(get_current_interview_any_status),
     db: Session = Depends(get_db),
 ):
     """
     Report a proctoring security violation (tab switch, face not detected, multiple people, etc.)
     Used by the frontend proctoring engine as a REST replacement for the WS security_violation action.
     """
-    if interview_session.id != interview_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    # Auth verification: Allow candidate (interview JWT) or Super Admin (staff JWT) (CRIT-01 & CRIT-02)
+    interview_session = None
+    is_super_admin = False
+    current_admin_user = None
+    
+    try:
+        interview_session = get_current_interview(request, db)
+    except HTTPException as e:
+        try:
+            current_admin_user = get_current_user(request, db)
+            if current_admin_user and current_admin_user.role == "super_admin":
+                is_super_admin = True
+        except Exception:
+            raise e # Raise the candidate auth exception if neither passes
+            
+    if interview_session:
+        if interview_session.id != interview_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: interview token does not match interview_id."
+            )
+        proctoring_source = "candidate_proctoring_engine"
+        triggering_user_id = None
+    elif is_super_admin:
+        proctoring_source = f"super_admin_override_{current_admin_user.email}"
+        triggering_user_id = current_admin_user.id
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: invalid authentication source."
+        )
 
     # Normalise empty/whitespace reasons so the default is always recorded
     reason = (data.get("reason") or "").strip() or "Proctoring violation"
-    logger.warning(f"SECURITY_VIOLATION: Terminating interview {interview_id}. Reason: {reason}")
+    logger.warning(f"SECURITY_VIOLATION: Terminating interview {interview_id}. Source: {proctoring_source}. Reason: {reason}")
 
     interview = db.query(Interview).filter(
         Interview.id == interview_id
@@ -1381,10 +1415,28 @@ async def report_security_violation(
             fsm.transition(
                 interview.application,
                 TransitionAction.REJECT,
-                notes=f"Interview auto-terminated by proctoring system. Reason: {reason}",
+                notes=f"Interview auto-terminated by proctoring system. Source: {proctoring_source}. Reason: {reason}",
             )
     except Exception as fsm_err:
         logger.error(f"FSM transition failed on security violation: {fsm_err}")
+
+    # Add audit log record (CRIT-02)
+    try:
+        from app.domain.models import AuditLog
+        audit_entry = AuditLog(
+            user_id=triggering_user_id,
+            action="INTERVIEW_TERMINATED_VIOLATION",
+            resource_type="Interview",
+            resource_id=interview_id,
+            details=json.dumps({
+                "reason": reason,
+                "proctoring_source": proctoring_source
+            }),
+            is_critical=True
+        )
+        db.add(audit_entry)
+    except Exception as audit_err:
+        logger.error(f"Failed to record security violation audit log: {audit_err}")
 
     db.commit()
 
@@ -1890,7 +1942,7 @@ async def create_monitoring_event(
     request: Request,
     interview_id: int,
     event_data: MonitoringEventCreate,
-    interview_session: Interview = Depends(get_current_interview_any_status),
+    interview_session: Interview = Depends(get_current_interview),
     db: Session = Depends(get_db)
 ):
     """

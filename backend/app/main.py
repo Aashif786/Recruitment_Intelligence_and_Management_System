@@ -113,7 +113,8 @@ def bootstrap_super_admin():
         with SessionLocal() as db:
             from sqlalchemy import text as _text
             # BUG-016 Fix: Lock the row to prevent concurrent promotion races.
-            db.execute(_text("SELECT pg_advisory_xact_lock(1919191919)"))
+            if "postgresql" in str(db.get_bind().url).lower():
+                db.execute(_text("SELECT pg_advisory_xact_lock(1919191919)"))
 
             existing_admin = db.query(User).filter(User.role == "super_admin").first()
             if existing_admin:
@@ -156,27 +157,137 @@ from app.core.standardized_route import StandardizedAPIRoute
 from app.services.email_ingestion_service import fetch_resume_attachments
 from app.core.encryption import decrypt_field
 
+async def _sweep_stuck_applications(db):
+    """Scan for applications stuck in 'parsing' or 'pending' for > 15 minutes,
+    increment retry count and trigger background re-parse, or mark as permanent failure.
+    """
+    try:
+        from datetime import datetime, timedelta
+        from app.domain.models import Application
+        from app.api.applications import process_application_background
+        from app.services.state_machine import CandidateState
+        from sqlalchemy import or_, and_
+
+        cutoff = datetime.utcnow() - timedelta(minutes=15)
+        stuck_apps = db.query(Application).filter(
+            Application.resume_status.in_(["parsing", "pending"]),
+            or_(
+                Application.parsing_started_at < cutoff,
+                and_(Application.parsing_started_at == None, Application.applied_at < cutoff)
+            )
+        ).all()
+
+        if not stuck_apps:
+            return
+
+        logger.info(f"[SWEEPER] Found {len(stuck_apps)} stuck applications. Attempting self-healing/retry.")
+
+        for app in stuck_apps:
+            retries = app.retry_count or 0
+            if retries < 3:
+                logger.warning(f"[SWEEPER] Application #{app.id} is stuck. Resetting and retrying background parsing (attempt {retries + 1}).")
+                app.resume_status = "parsing"
+                app.parsing_started_at = datetime.utcnow()
+                app.retry_count = retries + 1
+                db.commit()
+
+                # Trigger parsing asynchronously in the background
+                asyncio.create_task(
+                    process_application_background(
+                        app.id,
+                        app.job_id,
+                        app.resume_file_path,
+                        app.candidate_email,
+                        app.candidate_name
+                    )
+                )
+            else:
+                logger.error(f"[SWEEPER] Application #{app.id} has exceeded maximum retries. Marking as permanent failure.")
+                app.resume_status = "failed"
+                app.status = CandidateState.PERMANENT_FAILURE.value
+                app.failure_reason = "[PERMANENT_FAILURE]: Ingestion/Parsing timed out repeatedly."
+                db.commit()
+    except Exception as e:
+        logger.error(f"[SWEEPER] Error during stuck applications recovery sweep: {e}", exc_info=True)
+
+
 async def _imap_polling_loop():
     """Background coroutine that polls the IMAP inbox for resume attachments.
 
-    Runs only on the primary worker (WORKER_ID=0) to prevent duplicate
-    processing when multiple gunicorn workers are active.
+    Uses a database-backed distributed lock to ensure only one worker runs
+    the ingestion loop at any given time, eliminating the worker age check
+    which causes stalls on worker crashes.
     
     BUG-007 Fix: Exponential backoff circuit breaker — after 3 consecutive
     failures, sleep is increased up to 30 minutes to avoid hammering a broken
     IMAP server. On success, the backoff counter resets to zero.
     """
+    import uuid
     _consecutive_failures = 0
     _max_backoff_seconds = 1800  # 30 minutes cap
     _base_sleep_seconds = 60     # Normal poll interval
     
+    polling_instance_id = str(uuid.uuid4())
+    
     while True:
         db = None
+        lock_acquired = False
+        lock_token = None
+        sleep_seconds = _base_sleep_seconds
         try:
             db = SessionLocal()
 
-            # Fetch global settings from DB
+            # Ensure lock key exists in global_settings
             from app.domain.models import GlobalSettings
+            lock_record = db.query(GlobalSettings).filter(GlobalSettings.key == "imap_polling_lock").first()
+            if not lock_record:
+                try:
+                    lock_record = GlobalSettings(key="imap_polling_lock", value="")
+                    db.add(lock_record)
+                    db.commit()
+                except Exception:
+                    db.rollback()
+
+            # Acquire lock via SELECT FOR UPDATE inside the session's transaction block
+            lock_record = db.query(GlobalSettings).filter(GlobalSettings.key == "imap_polling_lock").with_for_update().first()
+            
+            now_epoch = time.time()
+            is_locked = False
+            
+            if lock_record and lock_record.value:
+                try:
+                    val_parts = lock_record.value.split(":")
+                    if len(val_parts) == 2:
+                        val_instance, val_time_str = val_parts
+                        locked_time = float(val_time_str)
+                        # Lock expires after 5 minutes
+                        if now_epoch - locked_time < 300:
+                            is_locked = True
+                except ValueError:
+                    pass
+
+            if is_locked:
+                db.rollback()
+                db.close()
+                await asyncio.sleep(sleep_seconds)
+                continue
+
+            # Acquire the lock
+            lock_token = f"{polling_instance_id}:{now_epoch}"
+            if lock_record:
+                lock_record.value = lock_token
+                db.commit()
+                lock_acquired = True
+            else:
+                db.rollback()
+
+            # Run stuck applications sweep
+            try:
+                await _sweep_stuck_applications(db)
+            except Exception as sweep_err:
+                logger.error(f"Failed to run stuck applications recovery sweep: {sweep_err}")
+
+            # Fetch global settings from DB
             settings_records = db.query(GlobalSettings).all()
             settings_dict = {s.key: s.value for s in settings_records}
 
@@ -217,6 +328,21 @@ async def _imap_polling_loop():
                     f"Backing off for {sleep_seconds}s before next attempt."
                 )
         finally:
+            if lock_acquired and db is not None:
+                try:
+                    # Release lock: verify token matches before clearing to prevent overwrites
+                    lock_record = db.query(GlobalSettings).filter(GlobalSettings.key == "imap_polling_lock").with_for_update().first()
+                    if lock_record and lock_record.value == lock_token:
+                        lock_record.value = ""
+                        db.commit()
+                    else:
+                        db.rollback()
+                except Exception as rel_err:
+                    logger.error(f"Failed to release IMAP polling lock: {rel_err}")
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
             if db is not None:
                 try:
                     db.close()
@@ -229,13 +355,9 @@ async def _imap_polling_loop():
 @asynccontextmanager
 async def lifespan(app):
     """Application lifespan: manages background tasks on startup/shutdown."""
-    # Startup — only the primary worker starts the IMAP polling loop.
-    polling_task = None
-    if os.environ.get("WORKER_ID", "0") == "0":
-        polling_task = asyncio.create_task(_imap_polling_loop())
-        logger.info("IMAP polling loop started (primary worker only).")
-    else:
-        logger.info("IMAP polling loop skipped (non-primary worker).")
+    # Startup — start IMAP polling loop on all workers; database lock handles concurrency.
+    polling_task = asyncio.create_task(_imap_polling_loop())
+    logger.info("IMAP polling loop task spawned on this worker.")
 
     yield  # ── Application runs here ──
 
@@ -312,18 +434,39 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Requested-With", "TEST_ADMIN_SECRET"],
 )
 
 @app.get("/health", tags=["System"])
 def health_check():
     uptime_seconds = round(time.time() - app.state.start_time, 2)
     db_status = "ok"
+    linkedin_status = "disabled"
+    linkedin_warning = None
     try:
         from sqlalchemy import text
         from app.infrastructure.database import SessionLocal
         db = SessionLocal()
         db.execute(text("SELECT 1"))
+        if settings.enable_linkedin_posting:
+            from app.domain.models import GlobalSettings
+            linkedin_status = "ok"
+            try:
+                expires_record = db.query(GlobalSettings).filter(GlobalSettings.key == "linkedin_token_expires_at").first()
+                if expires_record and expires_record.value:
+                    from datetime import timezone, timedelta
+                    expires_at = datetime.fromisoformat(expires_record.value)
+                    now = datetime.now(timezone.utc) if expires_at.tzinfo else datetime.utcnow()
+                    if expires_at < now + timedelta(days=7):
+                        diff = expires_at - now
+                        days_left = diff.days
+                        linkedin_status = "warning"
+                        if days_left < 0:
+                            linkedin_warning = f"LinkedIn access token expired {abs(days_left)} days ago."
+                        else:
+                            linkedin_warning = f"LinkedIn access token expires in {days_left} days."
+            except Exception as e:
+                logger.error(f"Error checking LinkedIn token expiry: {e}")
         db.close()
     except Exception:
         db_status = "error"
@@ -368,7 +511,7 @@ def health_check():
         else:
             imap_status = "ok"
 
-    return {
+    response_data = {
         "status": "ok" if db_status == "ok" else "degraded",
         "timestamp": datetime.utcnow().isoformat(),
         "uptime_seconds": uptime_seconds,
@@ -380,6 +523,10 @@ def health_check():
             "imap_polling": imap_status
         }
     }
+    if settings.enable_linkedin_posting:
+        response_data["services"]["linkedin"] = linkedin_status
+        response_data["warnings"] = [linkedin_warning] if linkedin_warning else []
+    return response_data
 
 @app.get("/", tags=["System"])
 def root():

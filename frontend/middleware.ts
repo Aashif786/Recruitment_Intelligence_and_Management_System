@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get('access_token')?.value || request.cookies.get('token')?.value;
   const { pathname } = request.nextUrl;
 
-  // Protected routes - require authentication
+  // 1. Dashboard routes - require staff/admin token
   if (pathname.startsWith('/dashboard')) {
     let isValid = false;
 
@@ -39,10 +39,47 @@ export async function middleware(request: NextRequest) {
       loginUrl.searchParams.set('redirect', pathname);
       
       const response = NextResponse.redirect(loginUrl);
-      // Clean up invalid cookies to prevent redirect loops
       response.cookies.delete('access_token');
       response.cookies.delete('token');
       return response;
+    }
+  }
+
+  // 2. Interview routes - require candidate interview JWT (except access page)
+  if (pathname.startsWith('/interview') && pathname !== '/interview/access') {
+    const interviewToken = request.cookies.get('interview_token')?.value;
+    let isValid = false;
+
+    if (interviewToken) {
+      try {
+        const secretKey = process.env.INTERVIEW_JWT_SECRET || (process.env.JWT_SECRET ? process.env.JWT_SECRET + "_interview" : "");
+        if (secretKey) {
+          const secret = new TextEncoder().encode(secretKey);
+          const { payload } = await jwtVerify(interviewToken, secret);
+          if (payload && payload.role === 'interview') {
+            isValid = true;
+          }
+        }
+      } catch (err) {
+        console.error('Interview JWT verification failed in middleware:', err);
+      }
+    }
+
+    if (!isValid) {
+      const basePath = request.nextUrl.basePath || '';
+      const accessUrl = new URL(`${basePath}/interview/access`, request.url);
+      const response = NextResponse.redirect(accessUrl);
+      response.cookies.delete('interview_token');
+      return response;
+    }
+  }
+
+  // 3. Offer routes - require a token parameter in the URL
+  if (pathname.startsWith('/offer')) {
+    const offerToken = request.nextUrl.searchParams.get('token');
+    if (!offerToken) {
+      const basePath = request.nextUrl.basePath || '';
+      return NextResponse.redirect(new URL(`${basePath}/support`, request.url));
     }
   }
 
@@ -52,5 +89,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/dashboard/:path*',
+    '/interview/:path*',
+    '/offer/:path*',
   ],
 };
