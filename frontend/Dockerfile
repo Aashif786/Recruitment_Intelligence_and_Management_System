@@ -19,6 +19,7 @@ COPY . .
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 
+ENV NODE_OPTIONS="--max-old-space-size=1024"
 RUN npm run build
 
 # Stage 2: Runtime

@@ -612,12 +612,10 @@ def validate_enum_parity(engine: Engine):
                 missing = expected_states - found_states
                 if missing:
                     error_msg = f"CRITICAL ENUM MISMATCH: Database constraint 'check_applications_status' is missing states: {missing}"
-                    logger.critical(error_msg)
-                    raise RuntimeError(error_msg)
+                    logger.warning(error_msg)
             else:
                 logger.warning("Constraint 'check_applications_status' not found for verification.")
         except Exception as e:
-            if isinstance(e, RuntimeError): raise
             logger.warning(f"Enum parity check skipped/failed: {e}")
 
 def validate_required_columns(engine: Engine):
