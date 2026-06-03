@@ -24,8 +24,10 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(new URL('/auth/login?error=config', request.url));
         }
         const secret = new TextEncoder().encode(secretKey);
-        await jwtVerify(token, secret);
-        isValid = true;
+        const { payload } = await jwtVerify(token, secret);
+        if (payload && (payload.role === 'hr' || payload.role === 'super_admin')) {
+          isValid = true;
+        }
       } catch (err) {
         console.error('JWT verification failed in middleware:', err);
       }
