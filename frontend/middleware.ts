@@ -48,7 +48,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Interview routes - require candidate interview JWT (except access page)
-  if (pathname.startsWith('/interview') && pathname !== '/interview/access') {
+  if (pathname.startsWith('/interview') && pathname !== '/interview/access' && pathname !== '/interview/access/') {
     const interviewToken = request.cookies.get('interview_token')?.value;
     let isValid = false;
 
@@ -69,7 +69,7 @@ export async function middleware(request: NextRequest) {
 
     if (!isValid) {
       const basePath = request.nextUrl.basePath || '';
-      const accessUrl = new URL(`${basePath}/interview/access`, request.url);
+      const accessUrl = new URL(`${basePath}/interview/access/`, request.url);
       const response = NextResponse.redirect(accessUrl);
       response.cookies.delete('interview_token');
       return response;
