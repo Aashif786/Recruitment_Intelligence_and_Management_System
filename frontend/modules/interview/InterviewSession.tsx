@@ -153,6 +153,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const videoChunksRef = useRef<Blob[]>([]);
   const activeStreamRef = useRef<MediaStream | null>(null);
   const isSubmittingRef = useRef(false);
+  const startSessionVideoRecordingRef = useRef<((stream: MediaStream) => void) | null>(null);
 
   // ── completion/feedback state ──
   const [showAllDoneModal, setShowAllDoneModal] = useState(false);
@@ -638,15 +639,29 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
     // Debounce: wait 1000ms before attempting reconnection
     deviceChangeTimeoutRef.current = setTimeout(async () => {
-      // Only attempt reconnection if:
-      // 1. Camera is currently disconnected
-      // 2. Interview is not finished (allow reconnection during preview and active interview)
-      if (!cameraInitializedRef.current && !isFinishedRef.current) {
+      // Check if the camera is currently offline/disconnected.
+      // This is true if cameraInitializedRef is false, or if there's no active stream,
+      // or if the current video track has ended or is missing.
+      const videoTrack = activeStreamRef.current?.getVideoTracks()[0];
+      const isVideoEnded = !videoTrack || videoTrack.readyState === 'ended';
+      const isCameraOffline = !cameraInitializedRef.current || isVideoEnded;
+
+      // Only attempt reconnection if camera is offline and interview is not finished
+      if (isCameraOffline && !isFinishedRef.current) {
         let attempts = 0;
         const maxAttempts = 3;
         const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-        while (attempts < maxAttempts && !cameraInitializedRef.current && !isFinishedRef.current) {
+        while (attempts < maxAttempts && !isFinishedRef.current) {
+          // Recheck connection state inside the loop
+          const currentVideoTrack = activeStreamRef.current?.getVideoTracks()[0];
+          const currentVideoEnded = !currentVideoTrack || currentVideoTrack.readyState === 'ended';
+          const currentlyOffline = !cameraInitializedRef.current || currentVideoEnded;
+
+          if (!currentlyOffline) {
+            break;
+          }
+
           attempts++;
           try {
             // Enumerate devices to confirm video input is available
@@ -659,7 +674,12 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
               if (initCameraRef.current) {
                 await initCameraRef.current();
               }
-              if (cameraInitializedRef.current) {
+              
+              const postVideoTrack = activeStreamRef.current?.getVideoTracks()[0];
+              const postVideoEnded = !postVideoTrack || postVideoTrack.readyState === 'ended';
+              const postOffline = !cameraInitializedRef.current || postVideoEnded;
+              
+              if (!postOffline) {
                 console.log('[Camera] Reconnection successful!');
                 break;
               }
@@ -667,7 +687,12 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           } catch (err) {
             console.error(`[Camera] Reconnection attempt ${attempts} failed:`, err);
           }
-          if (!cameraInitializedRef.current && attempts < maxAttempts && !isFinishedRef.current) {
+
+          const finalVideoTrack = activeStreamRef.current?.getVideoTracks()[0];
+          const finalVideoEnded = !finalVideoTrack || finalVideoTrack.readyState === 'ended';
+          const finalOffline = !cameraInitializedRef.current || finalVideoEnded;
+
+          if (finalOffline && attempts < maxAttempts && !isFinishedRef.current) {
             console.log(`[Camera] Waiting before retry attempt ${attempts + 1}...`);
             await delay(1000 * attempts); // 1s, 2s backoff
           }
@@ -678,14 +703,11 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
   useEffect(() => {
     async function initCamera() {
-      const isStreamActive = !!activeStreamRef.current && 
-                             activeStreamRef.current.getTracks().length > 0 && 
-                             activeStreamRef.current.getTracks().every((t: any) => t.readyState === 'live');
-      if (cameraInitializedRef.current && isStreamActive) return;
-
-      // Clear old stream references before reinitialization
-      activeStreamRef.current?.getTracks().forEach(track => track.stop());
-      activeStreamRef.current = null;
+      // Check if we can reuse the existing audio track to prevent audio interruption
+      const existingAudioTrack = activeStreamRef.current?.getAudioTracks()[0];
+      const isAudioLive = existingAudioTrack && existingAudioTrack.readyState === 'live';
+      
+      let stream: MediaStream;
       
       try {
         await tf.ready();
@@ -693,8 +715,32 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           detectorRef.current = await blazeface.load();
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        activeStreamRef.current = stream;
+        if (isAudioLive && activeStreamRef.current) {
+          console.log('[Camera] Audio track is live, only requesting video to prevent device lock/interruptions.');
+          // Stop only the old video track
+          const oldVideoTrack = activeStreamRef.current.getVideoTracks()[0];
+          if (oldVideoTrack) {
+            try { oldVideoTrack.stop(); } catch (e) { console.warn(e); }
+          }
+          
+          // Request ONLY video
+          const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          const newVideoTrack = videoStream.getVideoTracks()[0];
+          
+          if (oldVideoTrack) {
+            try { activeStreamRef.current.removeTrack(oldVideoTrack); } catch (e) { console.warn(e); }
+          }
+          activeStreamRef.current.addTrack(newVideoTrack);
+          stream = activeStreamRef.current;
+        } else {
+          console.log('[Camera] Requesting both audio and video streams.');
+          // Clean up everything first
+          activeStreamRef.current?.getTracks().forEach(track => track.stop());
+          activeStreamRef.current = null;
+          
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          activeStreamRef.current = stream;
+        }
         
         // Ensure stream is bound to all relevant video elements
         if (sessionVideoRef.current) {
@@ -721,41 +767,51 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           };
         }
 
-        const audioTrack = stream.getAudioTracks()[0];
-        if (audioTrack) {
-          audioTrack.onmute = () => handleStrike('Microphone feed disabled/muted');
-          audioTrack.onended = () => {
-            handleStrike('Microphone hardware disconnected');
-          };
-          
-          try {
-            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-            if (AudioContext) {
-              const audioCtx = new AudioContext();
-              const analyser = audioCtx.createAnalyser();
-              const source = audioCtx.createMediaStreamSource(stream);
-              source.connect(analyser);
-              analyser.fftSize = 256;
-              const dataArray = new Uint8Array(analyser.frequencyBinCount);
-              
-              const updateVolume = () => {
-                if (cameraInitializedRef.current === false) return; // stopped
-                analyser.getByteFrequencyData(dataArray);
-                let sum = 0;
-                for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
-                const avg = sum / dataArray.length;
-                const volBar = document.getElementById('mic-volume-bar');
-                if (volBar) {
-                  volBar.style.width = Math.min(100, (avg / 64) * 100) + '%';
-                }
-                requestAnimationFrame(updateVolume);
-              };
-              updateVolume();
+        // Only set up audio track handlers if we requested a new audio track
+        if (!isAudioLive) {
+          const audioTrack = stream.getAudioTracks()[0];
+          if (audioTrack) {
+            audioTrack.onmute = () => handleStrike('Microphone feed disabled/muted');
+            audioTrack.onended = () => {
+              handleStrike('Microphone hardware disconnected');
+            };
+            
+            try {
+              const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+              if (AudioContext) {
+                const audioCtx = new AudioContext();
+                const analyser = audioCtx.createAnalyser();
+                const source = audioCtx.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 256;
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                const updateVolume = () => {
+                  if (cameraInitializedRef.current === false) return; // stopped
+                  analyser.getByteFrequencyData(dataArray);
+                  let sum = 0;
+                  for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+                  const avg = sum / dataArray.length;
+                  const volBar = document.getElementById('mic-volume-bar');
+                  if (volBar) {
+                    volBar.style.width = Math.min(100, (avg / 64) * 100) + '%';
+                  }
+                  requestAnimationFrame(updateVolume);
+                };
+                updateVolume();
+              }
+            } catch(e) {
+              console.error('AudioContext setup failed', e);
             }
-          } catch(e) {
-            console.error('AudioContext setup failed', e);
           }
         }
+
+        // Restart video recorder if the interview is already started
+        if (isStartedRef.current && startSessionVideoRecordingRef.current) {
+          console.log('[Camera] Restarting MediaRecorder with reconnected stream...');
+          startSessionVideoRecordingRef.current(stream);
+        }
+
       } catch (e: any) {
         console.error('Video setup failed', e);
         setIsCameraConnected(false);
@@ -853,13 +909,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     }
   }, [isStarted, interviewId, token]);
 
-  // Proctoring monitors & Video recorder (Runs when isStarted becomes true)
-  useEffect(() => {
-    if (!isStarted || !activeStreamRef.current) return;
-
-    let checkCount = 0;
-    const stream = activeStreamRef.current;
-
+  const startSessionVideoRecording = useCallback((stream: MediaStream) => {
     // Initialize session video recorder
     if (videoRecorderRef.current && videoRecorderRef.current.state !== 'inactive') {
       try { videoRecorderRef.current.stop(); } catch (e) { console.error(e); }
@@ -963,6 +1013,20 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         description: "Webcam monitoring and proctoring remain fully active."
       });
     }
+  }, [uploadVideo]);
+
+  useEffect(() => {
+    startSessionVideoRecordingRef.current = startSessionVideoRecording;
+  }, [startSessionVideoRecording]);
+
+  // Proctoring monitors & Video recorder (Runs when isStarted becomes true)
+  useEffect(() => {
+    if (!isStarted || !activeStreamRef.current) return;
+
+    let checkCount = 0;
+    const stream = activeStreamRef.current;
+
+    startSessionVideoRecording(stream);
 
     if (faceCheckIntervalRef.current) clearInterval(faceCheckIntervalRef.current);
     faceCheckIntervalRef.current = setInterval(async () => {
