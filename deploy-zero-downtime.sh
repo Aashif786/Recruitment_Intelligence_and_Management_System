@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 
 echo "🚀 Initiating Zero-Downtime Deployment (Blue/Green)"
@@ -57,6 +57,10 @@ else
 fi
 
 echo "Active environment is: $ACTIVE_ENV. Deploying to: $DEPLOY_ENV"
+
+# 2. Free up disk space before build (removes unused images/cache older than 24h)
+echo "🧹 Pruning old Docker images and build cache..."
+docker system prune -f --filter "until=24h" || true
 
 # 2. Build and boot the new environment safely in the background
 echo "🏗️ Building and starting $DEPLOY_ENV environment..."
