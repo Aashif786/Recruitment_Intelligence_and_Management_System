@@ -123,9 +123,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 className="bg-background object-cover"
                             />
                             <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-bold">
-                                {companyLogo ? (
-                                    <img src={companyLogo} className="h-full w-full object-contain" alt="Logo Fallback" />
-                                ) : initials}
+                                <img src="/calrims/logo.png" className="h-full w-full object-contain" alt="Logo" />
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
