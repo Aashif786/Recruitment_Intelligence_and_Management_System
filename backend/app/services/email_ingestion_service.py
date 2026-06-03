@@ -671,6 +671,18 @@ async def run_batch_resume_processing(db: Session):
                 db.commit()
                 continue
 
+            # Check if candidate has already applied to this job (uq_application_job_email constraint)
+            existing_app = db.query(Application).filter(
+                Application.job_id == target_job.id,
+                Application.candidate_email == candidate_email
+            ).first()
+            
+            if existing_app:
+                logger.info(f"Candidate {candidate_email} has already applied to job {target_job.id}. Skipping duplicate application ingestion.")
+                resume.processed = True
+                db.commit()
+                continue
+
             # Create application
             new_app = Application(
                 job_id=target_job.id,

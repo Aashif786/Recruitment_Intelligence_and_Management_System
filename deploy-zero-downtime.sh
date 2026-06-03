@@ -20,7 +20,7 @@ echo "📥 Syncing code from GitHub..."
 git fetch --all
 git reset --hard origin/main
 
-# 0.5 Ensure INTERVIEW_JWT_SECRET exists in backend/.env (production validation requires it)
+# 0.5 Ensure INTERVIEW_JWT_SECRET and ENCRYPTION_KEY exist in backend/.env
 echo "🔧 Checking environment variables..."
 ENV_FILE="backend/.env"
 if [ -f "$ENV_FILE" ]; then
@@ -29,6 +29,13 @@ if [ -f "$ENV_FILE" ]; then
         RAND_SECRET=$(openssl rand -hex 32 2>/dev/null || echo "default_interview_secret_secure_random_key_12345")
         echo "" >> "$ENV_FILE"
         echo "INTERVIEW_JWT_SECRET=$RAND_SECRET" >> "$ENV_FILE"
+    fi
+    if grep -q "ENCRYPTION_KEY=" "$ENV_FILE"; then
+        echo "Updating ENCRYPTION_KEY in $ENV_FILE to align with localhost..."
+        sed -i 's|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=3gcctn9-UwjDXdYjmhslWwrF50FPayUTMWbGrMx02ck=|g' "$ENV_FILE"
+    else
+        echo "Adding ENCRYPTION_KEY to $ENV_FILE..."
+        echo "ENCRYPTION_KEY=3gcctn9-UwjDXdYjmhslWwrF50FPayUTMWbGrMx02ck=" >> "$ENV_FILE"
     fi
 else
     echo "⚠️ Warning: backend/.env file not found. Skipping auto-injection."
