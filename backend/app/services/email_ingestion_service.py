@@ -9,7 +9,7 @@ from email.header import decode_header
 from email.utils import parsedate_to_datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
-from datetime import datetime
+from datetime import datetime, timezone
 from app.domain.models import AttachmentResume, Application, Job
 from app.core.config import get_settings
 import logging
@@ -33,36 +33,37 @@ def _retry_with_backoff(func, max_attempts=3, delays=[2, 4, 8]):
     return None
 
 def _decode_subject(subject_header):
-    """Safely decode email subject with fallback encodings"""
+    """Safely decode email subject with fallback encodings, supporting multipart encoded words"""
     if not subject_header:
         return ""
     
     try:
         decoded_parts = decode_header(subject_header)
-        subject, encoding = decoded_parts[0]
-        
-        if subject is None:
-            return ""
-        
-        if isinstance(subject, bytes):
-            # Try specified encoding first
-            if encoding:
-                try:
-                    return subject.decode(encoding)
-                except (UnicodeDecodeError, LookupError):
-                    pass
-            
-            # Fallback encodings
-            for enc in ['utf-8', 'latin-1', 'cp1252']:
-                try:
-                    return subject.decode(enc, errors='replace')
-                except (UnicodeDecodeError, LookupError):
-                    continue
-            
-            # Last resort
-            return subject.decode('utf-8', errors='replace')
-        
-        return str(subject)
+        subject_parts = []
+        for part, encoding in decoded_parts:
+            if part is None:
+                continue
+            if isinstance(part, bytes):
+                if encoding:
+                    try:
+                        decoded_part = part.decode(encoding)
+                    except (UnicodeDecodeError, LookupError):
+                        decoded_part = part.decode('utf-8', errors='replace')
+                else:
+                    # Fallback encodings
+                    decoded_part = None
+                    for enc in ['utf-8', 'latin-1', 'cp1252']:
+                        try:
+                            decoded_part = part.decode(enc)
+                            break
+                        except (UnicodeDecodeError, LookupError):
+                            continue
+                    if decoded_part is None:
+                        decoded_part = part.decode('utf-8', errors='replace')
+                subject_parts.append(decoded_part)
+            else:
+                subject_parts.append(str(part))
+        return "".join(subject_parts)
     except Exception as e:
         logger.warning(f"Failed to decode subject: {e}")
         return ""
@@ -72,6 +73,14 @@ def _extract_email(sender_str):
     if not sender_str:
         return None
     
+    if isinstance(sender_str, bytes):
+        try:
+            sender_str = sender_str.decode('utf-8', errors='replace')
+        except Exception:
+            sender_str = str(sender_str)
+    else:
+        sender_str = str(sender_str)
+        
     # Try angle bracket format first
     match = re.search(r'<([^>]+)>', sender_str)
     if match:
@@ -87,78 +96,95 @@ def _extract_email(sender_str):
     return None
 
 def _decode_email_body(msg_obj):
-    """Decode email body with charset detection and fallback"""
+    """Decode email body with charset detection, HTML fallback, and fallback encodings"""
     email_body = ""
+    html_body = ""
     
+    def decode_payload(part):
+        try:
+            payload = part.get_payload(decode=True)
+            if not payload:
+                return ""
+            if isinstance(payload, str):
+                return payload
+            charset = part.get_content_charset() or 'utf-8'
+            try:
+                return payload.decode(charset, errors='replace')
+            except (UnicodeDecodeError, LookupError):
+                for enc in ['utf-8', 'latin-1', 'cp1252']:
+                    try:
+                        return payload.decode(enc, errors='replace')
+                    except (UnicodeDecodeError, LookupError):
+                        continue
+                return payload.decode('utf-8', errors='replace')
+        except Exception as e:
+            logger.warning(f"Failed to decode part: {e}")
+            return ""
+
     try:
         if msg_obj.is_multipart():
             for part in msg_obj.walk():
                 content_type = part.get_content_type()
                 content_disposition = str(part.get("Content-Disposition"))
                 
-                if content_type == "text/plain" and "attachment" not in content_disposition:
-                    try:
-                        payload = part.get_payload(decode=True)
-                        if payload:
-                            # Try to get charset
-                            charset = part.get_content_charset() or 'utf-8'
-                            try:
-                                email_body += payload.decode(charset, errors='replace')
-                            except (UnicodeDecodeError, LookupError):
-                                # Fallback encodings
-                                for enc in ['utf-8', 'latin-1', 'cp1252']:
-                                    try:
-                                        email_body += payload.decode(enc, errors='replace')
-                                        break
-                                    except (UnicodeDecodeError, LookupError):
-                                        continue
-                    except Exception as e:
-                        logger.warning(f"Failed to decode email body part: {e}")
-                        continue
+                if "attachment" not in content_disposition:
+                    if content_type == "text/plain":
+                        email_body += decode_payload(part)
+                    elif content_type == "text/html":
+                        html_body += decode_payload(part)
         else:
-            try:
-                payload = msg_obj.get_payload(decode=True)
-                if payload:
-                    charset = msg_obj.get_content_charset() or 'utf-8'
-                    try:
-                        email_body = payload.decode(charset, errors='replace')
-                    except (UnicodeDecodeError, LookupError):
-                        for enc in ['utf-8', 'latin-1', 'cp1252']:
-                            try:
-                                email_body = payload.decode(enc, errors='replace')
-                                break
-                            except (UnicodeDecodeError, LookupError):
-                                continue
-            except Exception as e:
-                logger.warning(f"Failed to decode email body: {e}")
+            content_type = msg_obj.get_content_type()
+            if content_type == "text/plain":
+                email_body = decode_payload(msg_obj)
+            elif content_type == "text/html":
+                html_body = decode_payload(msg_obj)
     except Exception as e:
         logger.error(f"Error decoding email body: {e}")
     
-    return email_body if email_body else "[Email body could not be decoded]"
+    if email_body.strip():
+        return email_body
+    
+    if html_body.strip():
+        # Clean HTML tags to extract readable text
+        cleaned = re.sub(r'<style[^>]*>.*?</style>', '', html_body, flags=re.DOTALL | re.IGNORECASE)
+        cleaned = re.sub(r'<script[^>]*>.*?</script>', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
+        cleaned = re.sub(r'<[^>]+>', ' ', cleaned)
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        return cleaned
+
+    return "[Email body could not be decoded]"
 
 def _decode_filename(filename_header):
-    """Safely decode attachment filename"""
+    """Safely decode attachment filename, supporting multipart encoded words"""
     if not filename_header:
         return None
     
     try:
         decoded_parts = decode_header(filename_header)
-        filename, encoding = decoded_parts[0]
-        
-        if isinstance(filename, bytes):
-            if encoding:
-                try:
-                    return filename.decode(encoding)
-                except (UnicodeDecodeError, LookupError):
-                    pass
-            
-            for enc in ['utf-8', 'latin-1', 'cp1252']:
-                try:
-                    return filename.decode(enc, errors='replace')
-                except (UnicodeDecodeError, LookupError):
-                    continue
-        
-        return str(filename) if filename else None
+        filename_parts = []
+        for part, encoding in decoded_parts:
+            if part is None:
+                continue
+            if isinstance(part, bytes):
+                if encoding:
+                    try:
+                        decoded_part = part.decode(encoding)
+                    except (UnicodeDecodeError, LookupError):
+                        decoded_part = part.decode('utf-8', errors='replace')
+                else:
+                    decoded_part = None
+                    for enc in ['utf-8', 'latin-1', 'cp1252']:
+                        try:
+                            decoded_part = part.decode(enc)
+                            break
+                        except (UnicodeDecodeError, LookupError):
+                            continue
+                    if decoded_part is None:
+                        decoded_part = part.decode('utf-8', errors='replace')
+                filename_parts.append(decoded_part)
+            else:
+                filename_parts.append(str(part))
+        return "".join(filename_parts) if filename_parts else None
     except Exception as e:
         logger.warning(f"Failed to decode filename: {e}")
         return None
@@ -223,8 +249,8 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
             try:
                 # Fetch metadata
                 res, msg_meta = mail.fetch(email_id, "(BODY[HEADER.FIELDS (SUBJECT FROM DATE MESSAGE-ID)])")
-                if res != "OK":
-                    logger.warning(f"Failed to fetch metadata for email ID {email_id.decode()}")
+                if res != "OK" or not msg_meta or not isinstance(msg_meta, list) or not msg_meta[0] or len(msg_meta[0]) < 2 or msg_meta[0][1] is None:
+                    logger.warning(f"Failed to fetch metadata or invalid metadata structure for email ID {email_id.decode() if isinstance(email_id, bytes) else email_id}")
                     continue
                 
                 header_obj = email.message_from_bytes(msg_meta[0][1])
@@ -232,8 +258,16 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                 # Extract and decode subject
                 subject = _decode_subject(header_obj.get("Subject"))
                 
-                # Extract sender email
+                # Extract sender email and decode it
                 sender = header_obj.get("From", "")
+                if isinstance(sender, bytes):
+                    try:
+                        sender = sender.decode('utf-8', errors='replace')
+                    except Exception:
+                        sender = str(sender)
+                else:
+                    sender = str(sender)
+                
                 raw_email = _extract_email(sender)
                 if not raw_email:
                     logger.warning(f"Could not extract valid email from: {sender}")
@@ -244,7 +278,11 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                 received_at = datetime.utcnow()
                 if date_str:
                     try:
-                        received_at = parsedate_to_datetime(date_str)
+                        received_dt = parsedate_to_datetime(date_str)
+                        if received_dt.tzinfo is not None:
+                            received_at = received_dt.astimezone(timezone.utc).replace(tzinfo=None)
+                        else:
+                            received_at = received_dt
                     except Exception as e:
                         logger.warning(f"Failed to parse date '{date_str}': {e}. Using current time.")
                 
@@ -292,36 +330,12 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                         
                         # Decode email body
                         email_body = _decode_email_body(msg_obj)
-                        
-                        # Process attachments
-                        resume_count = 0
-                        if msg_obj.is_multipart():
-                            for part in msg_obj.walk():
-                                if resume_count > 0:
-                                    logger.warning(f"Email from {raw_email} has multiple resume attachments. Processing only the first one.")
-                                    break
-                                
-                                content_type = part.get_content_type()
-                                content_disposition = str(part.get("Content-Disposition", ""))
-                                if content_type == "text/plain" and "attachment" not in content_disposition:
-                                    try:
-                                        payload = part.get_payload(decode=True)
-                                        if payload:
-                                            email_body += payload.decode()
-                                    except:
-                                        pass
-                        else:
-                            try:
-                                payload = msg_obj.get_payload(decode=True)
-                                if payload:
-                                    email_body = payload.decode()
-                            except:
-                                pass
                         # BUG-003 Fix: Truncate email body to 2000 chars to prevent PII accumulation.
                         # Only the subject line is needed for job code matching.
                         email_body = email_body[:2000] if email_body else ""
 
                         # Extract and process attachments
+                        resume_count = 0
                         found_resume = False
                         if msg_obj.is_multipart():
                             for part in msg_obj.walk():
@@ -441,7 +455,24 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                         logger.info(f"Ingested new resume from {raw_email}: {safe_filename}")
                         
                         if resume_count == 0:
-                            logger.info(f"Email from {raw_email} had no resume attachments.")
+                            logger.info(f"Email from {raw_email} had no resume attachments. Ingesting email metadata only.")
+                            new_resume = AttachmentResume(
+                                message_id=msg_id,
+                                sender_email=sender,
+                                subject=subject,
+                                file_name=None,
+                                file_url=None,
+                                file_data=None, 
+                                email_body=email_body,
+                                mime_type="text/plain",
+                                received_at=received_at,
+                                processed=True,  # Mark processed since there is no attachment to parse/map
+                                mapping_failed=True,
+                                retry_count=0,
+                                last_error="No resume attachment found in email."
+                            )
+                            db.add(new_resume)
+                            saved_count += 1
                 
                 # Commit after each email
                 db.commit()

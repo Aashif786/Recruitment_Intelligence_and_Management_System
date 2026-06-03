@@ -651,7 +651,7 @@ export default function IngestedEmailsPage() {
                                                     <ExternalLink className="h-3 w-3" />
                                                 </a>
                                             ) : (
-                                                <span className="text-xs text-muted-foreground italic">No attachment url</span>
+                                                <span className="text-xs text-muted-foreground italic">attachment missing</span>
                                             )}
                                         </TableCell>
                                         <TableCell>

@@ -1404,7 +1404,46 @@ def _extract_storage_path_identifier(path: str) -> Optional[str]:
         
     return None # Don't return generic paths
 
-def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: set = None, app_emails_set: set = None):
+
+def _get_target_job_id_from_subject(subject_str: str, db: Session) -> Optional[int]:
+    if not subject_str:
+        return None
+    # Pattern A: JOB-[A-Z0-9]{6}
+    job_codes = re.findall(r'JOB-[A-Z0-9]{6}', subject_str, re.IGNORECASE)
+    if job_codes:
+        for code in job_codes:
+            extracted_code = code.upper().strip()
+            job = db.query(Job).filter(func.upper(Job.job_id) == extracted_code).first()
+            if job:
+                return job.id
+    
+    # Pattern B: job id/code numeric
+    subject_lower = subject_str.lower()
+    numeric_id_match = re.search(r'\bjob\s*(?:id|code)?\s*[:\-\#]?\s*(\d+)\b', subject_lower)
+    if numeric_id_match:
+        extracted_id = int(numeric_id_match.group(1).strip())
+        job = db.query(Job).filter(Job.id == extracted_id).first()
+        if job:
+            return job.id
+            
+    # Pattern C: Job title matching 80%
+    subject_words = set(subject_lower.split())
+    open_jobs = db.query(Job).filter(Job.status == 'open').all()
+    for job in open_jobs:
+        job_title_words = set(job.title.lower().split())
+        if job_title_words:
+            match_count = len(job_title_words & subject_words)
+            if match_count / len(job_title_words) >= 0.8:
+                return job.id
+    return None
+
+def _resolve_resume_mapping(
+    item: AttachmentResume,
+    db: Session,
+    app_paths_set: set = None,
+    app_emails_no_path_set: set = None,
+    app_emails_job_set: set = None
+):
     """
     Unified logic to resolve if an ingested email is mapped to an application.
 
@@ -1416,18 +1455,14 @@ def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: 
       - Stats call (with sets): `if app_found or is_processed`
       - Listing call (without sets): `app_obj.id if app_obj else None`
     """
-    if item.processed:
-        # If manually marked processed, we don't necessarily need the app object for stats,
-        # but for the list we still try to find it for the "VIEW CANDIDATE" link.
-        pass
-
     # Extract candidate's raw email from sender email
     sender_str = item.sender_email or ""
     match = re.search(r'<([^>]+)>', sender_str)
     raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
 
+    path_id = _extract_storage_path_identifier(item.file_url) if item.file_url else None
+
     # 1. Match by unique storage path identifier (most accurate)
-    path_id = _extract_storage_path_identifier(item.file_url)
     if path_id:
         if app_paths_set is not None:
             # Fast path (stats): return bool, bool
@@ -1444,21 +1479,40 @@ def _resolve_resume_mapping(item: AttachmentResume, db: Session, app_paths_set: 
             if app:
                 return app, True
 
-    # 2. Match by candidate email (fallback)
-    if raw_email:
-        if app_emails_set is not None:
+    # 2. Match by email (if email has no attachment and was manually mapped)
+    if not path_id and raw_email:
+        if app_emails_no_path_set is not None:
+            if raw_email in app_emails_no_path_set:
+                return True, True
+        else:
+            app = db.query(Application).filter(
+                func.trim(func.lower(Application.candidate_email)) == raw_email,
+                or_(
+                    Application.resume_file_path == None,
+                    Application.resume_file_path == ""
+                )
+            ).first()
+            if app:
+                return app, True
+
+    # 3. Match by candidate email and target job ID (fallback)
+    # This prevents any candidate email from mapping to their other unrelated jobs.
+    target_job_id = _get_target_job_id_from_subject(item.subject, db)
+    if raw_email and target_job_id:
+        if app_emails_job_set is not None:
             # Fast path (stats): return bool, bool
-            if raw_email in app_emails_set:
+            if (raw_email, target_job_id) in app_emails_job_set:
                 return True, True
         else:
             # Slow path (list): return full Application object
             app = db.query(Application).filter(
-                func.trim(func.lower(Application.candidate_email)) == raw_email
-            ).order_by(Application.applied_at.desc()).first()
+                func.trim(func.lower(Application.candidate_email)) == raw_email,
+                Application.job_id == target_job_id
+            ).first()
             if app:
                 return app, True
 
-    return None, item.processed
+    return None, getattr(item, 'processed', False)
 
 
 
@@ -1475,19 +1529,28 @@ def get_ingested_emails_stats(
     total_ingested = len(items)
     
     # Pre-fetch application mapping data for efficient lookups
-    applications_data = db.query(Application.resume_file_path, Application.candidate_email).all()
+    applications_data = db.query(Application.resume_file_path, Application.candidate_email, Application.job_id).all()
     
     # Store in sets for O(1) lookups
-    app_paths = {
-        _extract_storage_path_identifier(a.resume_file_path) 
-        for a in applications_data if a.resume_file_path
-    }
-    app_emails = {a.candidate_email.lower().strip() for a in applications_data if a.candidate_email}
+    app_paths = set()
+    app_emails_no_path = set()
+    app_emails_job = set()
+    
+    for a in applications_data:
+        if a.candidate_email:
+            email_key = a.candidate_email.lower().strip()
+            if a.job_id:
+                app_emails_job.add((email_key, a.job_id))
+            path_id = _extract_storage_path_identifier(a.resume_file_path) if a.resume_file_path else None
+            if path_id:
+                app_paths.add(path_id)
+            else:
+                app_emails_no_path.add(email_key)
     
     auto_mapped = 0
     for item in items:
-        app_found, is_processed = _resolve_resume_mapping(item, db, app_paths, app_emails)
-        if app_found or (is_processed and not getattr(item, 'mapping_failed', False)):
+        app_found, is_processed = _resolve_resume_mapping(item, db, app_paths, app_emails_no_path, app_emails_job)
+        if app_found:
             auto_mapped += 1
                 
     return {
@@ -1533,23 +1596,28 @@ def get_ingested_emails(
     items = query.order_by(AttachmentResume.id.desc()).all()
 
     # BUG-B Fix: Pre-fetch application mapping data once — O(n) sets for O(1) lookups.
-    # Previously this was done ONLY in get_ingested_emails_stats(); the listing loop
-    # called _resolve_resume_mapping(item, db) without sets, causing 1 DB query per row.
-    applications_data = db.query(Application.resume_file_path, Application.candidate_email).all()
-    app_paths_set = {
-        _extract_storage_path_identifier(a.resume_file_path)
-        for a in applications_data if a.resume_file_path
-    }
-    app_emails_set = {a.candidate_email.lower().strip() for a in applications_data if a.candidate_email}
+    applications_data = db.query(Application.resume_file_path, Application.candidate_email, Application.job_id).all()
+    
+    app_paths_set = set()
+    app_emails_no_path_set = set()
+    app_emails_job_set = set()
+    
+    for a in applications_data:
+        if a.candidate_email:
+            email_key = a.candidate_email.lower().strip()
+            if a.job_id:
+                app_emails_job_set.add((email_key, a.job_id))
+            path_id = _extract_storage_path_identifier(a.resume_file_path) if a.resume_file_path else None
+            if path_id:
+                app_paths_set.add(path_id)
+            else:
+                app_emails_no_path_set.add(email_key)
 
     results = []
 
     for item in items:
         # BUG-B Fix: Pass pre-built sets — avoids per-row DB queries.
-        # Note: when sets are passed, _resolve_resume_mapping returns (True|None, bool).
-        # We still need the full app object for application_id / job metadata, so we
-        # do a targeted single query only for matched rows (much cheaper than N queries).
-        app_found, is_processed = _resolve_resume_mapping(item, db, app_paths_set, app_emails_set)
+        app_found, is_processed = _resolve_resume_mapping(item, db, app_paths_set, app_emails_no_path_set, app_emails_job_set)
 
         app_obj = None
         if app_found:
@@ -1557,19 +1625,49 @@ def get_ingested_emails(
             sender_str = item.sender_email or ""
             match = re.search(r'<([^>]+)>', sender_str)
             raw_email = match.group(1).lower().strip() if match else sender_str.lower().strip()
-            path_id = _extract_storage_path_identifier(item.file_url)
-            filter_conditions = []
+            path_id = _extract_storage_path_identifier(item.file_url) if item.file_url else None
+            
             if path_id:
-                filter_conditions.append(Application.resume_file_path.like(f"%{path_id}%"))
-            if raw_email:
-                filter_conditions.append(func.trim(func.lower(Application.candidate_email)) == raw_email)
-            if filter_conditions:
                 app_obj = (
                     db.query(Application)
                     .options(joinedload(Application.job))
-                    .filter(or_(*filter_conditions))
+                    .filter(
+                        or_(
+                            Application.resume_file_path == path_id,
+                            Application.resume_file_path.like(f"%{path_id}%")
+                        )
+                    )
                     .first()
                 )
+            
+            if not app_obj and raw_email:
+                # Try matching by email where resume_file_path is None (manually mapped no attachment)
+                app_obj = (
+                    db.query(Application)
+                    .options(joinedload(Application.job))
+                    .filter(
+                        func.trim(func.lower(Application.candidate_email)) == raw_email,
+                        or_(
+                            Application.resume_file_path == None,
+                            Application.resume_file_path == ""
+                        )
+                    )
+                    .first()
+                )
+            
+            if not app_obj and raw_email:
+                # Try matching by email and target job ID
+                target_job_id = _get_target_job_id_from_subject(item.subject, db)
+                if target_job_id:
+                    app_obj = (
+                        db.query(Application)
+                        .options(joinedload(Application.job))
+                        .filter(
+                            func.trim(func.lower(Application.candidate_email)) == raw_email,
+                            Application.job_id == target_job_id
+                        )
+                        .first()
+                    )
 
         # Duplicate detection
         sender_str = item.sender_email or ""
@@ -1619,7 +1717,7 @@ def get_ingested_emails(
     # BUG-G Fix: Compute stats inline from the results we already have in memory
     # instead of calling get_ingested_emails_stats() which runs a second full table scan.
     total_ingested = db.query(AttachmentResume).count()
-    auto_mapped_count = sum(1 for r in results if r["application_id"] is not None or (r["processed"] and not r["mapping_failed"]))
+    auto_mapped_count = sum(1 for r in results if r["application_id"] is not None)
     
     logger.debug(f"📊 Stats (partial - from filtered results): Total={total_ingested}, Auto-Mapped={auto_mapped_count}")
     
@@ -1628,19 +1726,19 @@ def get_ingested_emails(
     if search:
         # For search results, global stats still need full counts — use pre-built sets
         all_results_app_found = [
-            (i, _resolve_resume_mapping(i, db, app_paths_set, app_emails_set))
+            (i, _resolve_resume_mapping(i, db, app_paths_set, app_emails_no_path_set, app_emails_job_set))
             for i in all_items_for_stats
         ]
-        auto_mapped_global = sum(1 for (i, (af, ip)) in all_results_app_found if af or (ip and not getattr(i, 'mapping_failed', False)))
+        auto_mapped_global = sum(1 for (i, (af, ip)) in all_results_app_found if af)
     else:
         auto_mapped_global = auto_mapped_count
 
     # Python-level filter to match UI's status filter accurately
     if processed is not None:
         if processed:
-            results = [r for r in results if r["application_id"] is not None or (r["processed"] and not r["mapping_failed"])]
+            results = [r for r in results if r["application_id"] is not None]
         else:
-            results = [r for r in results if r["application_id"] is None and (not r["processed"] or r["mapping_failed"])]
+            results = [r for r in results if r["application_id"] is None]
 
     total = len(results)
     paginated_items = results[skip: skip + limit]
