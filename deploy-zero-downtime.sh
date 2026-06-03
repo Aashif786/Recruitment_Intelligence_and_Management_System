@@ -17,7 +17,7 @@ fi
 
 # 0. Pull latest changes from GitHub
 echo "📥 Syncing code from GitHub..."
-git fetch --all
+git fetch origin
 git reset --hard origin/main
 
 # 0.5 Ensure INTERVIEW_JWT_SECRET and ENCRYPTION_KEY exist in backend/.env
