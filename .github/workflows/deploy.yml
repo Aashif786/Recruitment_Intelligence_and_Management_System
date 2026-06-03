@@ -31,4 +31,20 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             chmod +x deploy-zero-downtime.sh
-            bash ./deploy-zero-downtime.sh
+            
+            echo "=== VPS SYSTEM STATUS BEFORE DEPLOY ==="
+            free -m
+            df -h
+            
+            if ! bash ./deploy-zero-downtime.sh; then
+              echo "=== DEPLOYMENT FAILED: DIAGNOSTIC LOGS ==="
+              echo "=== FREE MEMORY ==="
+              free -m
+              echo "=== DISK SPACE ==="
+              df -h
+              echo "=== DOCKER CONTAINERS ==="
+              docker ps -a
+              echo "=== DOCKER COMPOSE LOGS ==="
+              docker compose -f docker-compose.prod.yml logs --tail=100
+              exit 1
+            fi
