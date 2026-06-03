@@ -169,7 +169,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                         isActive && "bg-sidebar-accent/60 text-primary font-bold shadow-sm"
                                     )}
                                 >
-                                    <Link href={link.href} className="flex items-center justify-between w-full">
+                                    <Link href={link.href} prefetch={false} className="flex items-center justify-between w-full">
                                         {isActive && (
                                             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-primary rounded-r-lg z-20" />
                                         )}

@@ -43,17 +43,17 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
       {!isDashboard && (
         <div className="flex items-center gap-4 font-semibold text-sm">
           {!isHome && (
-            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/" prefetch={false} className="text-muted-foreground hover:text-foreground transition-colors">
               Home
             </Link>
           )}
           {!isJobs && (
-            <Link href="/jobs" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/jobs" prefetch={false} className="text-muted-foreground hover:text-foreground transition-colors">
               Browse Roles
             </Link>
           )}
           {!isAuth && (
-            <Link href="/auth/login?role=hr" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/auth/login?role=hr" prefetch={false} className="text-muted-foreground hover:text-foreground transition-colors">
               HR Portal
             </Link>
           )}
@@ -68,7 +68,7 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
           <UserNav />
         </div>
       ) : (isAuthenticated && !isJobs && !isHome && !isAuth) ? (
-        <Link href={user?.role === 'candidate' ? '/jobs' : '/dashboard/hr'} className="w-full md:w-auto">
+        <Link href={user?.role === 'candidate' ? '/jobs' : '/dashboard/hr'} prefetch={false} className="w-full md:w-auto">
           <Button className="w-full md:w-auto rounded-full px-6 bg-primary text-primary-foreground hover:bg-primary/90 font-bold transition-all shadow-lg shadow-primary/20">
             {user?.role === 'candidate' ? 'Browse Jobs' : 'Go to Dashboard'} <ChevronRight className="ml-1 h-4 w-4" />
           </Button>
@@ -86,7 +86,7 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
       <div className="w-full px-4 flex items-center justify-between">
 
         {/* Left: Logo and Title */}
-        <Link href={logoLink} className="flex items-center gap-3 group">
+        <Link href={logoLink} prefetch={false} className="flex items-center gap-3 group">
           <div className="bg-primary/10 p-1 rounded-lg group-hover:scale-110 transition-transform border border-primary/20">
             <img src={companyLogo} alt="Logo" className="h-8 w-auto object-contain max-w-[150px] group-hover:scale-105 transition-transform" />
           </div>
