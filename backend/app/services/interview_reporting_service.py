@@ -217,6 +217,7 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
         except Exception as e:
             logger.warning(f"FSM transition failed for interview {interview_id}: {e}")
             interview.application.status = "interview_completed"
+            interview.application.email_status = "pending"
             
         # ── Phase 6: Critical Audit Logging ──
         from app.services.candidate_service import CandidateService

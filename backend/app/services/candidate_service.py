@@ -50,8 +50,10 @@ class CandidateService:
             if new_status == "applied":
                 if current_status == "applied":
                     application.status = new_status
+                    application.email_status = 'pending'
             else:
                 application.status = new_status
+                application.email_status = 'pending'
 
         # Create or update the stage record
         stage = self.db.query(ApplicationStage).filter(
