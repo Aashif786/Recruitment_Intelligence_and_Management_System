@@ -199,7 +199,7 @@ export class APIClient {
     if (!success) {
       const errorMessage = typeof error === 'string' ? error : (error?.message || 'Unknown API error')
 
-      if (typeof window !== 'undefined' && [401, 403, 500].includes(response.status)) {
+      if (typeof window !== 'undefined' && (response.status === 401 || response.status === 403 || response.status >= 500)) {
         // Don't toast for background SWR polling endpoints or if it's a session expiry (handled by redirect)
         const isSilentEndpoint = response.url?.includes('/api/settings') ||
           response.url?.includes('/api/notifications') ||
@@ -233,7 +233,9 @@ export class APIClient {
       }
 
       // CRITICAL: Throw so that performMutation and other callers detect the failure
-      throw new Error(errorMessage)
+      const apiError = new Error(errorMessage) as any
+      apiError.status = response.status
+      throw apiError
     }
 
     // Handled in the success case as well

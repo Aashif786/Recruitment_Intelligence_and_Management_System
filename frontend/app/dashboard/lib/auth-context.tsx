@@ -85,6 +85,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return { userData: null, status: 401, isOffline: false }
             }
 
+            if (response.status >= 500) {
+              return { userData: null, status: response.status, isOffline: true }
+            }
+
             return { userData: null, status: response.status, isOffline: false }
           } catch (error: any) {
             if (error?.name === 'AbortError') {

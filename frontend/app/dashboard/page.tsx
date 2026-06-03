@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/dashboard/lib/auth-context'
 
 export default function DashboardRedirect() {
-    const { user, isLoading } = useAuth()
+    const { user, isLoading, isOffline } = useAuth()
     const router = useRouter()
 
     useEffect(() => {
@@ -16,10 +16,10 @@ export default function DashboardRedirect() {
                 // All other management/staff roles go to the HR dashboard
                 router.push('/dashboard/hr')
             }
-        } else if (!isLoading && !user) {
+        } else if (!isLoading && !isOffline && !user) {
             router.push('/auth/login')
         }
-    }, [user, isLoading, router])
+    }, [user, isLoading, isOffline, router])
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background">
