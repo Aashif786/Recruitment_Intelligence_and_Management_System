@@ -321,6 +321,7 @@ class CandidateStateMachine:
         # 3. Atomic status update
         application.status = target_state.value
         application.updated_at = get_ist_now()
+        application.email_status = 'pending'
 
         # 4. Log the transition
         self._log_transition(
