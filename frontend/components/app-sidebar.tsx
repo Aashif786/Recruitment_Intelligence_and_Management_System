@@ -118,12 +118,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:hidden">
                         <Avatar className="h-10 w-10 border-2 border-sidebar-primary/20 shadow-sm ring-2 ring-sidebar-ring/50">
                             <AvatarImage
-                                src={companyLogo || user?.profile_image_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.email || user?.role || 'default')}`}
-                                alt={user?.full_name || 'User avatar'}
-                                className="bg-background object-cover"
+                                src={companyLogo || '/calrims/logo.png'}
+                                alt={user?.full_name || 'Company logo'}
+                                className="bg-background object-contain p-0.5"
                             />
                             <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-bold">
-                                <img src="/calrims/logo.png" className="h-full w-full object-contain" alt="Logo" />
+                                {initials}
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
