@@ -569,9 +569,9 @@ def list_jobs(
     """List jobs for the HR user (paginated; default limit 100, max 200)."""
     query = db.query(Job)
     # Apply visibility isolation: Anyone not a super_admin is restricted to their own jobs
-    if current_user.role.lower() != "super_admin":
-        query = query.filter(Job.hr_id == current_user.id)
-    # Super Admin sees all.
+    # (Disabled: standard HR sees all jobs by default)
+    # if current_user.role.lower() != "super_admin":
+    #     query = query.filter(Job.hr_id == current_user.id)
 
     # Apply optional status filter
     if status and status not in ("all", ""):
