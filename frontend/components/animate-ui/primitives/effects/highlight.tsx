@@ -505,25 +505,36 @@ function HighlightItem<T extends React.ElementType>({
     'data-highlight': true,
   };
 
-  const commonHandlers = hover
-    ? {
-      onMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => {
-        setActiveValue(childValue);
-        element.props.onMouseEnter?.(e);
-      },
-      onMouseLeave: (e: React.MouseEvent<HTMLDivElement>) => {
-        setActiveValue(null);
-        element.props.onMouseLeave?.(e);
-      },
+  const {
+    onMouseEnter: propsMouseEnter,
+    onMouseLeave: propsMouseLeave,
+    onClick: propsClick,
+    ...restProps
+  } = props;
+
+  const handleMouseEnter = (e: React.MouseEvent<any>) => {
+    propsMouseEnter?.(e);
+    if (hover) {
+      setActiveValue(childValue);
+      element.props.onMouseEnter?.(e);
     }
-    : click
-      ? {
-        onClick: (e: React.MouseEvent<HTMLDivElement>) => {
-          setActiveValue(childValue);
-          element.props.onClick?.(e);
-        },
-      }
-      : {};
+  };
+
+  const handleMouseLeave = (e: React.MouseEvent<any>) => {
+    propsMouseLeave?.(e);
+    if (hover) {
+      setActiveValue(null);
+      element.props.onMouseLeave?.(e);
+    }
+  };
+
+  const handleOnClick = (e: React.MouseEvent<any>) => {
+    propsClick?.(e);
+    if (click) {
+      setActiveValue(childValue);
+      element.props.onClick?.(e);
+    }
+  };
 
   if (asChild) {
     if (mode === 'children') {
@@ -537,8 +548,10 @@ function HighlightItem<T extends React.ElementType>({
             ...dataAttributes,
             'data-slot': 'motion-highlight-item-container',
           }),
-          ...commonHandlers,
-          ...props,
+          onMouseEnter: handleMouseEnter,
+          onMouseLeave: handleMouseLeave,
+          onClick: handleOnClick,
+          ...restProps,
         },
         <>
           <AnimatePresence initial={false} mode="wait">
@@ -588,7 +601,10 @@ function HighlightItem<T extends React.ElementType>({
         ...dataAttributes,
         'data-slot': 'motion-highlight-item',
       }),
-      ...commonHandlers,
+      onMouseEnter: handleMouseEnter,
+      onMouseLeave: handleMouseLeave,
+      onClick: handleOnClick,
+      ...restProps,
     });
   }
 
@@ -599,8 +615,10 @@ function HighlightItem<T extends React.ElementType>({
       data-slot="motion-highlight-item-container"
       className={cn(mode === 'children' && 'relative', className)}
       {...dataAttributes}
-      {...props}
-      {...commonHandlers}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={handleOnClick}
+      {...restProps}
     >
       {mode === 'children' && (
         <AnimatePresence initial={false} mode="wait">

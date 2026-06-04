@@ -427,7 +427,9 @@ function TooltipContent({ asChild = false, ...props }: TooltipContentProps) {
   return null;
 }
 
-type TooltipTriggerProps = WithAsChild<HTMLMotionProps<'div'>>;
+type TooltipTriggerProps = WithAsChild<HTMLMotionProps<'div'>> & {
+  disableFocus?: boolean;
+};
 
 function TooltipTrigger({
   ref,
@@ -437,6 +439,7 @@ function TooltipTrigger({
   onBlur,
   onPointerDown,
   asChild = false,
+  disableFocus = false,
   ...props
 }: TooltipTriggerProps) {
   const {
@@ -520,10 +523,10 @@ function TooltipTrigger({
   const handleFocus = React.useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
       onFocus?.(e);
-      if (suppressNextFocusRef.current) return;
+      if (disableFocus || suppressNextFocusRef.current) return;
       handleOpen();
     },
-    [handleOpen, onFocus],
+    [handleOpen, onFocus, disableFocus],
   );
 
   const handleBlur = React.useCallback(
