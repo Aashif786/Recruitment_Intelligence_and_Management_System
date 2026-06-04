@@ -111,26 +111,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     return (
-        <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border bg-sidebar/80 backdrop-blur-xl text-sidebar-foreground shadow-xl transition-colors duration-300">
-            <SidebarHeader className="border-b border-sidebar-border px-4 py-6">
+        <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border bg-sidebar/90 backdrop-blur-2xl text-sidebar-foreground shadow-[2px_0_20px_-4px_rgba(0,0,0,0.12)] transition-colors duration-300">
+            <SidebarHeader className="border-b border-sidebar-border/60 px-4 py-5">
                 <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center">
                     {/* User Profile Info */}
                     <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:hidden">
-                        <Avatar className="h-10 w-10 border-2 border-sidebar-primary/20 shadow-sm ring-2 ring-sidebar-ring/50">
+                        <Avatar className="h-10 w-10 border-2 border-sidebar-primary/30 shadow-sm ring-2 ring-sidebar-primary/20 ring-offset-1 ring-offset-sidebar">
                             <AvatarImage
                                 src={companyLogo || '/calrims/logo.png'}
                                 alt={user?.full_name || 'Company logo'}
                                 className="bg-background object-contain p-0.5"
                             />
-                            <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-bold">
+                            <AvatarFallback className="bg-gradient-to-br from-primary via-primary/80 to-accent text-primary-foreground font-black text-sm">
                                 {initials}
                             </AvatarFallback>
                         </Avatar>
-                        <div className="flex flex-col">
-                            <span className="font-bold text-sm text-sidebar-foreground truncate max-w-[120px]">
+                        <div className="flex flex-col gap-0.5">
+                            <span className="font-bold text-sm text-sidebar-foreground truncate max-w-[120px] leading-tight">
                                 {user?.full_name}
                             </span>
-                            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                            <span className="text-[10px] text-muted-foreground/70 truncate max-w-[120px] uppercase tracking-wider font-medium">
                                 HR Manager
                             </span>
                         </div>
@@ -141,7 +141,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         variant="ghost"
                         size="icon"
                         onClick={toggleSidebar}
-                        className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-full transition-colors group-data-[collapsible=icon]:rotate-180"
+                        className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl transition-all duration-200 group-data-[collapsible=icon]:rotate-180"
                     >
                         <PanelLeft className="h-4 w-4" />
                     </Button>
@@ -171,7 +171,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 >
                                     <Link href={link.href} prefetch={false} className="flex items-center justify-between w-full">
                                         {isActive && (
-                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-primary rounded-r-lg z-20" />
+                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-gradient-to-b from-primary to-primary/60 rounded-r-full z-20 shadow-[2px_0_8px_color-mix(in_oklab,var(--primary)_40%,transparent)]" />
                                         )}
                                         <div className="flex items-center gap-3">
                                             <Icon className={cn(
@@ -209,16 +209,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenu>
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-sidebar-border p-4">
+            <SidebarFooter className="border-t border-sidebar-border/60 p-4">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             onClick={logout}
                             tooltip="Sign Out"
-                            className="flex-1 gap-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            className="flex-1 gap-3 rounded-xl text-muted-foreground/70 hover:bg-gradient-to-r hover:from-destructive/10 hover:to-destructive/5 hover:text-destructive transition-all duration-200 border border-transparent hover:border-destructive/10"
                         >
-                            <LogOut className="h-5 w-5 shrink-0" />
-                            <span className="group-data-[collapsible=icon]:hidden">
+                            <LogOut className="h-4 w-4 shrink-0" />
+                            <span className="group-data-[collapsible=icon]:hidden font-medium">
                                 Sign Out
                             </span>
                         </SidebarMenuButton>

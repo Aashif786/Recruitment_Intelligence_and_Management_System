@@ -22,15 +22,15 @@ export function PageHeader({
   return (
     <div className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10", className)}>
       <div className="flex items-center gap-5">
-        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 shadow-sm border border-primary/20 transition-all duration-300 hover:scale-105 hover:bg-primary/15 group">
-          <Icon className="h-7 w-7 text-primary transition-transform duration-300 group-hover:rotate-3" />
+        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 transition-all duration-300 hover:scale-105 hover:bg-primary/15 hover:shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_12%,transparent)] group shadow-sm">
+          <Icon className="h-7 w-7 text-primary transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110" />
         </div>
-        <div className="space-y-1">
-          <h1 className="text-4xl font-black text-foreground tracking-tight">
+        <div className="space-y-1.5">
+          <h1 className="text-4xl font-extrabold text-foreground tracking-tight leading-none">
             {title}
           </h1>
           {description && (
-            <p className="text-muted-foreground font-medium text-lg leading-tight opacity-80">
+            <p className="text-muted-foreground font-medium text-base leading-snug">
               {description}
             </p>
           )}

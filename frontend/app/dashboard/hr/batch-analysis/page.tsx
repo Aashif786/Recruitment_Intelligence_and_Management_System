@@ -227,38 +227,40 @@ export default function BatchAnalysisPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Batch Analysis"
         description="Upload and process multiple resumes, or export filtered candidate data."
         icon={FileText}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ─── Bulk Upload Card ──────────────────────────── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UploadCloud className="h-5 w-5 text-primary" />
+        <Card className="flex flex-col h-full border-border/40 rounded-2xl shadow-[0_2px_12px_-2px_rgba(0,0,0,0.07)] hover:shadow-[0_6px_24px_-4px_rgba(0,0,0,0.12)] transition-shadow duration-300 overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+            <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+              <div className="p-1.5 bg-primary/10 rounded-lg">
+                <UploadCloud className="h-4 w-4 text-primary" />
+              </div>
               Bulk Processing Engine
             </CardTitle>
             <CardDescription>
               Supported inputs: PDF/DOCX files, nested folders, or ZIP archives (max 40 per batch).
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="bg-muted/30 border border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center">
-              <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <UploadCloud className="h-7 w-7 text-primary" />
+          <CardContent className="flex-1 flex flex-col p-5">
+            <div className="flex-1 min-h-[300px] bg-gradient-to-br from-muted/40 to-muted/20 border-2 border-dashed border-primary/20 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-1 transition-colors hover:border-primary/40 hover:bg-muted/30 group">
+              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                <UploadCloud className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Ready to ingest resumes</h3>
-              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
+              <h3 className="text-lg font-bold mb-1 text-foreground">Ready to ingest resumes</h3>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6 leading-relaxed">
                 Our AI engine maps resumes to job roles, strips duplicates, extracts identities, and prepares spreadsheets for export.
               </p>
               <Button
                 onClick={() => setIsBatchModalOpen(true)}
                 size="lg"
-                className="gap-2"
+                className="gap-2 rounded-xl px-8 shadow-md"
               >
                 <UploadCloud className="h-4 w-4" />
                 Run Batch Analysis
@@ -268,151 +270,155 @@ export default function BatchAnalysisPage() {
         </Card>
 
         {/* ─── Filtered Export Card ──────────────────────── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-primary" />
+        <Card className="flex flex-col h-full border-border/40 rounded-2xl shadow-[0_2px_12px_-2px_rgba(0,0,0,0.07)] hover:shadow-[0_6px_24px_-4px_rgba(0,0,0,0.12)] transition-shadow duration-300 overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+            <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+              <div className="p-1.5 bg-primary/10 rounded-lg">
+                <Filter className="h-4 w-4 text-primary" />
+              </div>
               Export Filtered Data
             </CardTitle>
             <CardDescription className="flex items-center justify-between">
               <span>Download candidate data filtered by date, role, or time-of-day.</span>
-              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] h-5">
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 text-[10px] h-5">
                 Max 1000
               </Badge>
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
-            {/* Date Range */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5 text-sm font-medium">
-                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                Date Range
-              </Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1 block">From</Label>
-                  <Input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="text-sm"
-                  />
+          <CardContent className="flex-1 flex flex-col">
+            <div className="space-y-5 max-w-2xl w-full">
+              {/* Date Range */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-sm font-medium">
+                  <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                  Date Range
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">From</Label>
+                    <Input
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">To</Label>
+                    <Input
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1 block">To</Label>
-                  <Input
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="text-sm"
-                  />
-                </div>
-              </div>
-              {dateError && (
-                <p className="text-xs text-destructive mt-1">{dateError}</p>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              
-                {/* Job Role */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5 text-sm font-medium">
-                    <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                    Job Role
-                  </Label>
-                  <Select value={filterJobId} onValueChange={setFilterJobId} disabled={jobsLoading}>
-                    <SelectTrigger className="text-sm">
-                      <SelectValue placeholder={jobsLoading ? 'Loading...' : 'All Roles'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Roles</SelectItem>
-                      {jobs?.filter(j => j.status === 'open').map(job => (
-                        <SelectItem key={job.id} value={job.id.toString()}>
-                          {job.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Time Window */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5 text-sm font-medium">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    Applied Time
-                  </Label>
-                  <Select value={timeRange} onValueChange={setTimeRange}>
-                    <SelectTrigger className="text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIME_OPTIONS.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-            
-            </div>
-            {/* Filter Summary */}
-            {filterSummary.length > 0 && (
-              <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 space-y-1">
-                <p className="text-xs font-bold text-primary uppercase tracking-wider">Exporting with filters:</p>
-                {filterSummary.map((line, i) => (
-                  <p key={i} className="text-sm text-foreground">{line}</p>
-                ))}
-              </div>
-            )}
-
-            {/* Export Error / Empty */}
-            {exportError && (
-              <div className="flex items-center gap-2 bg-destructive/10 text-destructive border border-destructive/20 rounded-lg p-3">
-                <SearchX className="h-4 w-4 shrink-0" />
-                <p className="text-sm font-medium">{exportError}</p>
-              </div>
-            )}
-
-            {/* Export Success Count */}
-            {exportCount !== null && exportCount > 0 && !exportError && (
-              <p className="text-sm text-emerald-600 font-medium">
-                ✅ Successfully exported {exportCount} candidates.
-              </p>
-            )}
-
-            {/* Live Count Badge */}
-            {hasFilters && liveCount !== null && (
-              <div className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm font-medium ${
-                liveCount === 0
-                  ? 'bg-destructive/10 border-destructive/20 text-destructive'
-                  : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
-              }`}>
-                <span>
-                  {isCountLoading ? 'Counting...' : liveCount === 0 ? 'No candidates found for these filters' : `${liveCount} candidate${liveCount !== 1 ? 's' : ''} will be exported`}
-                </span>
-                {liveCount > 0 && <Download className="h-3.5 w-3.5 opacity-60" />}
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                onClick={handleFilteredExport}
-                disabled={isExporting || !!dateError || liveCount === 0}
-                className="flex-1 gap-2"
-              >
-                {isExporting ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Exporting...</>
-                ) : (
-                  <><Download className="h-4 w-4" /> Download Excel</>
+                {dateError && (
+                  <p className="text-xs text-destructive mt-1">{dateError}</p>
                 )}
-              </Button>
-              {hasFilters && (
-                <Button variant="outline" onClick={clearFilters} className="shrink-0">
-                  Clear Filters
-                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                
+                  {/* Job Role */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-sm font-medium">
+                      <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                      Job Role
+                    </Label>
+                    <Select value={filterJobId} onValueChange={setFilterJobId} disabled={jobsLoading}>
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder={jobsLoading ? 'Loading...' : 'All Roles'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        {jobs?.filter(j => j.status === 'open').map(job => (
+                          <SelectItem key={job.id} value={job.id.toString()}>
+                            {job.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Time Window */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-sm font-medium">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      Applied Time
+                    </Label>
+                    <Select value={timeRange} onValueChange={setTimeRange}>
+                      <SelectTrigger className="text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIME_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+              
+              </div>
+              {/* Filter Summary */}
+              {filterSummary.length > 0 && (
+                <div className="bg-primary/5 border border-primary/15 rounded-xl p-3.5 space-y-1.5">
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Exporting with filters</p>
+                  {filterSummary.map((line, i) => (
+                    <p key={i} className="text-sm text-foreground/80 font-medium">{line}</p>
+                  ))}
+                </div>
               )}
+
+              {/* Export Error / Empty */}
+              {exportError && (
+                <div className="flex items-center gap-2 bg-destructive/10 text-destructive border border-destructive/20 rounded-lg p-3">
+                  <SearchX className="h-4 w-4 shrink-0" />
+                  <p className="text-sm font-medium">{exportError}</p>
+                </div>
+              )}
+
+              {/* Export Success Count */}
+              {exportCount !== null && exportCount > 0 && !exportError && (
+                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                  ✅ Successfully exported {exportCount} candidates.
+                </p>
+              )}
+
+              {/* Live Count Badge */}
+              {hasFilters && liveCount !== null && (
+                <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl border text-sm font-semibold ${
+                  liveCount === 0
+                    ? 'bg-destructive/10 border-destructive/20 text-destructive'
+                    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                }`}>
+                  <span>
+                    {isCountLoading ? 'Counting...' : liveCount === 0 ? 'No candidates found for these filters' : `${liveCount} candidate${liveCount !== 1 ? 's' : ''} will be exported`}
+                  </span>
+                  {liveCount > 0 && <Download className="h-3.5 w-3.5 opacity-60" />}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={handleFilteredExport}
+                  disabled={isExporting || !!dateError || liveCount === 0}
+                  className="flex-1 gap-2"
+                >
+                  {isExporting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Exporting...</>
+                  ) : (
+                    <><Download className="h-4 w-4" /> Download Excel</>
+                  )}
+                </Button>
+                {hasFilters && (
+                  <Button variant="outline" onClick={clearFilters} className="shrink-0">
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

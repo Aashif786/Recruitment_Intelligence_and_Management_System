@@ -13,13 +13,13 @@ interface CategoryScoreCardProps {
 const CategoryScoreCardImpl = ({ title, score, showNotAvailable }: CategoryScoreCardProps) => (
     <Card className="h-28 bg-card border shadow-sm">
         <CardContent className="h-full flex flex-col justify-center p-4">
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-2">{title}</div>
+            <div className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2">{title}</div>
             {showNotAvailable ? (
                 <div className="text-3xl font-semibold text-muted-foreground">N/A</div>
             ) : (
-                <div className="text-3xl font-bold text-slate-900 dark:text-slate-50">
+                <div className="text-3xl font-bold text-foreground">
                     {score !== undefined && score !== null ? score.toFixed(1) : 'N/A'}
-                    <span className="text-base font-normal text-slate-500 dark:text-slate-400 ml-1">/10</span>
+                    <span className="text-base font-normal text-muted-foreground ml-1">/10</span>
                 </div>
             )}
         </CardContent>

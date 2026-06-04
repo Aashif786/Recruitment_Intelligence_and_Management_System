@@ -555,7 +555,13 @@ export default function ReportsPage() {
   if (isInitialLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="h-14 w-14 rounded-full border-4 border-primary/20"></div>
+            <div className="absolute inset-0 h-14 w-14 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+          </div>
+          <p className="text-sm text-muted-foreground font-medium animate-pulse">Loading reports...</p>
+        </div>
       </div>
     )
   }
@@ -566,10 +572,13 @@ export default function ReportsPage() {
   if (fetchError || apiErrorMessage) {
     return (
       <div className="p-8">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-200">
-          <h3 className="font-bold">Error Loading Reports</h3>
-          <p>{fetchError?.message || apiErrorMessage || 'An error occurred while fetching reports.'}</p>
-          <Button onClick={() => mutate(reportsApiUrl)} variant="outline" className="mt-2">Retry</Button>
+        <div className="bg-destructive/10 text-destructive p-5 rounded-2xl border border-destructive/20 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <h3 className="font-bold text-base">Error Loading Reports</h3>
+          </div>
+          <p className="text-sm text-destructive/80">{fetchError?.message || apiErrorMessage || 'An error occurred while fetching reports.'}</p>
+          <Button onClick={() => mutate(reportsApiUrl)} variant="outline" className="w-fit gap-2 border-destructive/30 hover:bg-destructive/10 text-destructive">Retry</Button>
         </div>
       </div>
     )
@@ -583,7 +592,7 @@ export default function ReportsPage() {
         (allowing for 4rem header + 4rem layout padding + 1rem safety).
       - 'min-h-0' is crucial for allowing flex children to scroll.
     */
-    <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-4 lg:h-[calc(100vh-7.5rem)]">
+    <div className="w-full flex flex-col gap-4 lg:h-[calc(100vh-7.5rem)]">
 
       
       {/* Header - Fixed at the top of the component */}
@@ -605,16 +614,16 @@ export default function ReportsPage() {
             <div className="space-y-8 mt-4">
               {/* Row 1: Question */}
               <div className="space-y-2">
-                <h4 className="text-lg font-bold text-slate-900 dark:text-slate-50">Question:</h4>
-                <p className="text-lg text-slate-900 dark:text-slate-50 bg-card p-6 rounded-xl border shadow-sm leading-relaxed">
+                <h4 className="text-lg font-bold text-foreground">Question:</h4>
+                <p className="text-lg text-foreground bg-muted/30 p-6 rounded-xl border border-border shadow-sm leading-relaxed">
                   {cleanQuestionText(selectedQuestion.question)}
                 </p>
               </div>
 
               {/* Row 2: Answer */}
               <div className="space-y-2">
-                <h4 className="text-lg font-bold text-slate-900 dark:text-slate-50">Answer:</h4>
-                <p className={`text-base bg-card p-6 rounded-xl border shadow-sm leading-relaxed whitespace-pre-wrap ${isAnswerEmpty(selectedQuestion.answer) ? 'text-muted-foreground italic' : 'text-slate-900 dark:text-slate-50'}`}>
+                <h4 className="text-lg font-bold text-foreground">Answer:</h4>
+                <p className={`text-base bg-muted/30 p-6 rounded-xl border border-border shadow-sm leading-relaxed whitespace-pre-wrap ${isAnswerEmpty(selectedQuestion.answer) ? 'text-muted-foreground italic' : 'text-foreground'}`}>
                   {isAnswerEmpty(selectedQuestion.answer) ? 'Candidate did not provide an answer.' : selectedQuestion.answer}
                 </p>
               </div>
@@ -651,7 +660,7 @@ export default function ReportsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Strengths */}
                 <div>
-                  <h4 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-3">Strengths:</h4>
+                  <h4 className="text-lg font-bold text-foreground mb-3">Strengths:</h4>
                   <div className="bg-primary/10 border border-primary/20 rounded-xl p-6 h-full shadow-sm">
                     {selectedQuestion.evaluation.strengths && selectedQuestion.evaluation.strengths.length > 0 ? (
                       <ul className="space-y-3">
@@ -670,7 +679,7 @@ export default function ReportsPage() {
 
                 {/* Weaknesses */}
                 <div>
-                  <h4 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-3">Areas for Improvement:</h4>
+                  <h4 className="text-lg font-bold text-foreground mb-3">Areas for Improvement:</h4>
                   <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 h-full shadow-sm">
                     {selectedQuestion.evaluation.weaknesses && selectedQuestion.evaluation.weaknesses.length > 0 ? (
                       <ul className="space-y-3">

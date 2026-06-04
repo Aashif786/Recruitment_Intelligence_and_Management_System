@@ -672,39 +672,41 @@ export default function IngestedEmailsPage() {
                                             )}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {item.application_id ? (
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => router.push(`/dashboard/hr/applications/${item.application_id}`)}
-                                                    className="h-9 px-3 text-xs font-bold text-primary uppercase tracking-wider hover:bg-primary/10 rounded-xl"
-                                                >
-                                                    View Candidate
-                                                </Button>
-                                            ) : (
-                                                // SEC-1 Fix: Backend /assign requires super_admin.
-                                                // Hide button for regular HR to avoid confusing 403 errors.
-                                                // FIX: Cannot assign to job without a resume attachment.
-                                                !item.file_url ? (
-                                                    <Badge className="bg-rose-50 text-rose-400 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/25 text-[10px] font-semibold px-2 py-0.5 flex items-center gap-1 w-max">
-                                                        <AlertTriangle className="h-3 w-3" />
-                                                        No Resume
-                                                    </Badge>
-                                                ) : user?.role === 'super_admin' ? (
+                                            <div className="flex justify-end w-full">
+                                                {item.application_id ? (
                                                     <Button
                                                         size="sm"
-                                                        variant="outline"
-                                                        onClick={() => setSelectedResume(item)}
-                                                        className="h-9 px-3 text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-500/10 border-amber-500/30 rounded-xl shadow-none"
+                                                        variant="ghost"
+                                                        onClick={() => router.push(`/dashboard/hr/applications/${item.application_id}`)}
+                                                        className="h-9 px-3 text-xs font-bold text-primary uppercase tracking-wider hover:bg-primary/10 rounded-xl"
                                                     >
-                                                        Assign to Job
+                                                        View Candidate
                                                     </Button>
                                                 ) : (
-                                                    <Badge className="bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-semibold px-2 py-0.5">
-                                                        Unassigned
-                                                    </Badge>
-                                                )
-                                            )}
+                                                    // SEC-1 Fix: Backend /assign requires super_admin.
+                                                    // Hide button for regular HR to avoid confusing 403 errors.
+                                                    // FIX: Cannot assign to job without a resume attachment.
+                                                    !item.file_url ? (
+                                                        <Badge className="bg-rose-50 text-rose-400 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/25 text-[10px] font-semibold px-2 py-0.5 flex items-center gap-1 w-max">
+                                                            <AlertTriangle className="h-3 w-3" />
+                                                            No Resume
+                                                        </Badge>
+                                                    ) : user?.role === 'super_admin' ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => setSelectedResume(item)}
+                                                            className="h-9 px-3 text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-500/10 border-amber-500/30 rounded-xl shadow-none"
+                                                        >
+                                                            Assign to Job
+                                                        </Button>
+                                                    ) : (
+                                                        <Badge className="bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-semibold px-2 py-0.5">
+                                                            Unassigned
+                                                        </Badge>
+                                                    )
+                                                )}
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 )

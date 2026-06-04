@@ -160,7 +160,7 @@ export const ReportFilters = React.memo(function ReportFilters({
       <Card className="h-full flex flex-col shadow-sm border-border/60 !py-0 !gap-0 bg-card/80 backdrop-blur-sm">
         <CardHeader className="p-4 !pb-0 shrink-0 border-b border-border/50">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">Interview Reports</h2>
+            <h2 className="text-xl font-bold text-foreground">Interview Reports</h2>
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Filter className="h-4 w-4 text-primary" /> Filters
             </CardTitle>
@@ -173,7 +173,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all"
                           onClick={onClearFilters}
                         >
                           <RotateCcw className="h-3.5 w-3.5" />
@@ -204,7 +204,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-slate-300 cursor-not-allowed opacity-50"
+                    className="h-8 w-8 text-muted-foreground/40 cursor-not-allowed opacity-50"
                     disabled
                   >
                     <RotateCcw className="h-4 w-4" />
@@ -232,7 +232,7 @@ export const ReportFilters = React.memo(function ReportFilters({
           <div className="grid w-full items-center gap-1.5">
             <Label htmlFor="search" className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">Search</Label>
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <TooltipProvider delayDuration={150}>
                 <Tooltip open={searchQuery.length > 0 && debouncedSearchQuery !== searchQuery}>
                   <TooltipTrigger asChild>
@@ -484,7 +484,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                       variant="ghost"
                       size="sm"
                       onClick={() => setDateFilter(undefined)}
-                      className="h-5 text-[14px] text-muted-foreground hover:text-red-500 px-1"
+                      className="h-5 text-[14px] text-muted-foreground hover:text-destructive px-1"
                     >
                       Clear
                     </Button>

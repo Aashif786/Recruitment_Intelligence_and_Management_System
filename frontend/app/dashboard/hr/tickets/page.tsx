@@ -191,15 +191,15 @@ export default function HRTicketsPage() {
 
     const getIssueTypeBadge = (type: string) => {
         switch (type) {
-            case 'interruption': return 'bg-amber-100 text-amber-700 border-amber-200'
-            case 'technical': return 'bg-blue-100 text-blue-700 border-blue-200'
-            case 'misconduct_appeal': return 'bg-purple-100 text-purple-700 border-purple-200'
-            default: return 'bg-slate-100 text-slate-700'
+            case 'interruption': return 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+            case 'technical': return 'capsule-badge-info'
+            case 'misconduct_appeal': return 'bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20'
+            default: return 'capsule-badge-neutral'
         }
     }
 
     return (
-        <div className="w-full max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-700">
+        <div className="w-full space-y-8 animate-in fade-in duration-700">
             <PageHeader
                 title="Support Tickets"
                 description="Manage candidate issues and interruption reports."
@@ -350,16 +350,16 @@ export default function HRTicketsPage() {
                                 <div className="col-span-2 flex md:justify-center">
                                     {ticket.status === 'pending' && (
                                         ticket.hr_response ? (
-                                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 border font-bold text-xs">Replied</Badge>
+                                            <Badge className="capsule-badge capsule-badge-info font-bold text-xs">Replied</Badge>
                                         ) : (
-                                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 border font-bold text-xs">Pending</Badge>
+                                            <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-bold text-xs">Pending</Badge>
                                         )
                                     )}
                                     {ticket.status === 'resolved' && (
-                                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 border font-bold text-xs">{ticket.is_reissue_granted ? '🔑 Re-issued' : '✓ Resolved'}</Badge>
+                                        <Badge className="capsule-badge capsule-badge-success font-bold text-xs">{ticket.is_reissue_granted ? '🔑 Re-issued' : '✓ Resolved'}</Badge>
                                     )}
                                     {ticket.status === 'dismissed' && (
-                                        <Badge className="bg-slate-100 text-slate-500 border-slate-200 border font-bold text-xs">Dismissed</Badge>
+                                        <Badge className="capsule-badge capsule-badge-neutral font-bold text-xs">Dismissed</Badge>
                                     )}
                                 </div>
                                 <div className="col-span-1 text-left md:text-right text-xs font-medium text-muted-foreground">
@@ -446,16 +446,16 @@ export default function HRTicketsPage() {
                                     </Badge>
                                     {selectedTicket.status === 'pending' && (
                                         selectedTicket.hr_response ? (
-                                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 border font-bold text-xs">Replied</Badge>
+                                            <Badge className="capsule-badge capsule-badge-info font-bold text-xs">Replied</Badge>
                                         ) : (
-                                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 border font-bold text-xs">Pending</Badge>
+                                            <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-bold text-xs">Pending</Badge>
                                         )
                                     )}
                                     {selectedTicket.status === 'resolved' && (
-                                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 border font-bold text-xs">{selectedTicket.is_reissue_granted ? '🔑 Re-issued' : '✓ Resolved'}</Badge>
+                                        <Badge className="capsule-badge capsule-badge-success font-bold text-xs">{selectedTicket.is_reissue_granted ? '🔑 Re-issued' : '✓ Resolved'}</Badge>
                                     )}
                                     {selectedTicket.status === 'dismissed' && (
-                                        <Badge className="bg-slate-100 text-slate-500 border-slate-200 border font-bold text-xs">Dismissed</Badge>
+                                        <Badge className="capsule-badge capsule-badge-neutral font-bold text-xs">Dismissed</Badge>
                                     )}
                                 </>
                             )}
@@ -555,7 +555,7 @@ export default function HRTicketsPage() {
                                             </div>
                                             <div className="flex flex-wrap justify-between items-center gap-2 mt-2">
                                                 <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                                                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                                    <CheckCircle2 className="h-4 w-4 text-chart-4" />
                                                     Resolved {selectedTicket.resolved_at ? new Date(selectedTicket.resolved_at).toLocaleDateString() : ''}
                                                 </span>
                                                 {selectedTicket.is_reissue_granted && (
