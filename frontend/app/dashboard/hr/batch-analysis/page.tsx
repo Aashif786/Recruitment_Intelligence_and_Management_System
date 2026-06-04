@@ -236,7 +236,7 @@ export default function BatchAnalysisPage() {
 
       <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ─── Bulk Upload Card ──────────────────────────── */}
-        <Card>
+        <Card className="flex flex-col h-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UploadCloud className="h-5 w-5 text-primary" />
@@ -246,8 +246,8 @@ export default function BatchAnalysisPage() {
               Supported inputs: PDF/DOCX files, nested folders, or ZIP archives (max 40 per batch).
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="bg-muted/30 border border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center">
+          <CardContent className="flex-1 flex flex-col">
+            <div className="flex-1 min-h-[300px] bg-muted/30 border border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center">
               <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                 <UploadCloud className="h-7 w-7 text-primary" />
               </div>
@@ -268,7 +268,7 @@ export default function BatchAnalysisPage() {
         </Card>
 
         {/* ─── Filtered Export Card ──────────────────────── */}
-        <Card>
+        <Card className="flex flex-col h-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5 text-primary" />
@@ -276,13 +276,13 @@ export default function BatchAnalysisPage() {
             </CardTitle>
             <CardDescription className="flex items-center justify-between">
               <span>Download candidate data filtered by date, role, or time-of-day.</span>
-              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] h-5">
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 text-[10px] h-5">
                 Max 1000
               </Badge>
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="space-y-5 max-w-2xl">
+          <CardContent className="flex-1 flex flex-col">
+            <div className="space-y-5 max-w-2xl w-full">
               {/* Date Range */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5 text-sm font-medium">
@@ -377,7 +377,7 @@ export default function BatchAnalysisPage() {
 
               {/* Export Success Count */}
               {exportCount !== null && exportCount > 0 && !exportError && (
-                <p className="text-sm text-emerald-600 font-medium">
+                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
                   ✅ Successfully exported {exportCount} candidates.
                 </p>
               )}
