@@ -82,15 +82,15 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
     : '/'
 
   return (
-    <nav className="sticky top-0 w-full z-50 bg-sidebar/95 backdrop-blur-xl border-b border-border shadow-sm h-16 flex items-center shrink-0">
+    <nav className="sticky top-0 w-full z-50 bg-sidebar/90 backdrop-blur-2xl border-b border-border/60 h-16 flex items-center shrink-0 shadow-[0_1px_0_0_color-mix(in_oklab,var(--border)_80%,transparent),0_4px_16px_-4px_rgba(0,0,0,0.06)]">
       <div className="w-full px-4 flex items-center justify-between">
 
         {/* Left: Logo and Title */}
         <Link href={logoLink} prefetch={false} className="flex items-center gap-3 group">
-          <div className="bg-primary/10 p-1 rounded-lg group-hover:scale-110 transition-transform border border-primary/20">
-            <img src={companyLogo} alt="Logo" className="h-8 w-auto object-contain max-w-[150px] group-hover:scale-105 transition-transform" />
+          <div className="bg-primary/10 p-1.5 rounded-xl group-hover:scale-110 transition-transform border border-primary/20 shadow-sm group-hover:bg-primary/15 group-hover:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_10%,transparent)]">
+            <img src={companyLogo} alt="Logo" className="h-7 w-auto object-contain max-w-[150px] group-hover:scale-105 transition-transform" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-foreground hidden lg:block uppercase">
+          <span className="text-lg font-extrabold tracking-tight text-foreground hidden lg:block uppercase pl-2 border-l-2 border-primary/30">
             {companyName}
           </span>
         </Link>

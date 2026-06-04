@@ -298,9 +298,9 @@ export default function HRApplicationsPage() {
         description="Review and manage candidate applications."
         icon={Users}
       >
-        <div className="bg-primary/10 dark:bg-white/5 border border-primary/20 dark:border-white/10 rounded-2xl px-6 py-4 flex flex-col items-end shadow-sm">
-          <span className="text-[10px] font-bold text-primary dark:text-slate-200 uppercase tracking-widest mb-1">Total Records Found</span>
-          <span className="text-xl font-black text-primary dark:text-white tabular-nums">
+        <div className="bg-primary/10 border border-primary/20 rounded-2xl px-6 py-4 flex flex-col items-end shadow-sm">
+          <span className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Total Records Found</span>
+          <span className="text-xl font-black text-primary tabular-nums">
             {isLoading ? "..." : totalCount}
           </span>
         </div>
@@ -433,10 +433,12 @@ export default function HRApplicationsPage() {
           <p className="text-sm font-bold text-muted-foreground animate-pulse tracking-widest uppercase">Fetching Records...</p>
         </div>
       ) : applications.length === 0 ? (
-        <div className="text-center py-16 bg-card rounded-xl border border-border">
-          <p className="text-muted-foreground">
-            No applications match your filtering criteria.
-          </p>
+        <div className="text-center py-16 bg-card rounded-2xl border border-border/50 shadow-sm flex flex-col items-center gap-3">
+          <div className="p-4 bg-muted rounded-2xl border border-border/40">
+            <Users className="h-8 w-8 text-muted-foreground/40" />
+          </div>
+          <p className="text-muted-foreground font-semibold">No applications match your filtering criteria.</p>
+          <p className="text-sm text-muted-foreground/70">Try adjusting or clearing your filters.</p>
         </div>
       ) : (
         <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -532,18 +534,18 @@ export default function HRApplicationsPage() {
                   )}
                   <div className="flex gap-1.5">
                     {app.interview?.report?.aptitude_score != null && (
-                      <div className="h-2 w-8 bg-purple-100 rounded-full overflow-hidden" title={`Aptitude: ${app.interview?.report?.aptitude_score}/10`}>
-                        <div className="h-full bg-purple-500" style={{ width: `${(app.interview?.report?.aptitude_score || 0) * 10}%` }} />
+                      <div className="h-2 w-8 bg-primary/15 rounded-full overflow-hidden" title={`Aptitude: ${app.interview?.report?.aptitude_score}/10`}>
+                        <div className="h-full bg-primary/70" style={{ width: `${(app.interview?.report?.aptitude_score || 0) * 10}%` }} />
                       </div>
                     )}
                     {app.interview?.report?.technical_skills_score != null && (
-                      <div className="h-2 w-8 bg-blue-100 rounded-full overflow-hidden" title={`Tech: ${app.interview?.report?.technical_skills_score}/10`}>
-                        <div className="h-full bg-blue-500" style={{ width: `${(app.interview?.report?.technical_skills_score || 0) * 10}%` }} />
+                      <div className="h-2 w-8 bg-chart-2/20 rounded-full overflow-hidden" title={`Tech: ${app.interview?.report?.technical_skills_score}/10`}>
+                        <div className="h-full bg-chart-2" style={{ width: `${(app.interview?.report?.technical_skills_score || 0) * 10}%` }} />
                       </div>
                     )}
                     {app.interview?.report?.behavioral_score != null && (
-                      <div className="h-2 w-8 bg-green-100 rounded-full overflow-hidden" title={`Behav: ${app.interview?.report?.behavioral_score}/10`}>
-                        <div className="h-full bg-green-500" style={{ width: `${(app.interview?.report?.behavioral_score || 0) * 10}%` }} />
+                      <div className="h-2 w-8 bg-chart-4/20 rounded-full overflow-hidden" title={`Behav: ${app.interview?.report?.behavioral_score}/10`}>
+                        <div className="h-full bg-chart-4" style={{ width: `${(app.interview?.report?.behavioral_score || 0) * 10}%` }} />
                       </div>
                     )}
                   </div>
@@ -557,7 +559,7 @@ export default function HRApplicationsPage() {
                       {app.status.replace(/_/g, " ").toUpperCase()}
                     </span>
                     {app.file_status === 'missing' && (
-                      <span className="text-red-500 text-[9px] font-black tracking-tighter uppercase">File Missing</span>
+                      <span className="text-destructive text-[9px] font-black tracking-tighter uppercase">File Missing</span>
                     )}
                     <span className="text-xs font-bold text-muted-foreground">
                       {new Date(app.applied_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}
@@ -585,7 +587,7 @@ export default function HRApplicationsPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-10 w-10 p-0 text-teal-600 hover:bg-teal-50 rounded-xl transition-colors shadow-none"
+                        className="h-10 w-10 p-0 text-teal-600 hover:bg-teal-500/10 rounded-xl transition-colors shadow-none"
                         title="Call for Interview"
                         onClick={() => handleTransition(app.id, "call_for_interview")}
                       >
@@ -596,7 +598,7 @@ export default function HRApplicationsPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-10 w-10 p-0 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors shadow-none"
+                        className="h-10 w-10 p-0 text-emerald-600 hover:bg-emerald-500/10 rounded-xl transition-colors shadow-none"
                         title="Hire Candidate"
                         onClick={() => handleTransition(app.id, "hire")}
                       >
@@ -615,7 +617,7 @@ export default function HRApplicationsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-10 w-10 p-0 text-red-500 hover:bg-red-50 rounded-xl transition-colors shadow-none"
+                            className="h-10 w-10 p-0 text-destructive hover:bg-destructive/10 rounded-xl transition-colors shadow-none"
                             title="Reject"
                           >
                             <XCircle className="h-5 w-5" />
@@ -655,7 +657,7 @@ export default function HRApplicationsPage() {
                     size="sm"
                     onClick={() => setApplicationsPage(applicationsPage - 1)}
                     disabled={applicationsPage <= 1 || isLoading}
-                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                    className="h-8 px-4 rounded-xl font-bold bg-background border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
                   >
                     Previous
                   </Button>
@@ -664,7 +666,7 @@ export default function HRApplicationsPage() {
                     size="sm"
                     onClick={() => setApplicationsPage(applicationsPage + 1)}
                     disabled={!hasMoreApplications || isLoading}
-                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                    className="h-8 px-4 rounded-xl font-bold bg-background border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
                   >
                     Next
                   </Button>

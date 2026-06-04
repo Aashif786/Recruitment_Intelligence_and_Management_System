@@ -236,29 +236,31 @@ export default function BatchAnalysisPage() {
 
       <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ─── Bulk Upload Card ──────────────────────────── */}
-        <Card className="flex flex-col h-full">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UploadCloud className="h-5 w-5 text-primary" />
+        <Card className="flex flex-col h-full border-border/40 rounded-2xl shadow-[0_2px_12px_-2px_rgba(0,0,0,0.07)] hover:shadow-[0_6px_24px_-4px_rgba(0,0,0,0.12)] transition-shadow duration-300 overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+            <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+              <div className="p-1.5 bg-primary/10 rounded-lg">
+                <UploadCloud className="h-4 w-4 text-primary" />
+              </div>
               Bulk Processing Engine
             </CardTitle>
             <CardDescription>
               Supported inputs: PDF/DOCX files, nested folders, or ZIP archives (max 40 per batch).
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            <div className="flex-1 min-h-[300px] bg-muted/30 border border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center">
-              <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <UploadCloud className="h-7 w-7 text-primary" />
+          <CardContent className="flex-1 flex flex-col p-5">
+            <div className="flex-1 min-h-[300px] bg-gradient-to-br from-muted/40 to-muted/20 border-2 border-dashed border-primary/20 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-1 transition-colors hover:border-primary/40 hover:bg-muted/30 group">
+              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                <UploadCloud className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Ready to ingest resumes</h3>
-              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
+              <h3 className="text-lg font-bold mb-1 text-foreground">Ready to ingest resumes</h3>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6 leading-relaxed">
                 Our AI engine maps resumes to job roles, strips duplicates, extracts identities, and prepares spreadsheets for export.
               </p>
               <Button
                 onClick={() => setIsBatchModalOpen(true)}
                 size="lg"
-                className="gap-2"
+                className="gap-2 rounded-xl px-8 shadow-md"
               >
                 <UploadCloud className="h-4 w-4" />
                 Run Batch Analysis
@@ -268,10 +270,12 @@ export default function BatchAnalysisPage() {
         </Card>
 
         {/* ─── Filtered Export Card ──────────────────────── */}
-        <Card className="flex flex-col h-full">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-primary" />
+        <Card className="flex flex-col h-full border-border/40 rounded-2xl shadow-[0_2px_12px_-2px_rgba(0,0,0,0.07)] hover:shadow-[0_6px_24px_-4px_rgba(0,0,0,0.12)] transition-shadow duration-300 overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+            <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+              <div className="p-1.5 bg-primary/10 rounded-lg">
+                <Filter className="h-4 w-4 text-primary" />
+              </div>
               Export Filtered Data
             </CardTitle>
             <CardDescription className="flex items-center justify-between">
@@ -359,10 +363,10 @@ export default function BatchAnalysisPage() {
               </div>
               {/* Filter Summary */}
               {filterSummary.length > 0 && (
-                <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 space-y-1">
-                  <p className="text-xs font-bold text-primary uppercase tracking-wider">Exporting with filters:</p>
+                <div className="bg-primary/5 border border-primary/15 rounded-xl p-3.5 space-y-1.5">
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Exporting with filters</p>
                   {filterSummary.map((line, i) => (
-                    <p key={i} className="text-sm text-foreground">{line}</p>
+                    <p key={i} className="text-sm text-foreground/80 font-medium">{line}</p>
                   ))}
                 </div>
               )}
@@ -384,7 +388,7 @@ export default function BatchAnalysisPage() {
 
               {/* Live Count Badge */}
               {hasFilters && liveCount !== null && (
-                <div className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm font-medium ${
+                <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl border text-sm font-semibold ${
                   liveCount === 0
                     ? 'bg-destructive/10 border-destructive/20 text-destructive'
                     : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'

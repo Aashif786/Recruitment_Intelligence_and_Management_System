@@ -623,7 +623,13 @@ export default function ReportsPage() {
   if (isInitialLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="h-14 w-14 rounded-full border-4 border-primary/20"></div>
+            <div className="absolute inset-0 h-14 w-14 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+          </div>
+          <p className="text-sm text-muted-foreground font-medium animate-pulse">Loading reports...</p>
+        </div>
       </div>
     )
   }
@@ -634,10 +640,13 @@ export default function ReportsPage() {
   if (fetchError || apiErrorMessage) {
     return (
       <div className="p-8">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-200">
-          <h3 className="font-bold">Error Loading Reports</h3>
-          <p>{fetchError?.message || apiErrorMessage || 'An error occurred while fetching reports.'}</p>
-          <Button onClick={() => mutate(reportsApiUrl)} variant="outline" className="mt-2">Retry</Button>
+        <div className="bg-destructive/10 text-destructive p-5 rounded-2xl border border-destructive/20 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <h3 className="font-bold text-base">Error Loading Reports</h3>
+          </div>
+          <p className="text-sm text-destructive/80">{fetchError?.message || apiErrorMessage || 'An error occurred while fetching reports.'}</p>
+          <Button onClick={() => mutate(reportsApiUrl)} variant="outline" className="w-fit gap-2 border-destructive/30 hover:bg-destructive/10 text-destructive">Retry</Button>
         </div>
       </div>
     )
@@ -673,16 +682,16 @@ export default function ReportsPage() {
             <div className="space-y-8 mt-4">
               {/* Row 1: Question */}
               <div className="space-y-2">
-                <h4 className="text-lg font-bold text-slate-900 dark:text-slate-50">Question:</h4>
-                <p className="text-lg text-slate-900 dark:text-slate-50 bg-card p-6 rounded-xl border shadow-sm leading-relaxed">
+                <h4 className="text-lg font-bold text-foreground">Question:</h4>
+                <p className="text-lg text-foreground bg-muted/30 p-6 rounded-xl border border-border shadow-sm leading-relaxed">
                   {cleanQuestionText(selectedQuestion.question)}
                 </p>
               </div>
 
               {/* Row 2: Answer */}
               <div className="space-y-2">
-                <h4 className="text-lg font-bold text-slate-900 dark:text-slate-50">Answer:</h4>
-                <p className={`text-base bg-card p-6 rounded-xl border shadow-sm leading-relaxed whitespace-pre-wrap ${isAnswerEmpty(selectedQuestion.answer) ? 'text-muted-foreground italic' : 'text-slate-900 dark:text-slate-50'}`}>
+                <h4 className="text-lg font-bold text-foreground">Answer:</h4>
+                <p className={`text-base bg-muted/30 p-6 rounded-xl border border-border shadow-sm leading-relaxed whitespace-pre-wrap ${isAnswerEmpty(selectedQuestion.answer) ? 'text-muted-foreground italic' : 'text-foreground'}`}>
                   {isAnswerEmpty(selectedQuestion.answer) ? 'Candidate did not provide an answer.' : selectedQuestion.answer}
                 </p>
               </div>
@@ -719,7 +728,7 @@ export default function ReportsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Strengths */}
                 <div>
-                  <h4 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-3">Strengths:</h4>
+                  <h4 className="text-lg font-bold text-foreground mb-3">Strengths:</h4>
                   <div className="bg-primary/10 border border-primary/20 rounded-xl p-6 h-full shadow-sm">
                     {selectedQuestion.evaluation.strengths && selectedQuestion.evaluation.strengths.length > 0 ? (
                       <ul className="space-y-3">
@@ -738,7 +747,7 @@ export default function ReportsPage() {
 
                 {/* Weaknesses */}
                 <div>
-                  <h4 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-3">Areas for Improvement:</h4>
+                  <h4 className="text-lg font-bold text-foreground mb-3">Areas for Improvement:</h4>
                   <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 h-full shadow-sm">
                     {selectedQuestion.evaluation.weaknesses && selectedQuestion.evaluation.weaknesses.length > 0 ? (
                       <ul className="space-y-3">
@@ -794,7 +803,7 @@ export default function ReportsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all"
                               onClick={clearAllFilters}
                             >
                               <RotateCcw className="h-3.5 w-3.5" />
@@ -827,7 +836,7 @@ export default function ReportsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-slate-300 cursor-not-allowed opacity-50"
+                        className="h-8 w-8 text-muted-foreground/40 cursor-not-allowed opacity-50"
                         disabled
                       >
                         <RotateCcw className="h-4 w-4" />
@@ -837,12 +846,12 @@ export default function ReportsPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+            <CardContent className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-premium">
               {/* Search */}
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="search" className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">Search</Label>
                 <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <TooltipProvider delayDuration={150}>
                     <Tooltip open={searchQuery.length > 0 && debouncedSearchQuery !== searchQuery}>
                       <TooltipTrigger asChild>
@@ -1097,7 +1106,7 @@ export default function ReportsPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setDateFilter(undefined)}
-                          className="h-5 text-[14px] text-muted-foreground hover:text-red-500 px-1"
+                          className="h-5 text-[14px] text-muted-foreground hover:text-destructive px-1"
                         >
                           Clear
                         </Button>
@@ -1187,28 +1196,28 @@ export default function ReportsPage() {
           <div className="animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-100 rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2">
             <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Applied</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalApplied}</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Total Applied</p>
+                <p className="text-2xl font-bold leading-tight text-foreground">{metrics.totalApplied}</p>
               </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Finished</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalFinished}</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Total Finished</p>
+                <p className="text-2xl font-bold leading-tight text-foreground">{metrics.totalFinished}</p>
               </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Reports</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.total}</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Total Reports</p>
+                <p className="text-2xl font-bold leading-tight text-foreground">{metrics.total}</p>
               </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Avg Score</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.avgScore}</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Avg Score</p>
+                <p className="text-2xl font-bold leading-tight text-foreground">{metrics.avgScore}</p>
               </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Avg Questions</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.avgQuestions}</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Avg Questions</p>
+                <p className="text-2xl font-bold leading-tight text-foreground">{metrics.avgQuestions}</p>
               </div>
               <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Selection Rate</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Selection Rate</p>
+                <p className="text-2xl font-bold leading-tight text-foreground">{metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%</p>
               </div>
             </div>
           </div>
@@ -1311,23 +1320,23 @@ export default function ReportsPage() {
           {/* Status Stats */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-emerald-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">High Performers (&gt; 6)</p>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">High Performers (&gt; 6)</p>
               <div className="text-emerald-500 font-bold text-2xl">{metrics.selected}</div>
             </div>
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-amber-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Average Performers (4-6)</p>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Average Performers (4-6)</p>
               <div className="text-amber-500 font-bold text-2xl">{metrics.hold}</div>
             </div>
-            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-red-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Low Performers (&lt; 4)</p>
-              <div className="text-red-500 font-bold text-2xl">{metrics.rejected}</div>
+            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-destructive shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Low Performers (&lt; 4)</p>
+              <div className="text-destructive font-bold text-2xl">{metrics.rejected}</div>
             </div>
-            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-gray-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Terminated</p>
-              <div className="text-gray-500 font-bold text-2xl">{metrics.terminated}</div>
+            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-border shadow-sm">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Terminated</p>
+              <div className="text-muted-foreground font-bold text-2xl">{metrics.terminated}</div>
             </div>
             <div className="bg-card p-4 rounded-lg border border-l-4 border-l-orange-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Incomplete</p>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Incomplete</p>
               <div className="text-orange-500 font-bold text-2xl">{metrics.incomplete}</div>
             </div>
           </div>
@@ -1335,7 +1344,7 @@ export default function ReportsPage() {
           {/* Reports List / Results */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex justify-between items-center mb-4">
-              <TabsList className="h-11 rounded-full p-1 bg-slate-100/80 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50">
+              <TabsList className="h-11 rounded-full p-1 bg-muted/80 border border-border/60">
                 <TabsTrigger value="detailed" className="rounded-full px-5 h-full">Detailed View</TabsTrigger>
                 <TabsTrigger value="table" className="rounded-full px-5 h-full">Table View</TabsTrigger>
                 <TabsTrigger value="analytics" className="rounded-full px-5 h-full">Summary Analytics</TabsTrigger>
@@ -1353,8 +1362,8 @@ export default function ReportsPage() {
                   </Button>
                 )}
 
-                <div className="flex items-center gap-2.5 bg-slate-100/80 dark:bg-slate-800/50 px-4 h-11 rounded-full border border-slate-200/60 dark:border-slate-700/50 shadow-sm animate-in fade-in zoom-in duration-500">
-                  <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 tracking-tight">Show</span>
+                <div className="flex items-center gap-2.5 bg-muted/60 px-4 h-11 rounded-full border border-border/60 shadow-sm animate-in fade-in zoom-in duration-500">
+                  <span className="text-[13px] font-bold text-muted-foreground tracking-tight">Show</span>
                   <Select
                     value={String(reportsPerPage)}
                     onValueChange={(v) => {
@@ -1362,17 +1371,17 @@ export default function ReportsPage() {
                       setReportsPage(1)
                     }}
                   >
-                    <SelectTrigger className="h-8 w-[84px] rounded-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-[14px] font-extrabold text-slate-700 dark:text-slate-200 shadow-none focus:ring-2 focus:ring-primary/20 transition-all hover:border-primary/40 px-3">
+                    <SelectTrigger className="h-8 w-[84px] rounded-full bg-background border-border text-[14px] font-extrabold text-foreground shadow-none focus:ring-2 focus:ring-primary/20 transition-all hover:border-primary/40 px-3">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-slate-200 dark:border-slate-700 shadow-xl">
+                    <SelectContent className="rounded-xl border-border shadow-xl">
                       <SelectItem value="10" className="rounded-lg focus:bg-primary/10">10</SelectItem>
                       <SelectItem value="25" className="rounded-lg focus:bg-primary/10">25</SelectItem>
                       <SelectItem value="50" className="rounded-lg focus:bg-primary/10">50</SelectItem>
                       <SelectItem value="100" className="rounded-lg focus:bg-primary/10">100</SelectItem>
                     </SelectContent>
                   </Select>
-                  <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 tracking-tight">per page</span>
+                  <span className="text-[13px] font-bold text-muted-foreground tracking-tight">per page</span>
                 </div>
               </div>
             </div>
@@ -1427,7 +1436,7 @@ export default function ReportsPage() {
                           className="cursor-pointer hover:bg-muted/50 transition-colors"
                           onClick={() => setViewingReport(report)}
                         >
-                          <TableCell className="font-semibold text-slate-700 dark:text-slate-200">
+                          <TableCell className="font-semibold text-foreground">
                             {report.candidate_profile.candidate_name || report.filename.replace('.json', '')}
                           </TableCell>
                           <TableCell>{report.display_date_short}</TableCell>
@@ -1510,7 +1519,7 @@ export default function ReportsPage() {
 
             <TabsContent value="analytics" className="animate-in fade-in zoom-in-95 duration-300">
               {metrics.total > 0 ? (
-                <Card className="border-none shadow-xl bg-gradient-to-br from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/50">
+                <Card className="border-none shadow-xl bg-card">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-xl flex items-center gap-2">
                       <BarChart className="h-5 w-5 text-primary" />
@@ -1530,31 +1539,31 @@ export default function ReportsPage() {
                       </div>
 
                       <div className="w-full lg:w-1/2 grid grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.avgScore}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Avg Score</div>
+                        <div className="bg-card/60 p-6 rounded-2xl border border-border/60 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
+                          <div className="text-3xl font-black text-foreground tracking-tight">{metrics.avgScore}</div>
+                          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Avg Score</div>
                         </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.total}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Interviews</div>
+                        <div className="bg-card/60 p-6 rounded-2xl border border-border/60 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
+                          <div className="text-3xl font-black text-foreground tracking-tight">{metrics.total}</div>
+                          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Interviews</div>
                         </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.avgQuestions}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Avg Qs</div>
+                        <div className="bg-card/60 p-6 rounded-2xl border border-border/60 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
+                          <div className="text-3xl font-black text-foreground tracking-tight">{metrics.avgQuestions}</div>
+                          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Avg Qs</div>
                         </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
+                        <div className="bg-card/60 p-6 rounded-2xl border border-border/60 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
                           <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                             {metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%
                           </div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Success Rate</div>
+                          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Success Rate</div>
                         </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.totalApplied}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Applied</div>
+                        <div className="bg-card/60 p-6 rounded-2xl border border-border/60 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
+                          <div className="text-3xl font-black text-foreground tracking-tight">{metrics.totalApplied}</div>
+                          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Applied</div>
                         </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.totalFinished}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Finished</div>
+                        <div className="bg-card/60 p-6 rounded-2xl border border-border/60 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
+                          <div className="text-3xl font-black text-foreground tracking-tight">{metrics.totalFinished}</div>
+                          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Finished</div>
                         </div>
                       </div>
                     </div>

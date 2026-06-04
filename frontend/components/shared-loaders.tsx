@@ -102,7 +102,7 @@ export function StatsGridSkeleton({ count = 4 }: { count?: number }) {
 export function DataTableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="w-full space-y-4 animate-in fade-in duration-700">
-      <div className="flex items-center gap-4 px-4 py-3 bg-muted/30 rounded-2xl border-b border-muted">
+      <div className="flex items-center gap-4 px-4 py-3 bg-muted/30 rounded-2xl border-b border-border">
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className={cn("h-4", i === 0 ? "w-40" : "flex-1", "rounded-full")} />
         ))}
@@ -111,7 +111,7 @@ export function DataTableSkeleton({ rows = 5 }: { rows?: number }) {
         {Array.from({ length: rows }).map((_, i) => (
           <div 
             key={i} 
-            className="flex items-center gap-4 px-4 py-4 border rounded-2xl bg-card/40 border-slate-100 dark:border-slate-800"
+            className="flex items-center gap-4 px-4 py-4 border rounded-2xl bg-card/40 border-border"
             style={{ opacity: 1 - (i * 0.15) }}
           >
             <div className="flex items-center gap-3 w-40">
@@ -191,27 +191,27 @@ export function LoadingWrapper({
           <motion.div
             key="error"
             ref={errorRef}
-            tabIndex={-1} // Make div focusable for keyboard users
+            tabIndex={-1}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="w-full py-16 flex flex-col items-center justify-center text-center space-y-4 bg-red-50/30 dark:bg-red-950/10 rounded-3xl border border-red-100 dark:border-red-900/30 focus:outline-none"
+            className="w-full py-16 flex flex-col items-center justify-center text-center space-y-4 bg-destructive/5 rounded-3xl border border-destructive/20 focus:outline-none"
             role="alert"
           >
-            <div className="p-4 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 dark:text-red-400">
+            <div className="p-4 bg-destructive/10 rounded-full text-destructive">
               <AlertCircle className="h-8 w-8" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Fetch Failed</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-                {typeof error === 'string' ? error : error?.message || "We encountered an error while securing your data. Please try again."}
+              <h3 className="text-lg font-bold text-foreground">Fetch Failed</h3>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                {typeof error === 'string' ? error : error?.message || "We encountered an error while loading your data. Please try again."}
               </p>
             </div>
             {onRetry && (
               <Button 
                 variant="outline" 
                 onClick={onRetry}
-                className="gap-2 rounded-full border-red-200 hover:bg-red-50 text-red-700 dark:text-red-400 dark:border-red-800"
+                className="gap-2 rounded-full border-destructive/30 hover:bg-destructive/10 text-destructive"
               >
                 <RefreshCcw className="h-4 w-4" /> Retry Connection
               </Button>
@@ -301,10 +301,13 @@ export function PageLoader({
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center justify-center py-20 text-center space-y-4"
           >
-            <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full text-slate-400">
-              <RefreshCcw className="h-10 w-10 opacity-20" />
+            <div className="bg-muted p-5 rounded-2xl text-muted-foreground border border-border/50">
+              <RefreshCcw className="h-9 w-9 opacity-30" />
             </div>
-            <p className="text-slate-500 font-medium">{emptyMessage}</p>
+            <div className="space-y-1.5">
+              <p className="text-foreground/80 font-semibold">{emptyMessage}</p>
+              <p className="text-muted-foreground text-sm">Try adjusting your filters or adding new data.</p>
+            </div>
             {emptyAction}
           </motion.div>
         ) : (

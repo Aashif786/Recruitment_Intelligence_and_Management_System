@@ -158,7 +158,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="p-6 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8 animate-in fade-in duration-500">
             <PageHeader
                 title="System Settings"
                 description="Configure company details and automation templates"
@@ -176,10 +176,12 @@ export default function SettingsPage() {
             </PageHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-border/50 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/30">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <Building2 className="h-5 w-5 text-primary" />
+                <Card className="border-border/40 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300 overflow-hidden rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+                        <CardTitle className="flex items-center gap-2 text-base font-bold">
+                            <div className="p-1.5 bg-primary/10 rounded-lg">
+                                <Building2 className="h-4 w-4 text-primary" />
+                            </div>
                             Company Profile
                         </CardTitle>
                         <CardDescription>Basic information used in communications</CardDescription>
@@ -242,10 +244,12 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-border/50 shadow-sm overflow-hidden flex flex-col">
-                    <CardHeader className="bg-muted/30">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <ImageIcon className="h-5 w-5 text-primary" />
+                <Card className="border-border/40 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300 overflow-hidden flex flex-col rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+                        <CardTitle className="flex items-center gap-2 text-base font-bold">
+                            <div className="p-1.5 bg-primary/10 rounded-lg">
+                                <ImageIcon className="h-4 w-4 text-primary" />
+                            </div>
                             HR Details
                         </CardTitle>
                         <CardDescription>HR Contact Information</CardDescription>
@@ -303,10 +307,12 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* White-Label Branding Config Card */}
-                <Card className="border-border/50 shadow-sm overflow-hidden md:col-span-2">
-                    <CardHeader className="bg-muted/30">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <Settings className="h-5 w-5 text-primary" />
+                <Card className="border-border/40 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300 overflow-hidden md:col-span-2 rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+                        <CardTitle className="flex items-center gap-2 text-base font-bold">
+                            <div className="p-1.5 bg-primary/10 rounded-lg">
+                                <Settings className="h-4 w-4 text-primary" />
+                            </div>
                             White-Label Branding Config
                         </CardTitle>
                         <CardDescription>Customize the application's logo, colors, text, and policies for your brand identity</CardDescription>
@@ -425,12 +431,14 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* New Theme Preference Card */}
-                <Card className="border-border/50 shadow-sm overflow-hidden md:col-span-2">
-                    <CardHeader className="bg-muted/30">
+                <Card className="border-border/40 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300 overflow-hidden md:col-span-2 rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Settings className="h-5 w-5 text-primary" />
+                                <CardTitle className="flex items-center gap-2 text-base font-bold">
+                                    <div className="p-1.5 bg-primary/10 rounded-lg">
+                                        <Settings className="h-4 w-4 text-primary" />
+                                    </div>
                                     Theme Preferences
                                 </CardTitle>
                                 <CardDescription>Choose how your workspace looks</CardDescription>
@@ -449,14 +457,16 @@ export default function SettingsPage() {
                 </Card>
             </div>
 
-            <Card className="border-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/30">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <FileText className="h-5 w-5 text-primary" />
-                                Offer Letter Template
-                            </CardTitle>
+                <Card className="border-border/40 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300 overflow-hidden rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <CardTitle className="flex items-center gap-2 text-base font-bold">
+                                    <div className="p-1.5 bg-primary/10 rounded-lg">
+                                        <FileText className="h-4 w-4 text-primary" />
+                                    </div>
+                                    Offer Letter Template
+                                </CardTitle>
                             <CardDescription>Paste the edited HTML code (with internal css) of the offer letter. Use the placeholders specified below</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
@@ -539,7 +549,7 @@ export default function SettingsPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="p-6 space-y-4">
+                 <CardContent className="p-6 space-y-4">
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
                         <div className="flex items-center justify-between mb-2">
                             <h4 className="font-bold text-blue-800 dark:text-blue-300 text-sm">Available Placeholders</h4>

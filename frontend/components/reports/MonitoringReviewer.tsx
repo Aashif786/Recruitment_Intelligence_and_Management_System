@@ -134,19 +134,19 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-3xl bg-slate-50 dark:bg-slate-900/50">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Loading intelligent frame monitoring logs...</p>
+      <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-3xl bg-muted/30 dark:bg-muted/10">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-semibold text-muted-foreground">Loading intelligent frame monitoring logs...</p>
       </div>
     )
   }
 
   if (monitoringError) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-3xl border-red-200 bg-red-50/50 dark:bg-red-950/20">
-        <AlertCircle className="w-8 h-8 text-red-500 mb-3" />
-        <p className="text-sm font-semibold text-red-700 dark:text-red-300">Could not load proctoring events</p>
-        <p className="text-xs text-red-600/80 mt-1">{(monitoringError as Error).message || 'Please try again later.'}</p>
+      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-3xl border-destructive/20 bg-destructive/5">
+        <AlertCircle className="w-8 h-8 text-destructive mb-3" />
+        <p className="text-sm font-semibold text-destructive">Could not load proctoring events</p>
+        <p className="text-xs text-destructive/70 mt-1">{(monitoringError as Error).message || 'Please try again later.'}</p>
       </div>
     )
   }
@@ -155,7 +155,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
     return (
       <div className="space-y-4">
         {videoUrl ? (
-          <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-xl aspect-video relative group">
+          <div className="bg-foreground/90 rounded-2xl overflow-hidden shadow-xl aspect-video relative group">
             <video
               src={videoUrl?.startsWith('http') ? videoUrl : `${getApiBaseUrl()}${videoUrl}`}
               controls
@@ -176,25 +176,25 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-muted border border-border">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/30">
+          <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg">
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 tracking-tight">
+            <h3 className="text-lg font-bold text-foreground flex items-center gap-2 tracking-tight">
               AI Integrity Audit Timeline
               {warningCount > 0 ? (
-                <Badge className="bg-red-500 text-white font-bold px-2 py-0.5 text-xs animate-bounce">
+                <Badge className="bg-destructive text-destructive-foreground font-bold px-2 py-0.5 text-xs animate-bounce">
                   {warningCount} Anomalies
                 </Badge>
               ) : (
-                <Badge className="bg-green-500 text-white font-bold px-2 py-0.5 text-xs">
+                <Badge className="bg-chart-4 text-white font-bold px-2 py-0.5 text-xs">
                   100% Secure
                 </Badge>
               )}
             </h3>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <p className="text-xs font-semibold text-muted-foreground">
               Frame-by-frame chronological audit logs captured silently during the interview.
             </p>
           </div>
@@ -252,11 +252,11 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
         </div>
       </div>
 
-      <ScrollArea className="h-[480px] rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 shadow-inner">
+      <ScrollArea className="h-[480px] rounded-2xl border border-border bg-muted/20 p-4 shadow-inner scrollbar-premium">
         {filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
-            <Filter className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
-            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">No frames match the selected filter.</p>
+            <Filter className="w-12 h-12 text-muted-foreground/30 mb-3" />
+            <p className="text-sm font-bold text-muted-foreground">No frames match the selected filter.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -298,8 +298,8 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
                   </div>
                 </div>
 
-                <div className="p-3 flex items-center justify-center bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize tracking-wide">
+                <div className="p-3 flex items-center justify-center bg-card border-t border-border">
+                  <span className="text-xs font-bold text-foreground capitalize tracking-wide">
                     {ev.event_type.replace('_', ' ')}
                   </span>
                 </div>
@@ -310,31 +310,31 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
       </ScrollArea>
 
       <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-        <DialogContent className="max-w-5xl rounded-3xl p-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl">
+        <DialogContent className="max-w-5xl rounded-3xl p-6 bg-background border border-border shadow-2xl">
           <DialogHeader>
             <div className="flex items-center justify-between pr-8 mb-2">
               <div className="flex items-center gap-3">
                 {selectedEvent && getEventBadge(selectedEvent.event_type)}
-                <DialogTitle className="text-xl font-black text-slate-900 dark:text-white">
+                <DialogTitle className="text-xl font-black text-foreground">
                   Frame Audit Inspection
                 </DialogTitle>
               </div>
-              <span className="flex items-center gap-1.5 text-sm font-black text-blue-600 bg-blue-50 dark:bg-blue-950/50 px-3 py-1.5 rounded-xl">
+              <span className="flex items-center gap-1.5 text-sm font-black text-primary bg-primary/10 px-3 py-1.5 rounded-xl">
                 <Clock className="w-4 h-4" />
                 {selectedEvent && formatTimeOffset(selectedEvent.video_reference, selectedEvent.timestamp)}
               </span>
             </div>
-            <DialogDescription className="text-xs font-bold text-slate-500">
+            <DialogDescription className="text-xs font-bold text-muted-foreground">
               Captured at exact timestamp: {selectedEvent && parseNaiveDateTime(selectedEvent.timestamp).toLocaleString()}
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-4 space-y-4">
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Eye className="w-4 h-4 text-blue-600" /> Frame Snapshot
+              <span className="text-xs font-extrabold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Eye className="w-4 h-4 text-primary" /> Frame Snapshot
               </span>
-              <div className="rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 aspect-video shadow-lg bg-slate-950 flex items-center justify-center max-h-[70vh] w-full">
+              <div className="rounded-2xl overflow-hidden border-2 border-border aspect-video shadow-lg bg-foreground/90 flex items-center justify-center max-h-[70vh] w-full">
                 {selectedEvent?.frame_image_url ? (
                   <img
                     src={selectedEvent.frame_image_url?.startsWith('http') ? selectedEvent.frame_image_url : `${getApiBaseUrl()}${selectedEvent.frame_image_url}`}
@@ -342,17 +342,17 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-slate-500 p-12 text-center w-full">
-                    <CameraOff className="w-16 h-16 mb-3 opacity-50 text-slate-400" />
-                    <p className="text-sm font-bold text-slate-400">No frame snapshot image available for this event.</p>
+                  <div className="flex flex-col items-center justify-center text-muted-foreground p-12 text-center w-full">
+                    <CameraOff className="w-16 h-16 mb-3 opacity-50" />
+                    <p className="text-sm font-bold">No frame snapshot image available for this event.</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-900 mt-4">
-            <Button variant="default" className="rounded-xl font-bold shadow-lg shadow-blue-500/20" onClick={() => setSelectedEvent(null)}>
+          <div className="flex justify-end pt-4 border-t border-border mt-4">
+            <Button variant="default" className="rounded-xl font-bold" onClick={() => setSelectedEvent(null)}>
               Done Inspecting
             </Button>
           </div>

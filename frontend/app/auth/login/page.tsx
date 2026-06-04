@@ -179,8 +179,9 @@ function LoginContent() {
         
         {/* Subtle background decoration for right side */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-           <div className="absolute top-[0%] right-[0%] w-[300px] h-[300px] bg-primary/5 rounded-full blur-[100px]" />
-           <div className="absolute bottom-[0%] left-[0%] w-[300px] h-[300px] bg-accent/5 rounded-full blur-[100px]" />
+           <div className="absolute top-[0%] right-[0%] w-[350px] h-[350px] bg-primary/8 rounded-full blur-[120px]" />
+           <div className="absolute bottom-[0%] left-[0%] w-[300px] h-[300px] bg-primary/5 rounded-full blur-[100px]" />
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[200px] bg-primary/3 rounded-full blur-[80px] rotate-12" />
         </div>
 
         <div className="w-full max-w-md relative z-10">
@@ -293,10 +294,13 @@ function LoginContent() {
               <Button
                 type="submit"
                 disabled={isSubmitting || isLoading}
-                className="w-full h-12 bg-foreground hover:bg-foreground/90 text-background font-bold rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
+                className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-[0_4px_20px_-4px_rgba(var(--primary),0.5)] hover:shadow-[0_6px_28px_-4px_rgba(var(--primary),0.7)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
               >
                 {isSubmitting ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Signing In...</span>
+                  </>
                 ) : (
                   <>
                     <span>Sign In</span>

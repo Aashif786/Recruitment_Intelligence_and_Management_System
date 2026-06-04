@@ -57,7 +57,7 @@ export default function PipelinePage() {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 w-full overflow-hidden bg-slate-50/50 dark:bg-slate-900/50 p-2 px-4 shadow-inner border-y border-slate-200/50 dark:border-slate-800/50">
+            <div className="flex-1 min-h-0 w-full overflow-hidden bg-muted/30 p-2 px-4 shadow-inner border-y border-border/50">
                 <PipelineBoard jobId={jobId} />
             </div>
         </div>
