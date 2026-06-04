@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -14,8 +14,9 @@ from app.api.tickets import get_tickets as _get_tickets
 router = APIRouter(prefix="/api/hr", tags=["HR Tickets"])
 
 
-@router.get("/tickets", response_model=List[InterviewIssueResponse])
+@router.get("/tickets")
 def hr_get_tickets(
+    request: Request,
     status: str = "pending",
     skip: int = 0,
     limit: int = 50,
@@ -26,5 +27,5 @@ def hr_get_tickets(
     Alias endpoint for HR tickets dashboard.
     Non-breaking: returns the exact same schema as GET /api/tickets.
     """
-    return _get_tickets(status=status, skip=skip, limit=limit, current_user=current_user, db=db)
+    return _get_tickets(request=request, status=status, skip=skip, limit=limit, current_user=current_user, db=db)
 

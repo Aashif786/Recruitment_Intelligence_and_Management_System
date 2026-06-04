@@ -16,7 +16,7 @@ import json
 import os
 import uuid
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.exc import IntegrityError
 import logging
 import re
@@ -416,12 +416,12 @@ def create_job(
 
     # Lightweight race-condition duplicate protection (non-breaking):
     # same HR + same normalized title in very short recent window.
-    recent_window = datetime.utcnow().timestamp() - 10
+    recent_window = datetime.now(timezone.utc).timestamp() - 10
     normalized_title = (job_data.title or "").strip().lower()
     same_recent = db.query(Job).filter(
         Job.hr_id == current_user.id,
         Job.title.ilike(normalized_title),
-        Job.created_at >= datetime.utcfromtimestamp(recent_window)
+        Job.created_at >= datetime.fromtimestamp(recent_window, tz=timezone.utc)
     ).order_by(Job.id.desc()).first()
     if same_recent:
         log_json(
