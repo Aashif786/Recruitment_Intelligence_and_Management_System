@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator, ConfigDict
 from datetime import datetime
 import re
 import json
@@ -99,8 +99,7 @@ class UserResponse(BaseModel):
                  pass
         return v
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ForgotPasswordRequest(BaseModel):
     email: str
@@ -166,8 +165,7 @@ class UserListResponse(BaseModel):
                  pass
         return v
         
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # ============================================================================
 # Job Schemas
@@ -354,8 +352,7 @@ class JobResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class JobPublicResponse(BaseModel):
     id: int
@@ -370,8 +367,7 @@ class JobPublicResponse(BaseModel):
     status: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class JobExtractionResponse(BaseModel):
     title: str = ""
@@ -411,8 +407,7 @@ class JobSummary(BaseModel):
     job_id: Optional[str] = None
     title: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ApplicationResponse(BaseModel):
     id: int
@@ -490,8 +485,7 @@ class ApplicationResponse(BaseModel):
         except (ValueError, TypeError):
             return 0.0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ResumeExtractionSummary(BaseModel):
     id: int
@@ -501,16 +495,14 @@ class ResumeExtractionSummary(BaseModel):
     summary: Optional[str] = None
     extracted_skills: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class InterviewSummary(BaseModel):
     id: int
     status: str
     overall_score: Optional[float] = 0.0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ApplicationSummaryResponse(BaseModel):
     id: int
@@ -539,8 +531,7 @@ class ApplicationSummaryResponse(BaseModel):
     assigned_hr_id: Optional[int] = None
     assigned_hr_name: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ApplicationListResponse(BaseModel):
     items: List[ApplicationSummaryResponse]
@@ -559,8 +550,7 @@ class ApplicationStageResponse(BaseModel):
     completed_at: Optional[datetime] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ApplicationDetailResponse(ApplicationResponse):
@@ -584,8 +574,7 @@ class AuditLogResponse(BaseModel):
     resource_id: Optional[int]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -639,8 +628,7 @@ class ResumeExtractionResponse(BaseModel):
                 return {"error": "Invalid format", "raw": v}
         return v
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # ============================================================================
 # Interview Report Schemas
@@ -695,8 +683,7 @@ class InterviewReportResponse(BaseModel):
                 return {"error": "Invalid format", "raw": v}
         return v
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # ============================================================================
 # Interview Schemas
@@ -734,8 +721,7 @@ class InterviewQuestionResponse(BaseModel):
     question_options: Optional[str] = None
     options: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class InterviewAnswerResponse(BaseModel):
     id: int
@@ -760,8 +746,7 @@ class InterviewAnswerResponse(BaseModel):
                 return {"error": "Invalid format", "raw": v}
         return v
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class InterviewListResponse(BaseModel):
     id: int
@@ -773,8 +758,7 @@ class InterviewListResponse(BaseModel):
     locked_skill: Optional[str]
     score: Optional[float]
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class InterviewResponse(BaseModel):
     id: int
@@ -794,8 +778,7 @@ class InterviewResponse(BaseModel):
     duration_minutes: int = 60
     report: Optional[InterviewReportResponse] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class InterviewDetailResponse(InterviewResponse):
     questions: List[InterviewQuestionResponse] = []
@@ -850,8 +833,7 @@ class MonitoringEventResponse(BaseModel):
     frame_image_url: Optional[str] = None  # Signed URL
     video_reference: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================================================
@@ -875,8 +857,7 @@ class HiringDecisionResponse(BaseModel):
     assigned_hr_id: Optional[int] = None
     assigned_hr_name: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # ============================================================================
 # Notification Schemas
@@ -893,8 +874,7 @@ class NotificationResponse(BaseModel):
     created_at: datetime
     read_at: Optional[datetime]
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================================================
@@ -960,8 +940,7 @@ class InterviewIssueResponse(BaseModel):
     assigned_hr_id: Optional[int] = None
     assigned_hr_name: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class InterviewFeedbackCreate(BaseModel):
     interview_id: int
@@ -982,8 +961,7 @@ class InterviewFeedbackResponse(BaseModel):
     feedback_text: Optional[str]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserVerifyOTP(BaseModel):
     email: str

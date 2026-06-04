@@ -20,14 +20,15 @@ from fastapi import Request
 from app.core.rate_limiter import limiter
 
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
 class HireRequest(BaseModel):
     joining_date: datetime
     notes: Optional[str] = Field(None, max_length=2000)
 
-    @validator('joining_date')
+    @field_validator('joining_date')
+    @classmethod
     def validate_joining_date(cls, v):
         if v.year < 2000 or v.year > 2100:
             raise ValueError('Year must be between 2000 and 2100')

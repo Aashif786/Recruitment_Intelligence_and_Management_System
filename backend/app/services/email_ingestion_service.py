@@ -194,6 +194,125 @@ def _generate_synthetic_message_id(sender, subject, received_at):
     content = f"{sender}{subject}{received_at}".encode('utf-8')
     return hashlib.sha256(content).hexdigest()
 
+
+# ---------------------------------------------------------------------------
+# Job-relevance filter
+# ---------------------------------------------------------------------------
+_JOB_SUBJECT_KEYWORDS = [
+    # Job-application intent keywords
+    "job", "position", "role", "vacancy", "opening",
+    "application", "applying", "applied",
+    "resume", "cv", "curriculum vitae",
+    "cover letter", "candidacy", "candidate",
+    "hiring", "recruitment", "recruiter",
+    "employment", "career",
+    # Job-code pattern (e.g. JOB-ABCD12) is checked separately via regex
+]
+
+_BLOCKED_SENDER_DOMAINS = {
+    # Automated system emails — delivery / bounce / abuse
+    "mailer-daemon",
+    "postmaster",
+    "noreply",
+    "no-reply",
+    "donotreply",
+    "do-not-reply",
+    # Well-known marketing / transactional platforms that are never job applications
+    "mailchimp.com",
+    "sendgrid.net",
+    "amazonses.com",
+    "bounce.linkedin.com",
+    "email.udemy.com",
+    "notifications.udemy.com",
+    "bounce.glassdoor.com",
+    "fb.com",
+    "facebookmail.com",
+    "twitter.com",
+    "email.twitter.com",
+    "pinterest.com",
+    "email.quora.com",
+}
+
+_JOB_CODE_RE = re.compile(r'JOB-[A-Z0-9]{4,10}\b', re.IGNORECASE)
+
+# Compile a regex of the keywords with word boundaries to avoid matching substrings in unrelated words
+_KEYWORDS_PATTERN = "|".join(re.escape(kw) for kw in _JOB_SUBJECT_KEYWORDS) + "|résumé"
+_KEYWORDS_PATTERN = _KEYWORDS_PATTERN.replace("cover\\ letter", "cover\\s+letter").replace("curriculum\\ vitae", "curriculum\\s+vitae")
+_JOB_KEYWORDS_RE = re.compile(rf'\b({_KEYWORDS_PATTERN})s?\b', re.IGNORECASE)
+
+
+def _is_job_related_email(sender: str, subject: str, job_titles: list = None) -> bool:
+    """
+    Return True ONLY for emails that look like genuine job applications.
+
+    An email is accepted when:
+      - Its subject contains an explicit JOB-XXXXX code, OR
+      - Its subject contains a job/resume keyword, OR
+      - Its subject matches an actual open job title from the database
+        (60% word-overlap threshold).
+
+    Automated bounce / marketing / system emails are always rejected.
+    """
+    subject_lower = (subject or "").lower().strip()
+    sender_lower  = (sender  or "").lower().strip()
+
+    # 1. Hard reject: automated bounce / system senders
+    # The "From" field may be either "Mailer-Daemon <...>" or "postmaster@..."
+    for blocked in _BLOCKED_SENDER_DOMAINS:
+        if blocked in sender_lower:
+            logger.debug(f"🚫 Skipping non-job email — blocked sender domain '{blocked}': {sender!r}")
+            return False
+
+    # 2. Hard reject: common automated-reply subject prefixes
+    auto_prefixes = (
+        "delivery status notification",
+        "undeliverable",
+        "mail delivery",
+        "auto-reply",
+        "auto reply",
+        "out of office",
+        "automatic reply",
+        "do not reply",
+    )
+    for prefix in auto_prefixes:
+        if subject_lower.startswith(prefix) or prefix in subject_lower:
+            logger.debug(f"🚫 Skipping non-job email — automated subject prefix '{prefix}': {subject!r}")
+            return False
+
+    # 3. Accept: explicit JOB-XXXXX code in subject
+    if subject and _JOB_CODE_RE.search(subject):
+        return True
+
+    # 4. Accept: job/resume keyword in subject
+    if _JOB_KEYWORDS_RE.search(subject_lower):
+        return True
+
+    # 5. Accept: subject matches an actual open job title from the database
+    #    Uses 60% word-overlap threshold to handle partial matches like
+    #    "Applying for Python Dev" matching job title "Python Developer"
+    if job_titles:
+        subject_words = set(subject_lower.split())
+        # Remove common filler words from subject for better matching
+        filler_words = {"for", "the", "a", "an", "to", "in", "at", "of", "and", "or",
+                        "my", "i", "am", "is", "re", "fwd", "fw", "regarding", "apply",
+                        "applying", "application", "interested", "-", "–", ":"}
+        subject_content_words = subject_words - filler_words
+
+        for title in job_titles:
+            title_words = set(title.lower().split())
+            if not title_words:
+                continue
+            # Count how many words from the job title appear in the subject
+            match_count = len(title_words & subject_content_words)
+            match_pct = match_count / len(title_words)
+            if match_pct >= 0.6:
+                logger.info(f"✅ Email subject matches open job title '{title}' ({match_pct:.0%} overlap)")
+                return True
+
+    # 6. Reject everything else (newsletters, promotions, unrelated personal mail)
+    logger.debug(f"🚫 Skipping non-job email — no job keywords or title match in subject: {subject!r}")
+    return False
+
 def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
     """
     Connect to IMAP, fetch emails, extract attachments (PDFs/Docx), 
@@ -222,26 +341,67 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
             logger.error(f"Failed to select INBOX. Status: {status}, Response: {response}")
             return {"success": False, "error": f"Could not access inbox. Status: {status}"}
         
-        # Search for emails
-        status, messages = mail.search(None, 'UNSEEN')
-        if status != "OK":
-            return {"success": False, "error": "Could not search inbox."}
+        # ── Checkpoint-based IMAP search ──────────────────────────────────
+        # Instead of fetching the last N emails, we maintain a checkpoint
+        # (`last_email_sync_at` in GlobalSettings). On each sync we fetch:
+        #   1. All UNSEEN emails (always, to catch newly arrived unread mail)
+        #   2. All emails received SINCE the last checkpoint date
+        # On first-ever sync (no checkpoint), we use today's date.
+        # After a successful sync, the checkpoint is updated to now.
+        # The database's Message-ID unique constraint prevents duplicates.
+        from app.domain.models import GlobalSettings as GS
 
-        email_ids = messages[0].split()
-        
+        checkpoint_row = db.query(GS).filter(GS.key == "last_email_sync_at").first()
+        if checkpoint_row and checkpoint_row.value:
+            try:
+                last_sync_dt = datetime.fromisoformat(checkpoint_row.value)
+                since_date_str = last_sync_dt.strftime("%d-%b-%Y")  # IMAP date format
+                logger.info(f"📌 Checkpoint found: last sync was {checkpoint_row.value} → SINCE {since_date_str}")
+            except Exception:
+                since_date_str = datetime.utcnow().strftime("%d-%b-%Y")
+                logger.warning(f"⚠️  Could not parse checkpoint '{checkpoint_row.value}'. Using today: {since_date_str}")
+        else:
+            since_date_str = datetime.utcnow().strftime("%d-%b-%Y")
+            logger.info(f"📌 No checkpoint found (first sync). Using today: {since_date_str}")
+
+        # 1. Fetch UNSEEN emails
+        status, unseen_messages = mail.search(None, 'UNSEEN')
+        if status != "OK":
+            return {"success": False, "error": "Could not search inbox for UNSEEN."}
+
+        # 2. Fetch all emails SINCE the checkpoint date
+        status, since_messages = mail.search(None, f'SINCE {since_date_str}')
+        if status != "OK":
+            return {"success": False, "error": f"Could not search inbox SINCE {since_date_str}."}
+
+        unseen_ids = unseen_messages[0].split()
+        since_ids = since_messages[0].split()
+
+        # Combine and deduplicate
+        combined_ids = list(set(unseen_ids + since_ids))
+        # Sort by integer ID ascending (oldest first)
+        combined_ids.sort(key=lambda x: int(x))
+
+        email_ids = combined_ids
+
         # BUG-003 Fix: Add detailed logging to track email fetch counts
-        total_unseen = len(email_ids)
-        logger.info(f"🔍 IMAP Search Result: Found {total_unseen} UNSEEN emails in inbox")
-        
+        total_emails = len(email_ids)
+        logger.info(f"🔍 IMAP Search Result: Found {total_emails} emails (UNSEEN={len(unseen_ids)}, SINCE {since_date_str}={len(since_ids)})")
+
         # Process 100 most recent emails
         if len(email_ids) > 100:
             email_ids = email_ids[-100:]
-            logger.warning(f"⚠️  Inbox has {total_unseen} UNSEEN emails. Limiting to 100 most recent for this sync.")
+            logger.warning(f"⚠️  Inbox has {total_emails} emails. Limiting to 100 most recent for this sync.")
             
         saved_count = 0
         duplicate_count = 0
         error_count = 0
         processed_count = 0
+
+        # Pre-fetch open job titles for job-relevance matching
+        # This allows emails whose subject mentions an actual job title to be accepted
+        open_job_titles = [j.title for j in db.query(Job.title).filter(Job.status == 'open').all() if j.title]
+        logger.info(f"📋 Loaded {len(open_job_titles)} open job titles for subject matching: {open_job_titles}")
         
         logger.info(f"📧 Processing {len(email_ids)} email(s) for resume attachments...")
         
@@ -271,6 +431,13 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                 raw_email = _extract_email(sender)
                 if not raw_email:
                     logger.warning(f"Could not extract valid email from: {sender}")
+                    continue
+
+                # --- Job-relevance filter ---
+                # Only ingest emails that look like genuine job applications.
+                # Bounce notifications, marketing emails, OOO replies, etc. are skipped.
+                if not _is_job_related_email(sender, subject, job_titles=open_job_titles):
+                    logger.info(f"⏭️  Skipping non-job-related email from {raw_email}: {subject!r}")
                     continue
                 
                 # Parse date with fallback
@@ -484,11 +651,26 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
 
         # BUG-003 Fix: Comprehensive summary logging
         logger.info(f"📊 Email Sync Summary:")
-        logger.info(f"   • Total UNSEEN: {total_unseen}")
+        logger.info(f"   • UNSEEN: {len(unseen_ids)}, SINCE {since_date_str}: {len(since_ids)}")
         logger.info(f"   • Processed: {len(email_ids)}")
         logger.info(f"   • ✅ Saved: {saved_count}")
         logger.info(f"   • ⏭️  Duplicates: {duplicate_count}")
         logger.info(f"   • ❌ Errors: {error_count}")
+
+        # ── Save checkpoint ───────────────────────────────────────────────
+        # Update (or create) the last_email_sync_at checkpoint so the next
+        # sync only fetches emails from this moment forward.
+        sync_now = datetime.utcnow().isoformat()
+        try:
+            if checkpoint_row:
+                checkpoint_row.value = sync_now
+            else:
+                db.add(GS(key="last_email_sync_at", value=sync_now))
+            db.commit()
+            logger.info(f"📌 Checkpoint updated: last_email_sync_at = {sync_now}")
+        except Exception as ckpt_err:
+            logger.warning(f"⚠️  Failed to save sync checkpoint: {ckpt_err}")
+            db.rollback()
         
         mail.close()
         mail.logout()

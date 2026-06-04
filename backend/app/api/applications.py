@@ -1778,6 +1778,13 @@ async def assign_ingested_email(
     resume = db.query(AttachmentResume).filter(AttachmentResume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Ingested resume not found")
+
+    # Cannot assign an email without a resume attachment — there's nothing to parse
+    if not resume.file_url:
+        raise HTTPException(
+            status_code=400,
+            detail="This email has no resume attachment. Only emails with attached resumes (PDF/DOCX) can be assigned to a job."
+        )
         
     job = db.query(Job).filter(Job.id == req.job_id, Job.status == 'open').first()
     if not job:
