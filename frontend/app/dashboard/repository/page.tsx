@@ -798,7 +798,7 @@ export default function RepositoryPage() {
                                     <TableHead className="font-bold py-4">Set Title & Tags</TableHead>
                                     <TableHead className="font-bold text-center">Round Type</TableHead>
                                     <TableHead className="font-bold text-center">Questions</TableHead>
-                                    <TableHead className="font-bold text-right pr-6">Actions</TableHead>
+                                    <TableHead className="font-bold text-center pr-2">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -825,7 +825,7 @@ export default function RepositoryPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right pr-6">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                            <div className="flex items-center justify-end gap-1">
                                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10" onClick={() => openEdit(set)}>
                                                     <Pencil className="h-4 w-4" />
                                                 </Button>

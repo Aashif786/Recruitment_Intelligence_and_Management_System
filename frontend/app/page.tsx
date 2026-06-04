@@ -13,9 +13,6 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { ToggleTheme } from "@/components/lightswind/toggle-theme";
-import { FloatingHeroShapes } from "@/components/floating-hero-shapes";
-import { InteractiveFeatureBg } from "@/components/interactive-feature-bg";
 import { Libre_Franklin } from "next/font/google";
 
 const franklin = Libre_Franklin({ subsets: ["latin"] });

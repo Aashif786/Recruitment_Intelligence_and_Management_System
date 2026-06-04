@@ -408,7 +408,8 @@ function shallowEqualWithoutChildren(
 }
 
 function TooltipContent({ asChild = false, ...props }: TooltipContentProps) {
-  const { setProps, setAsChild } = useTooltip();
+  const { setProps, setAsChild, id } = useTooltip();
+  const { hideImmediate, currentTooltip } = useGlobalTooltip();
   const lastPropsRef = React.useRef<HTMLMotionProps<'div'> | undefined>(
     undefined,
   );
@@ -418,7 +419,13 @@ function TooltipContent({ asChild = false, ...props }: TooltipContentProps) {
       lastPropsRef.current = props;
       setProps(props);
     }
-  }, [props, setProps]);
+    return () => {
+      setProps({});
+      if (currentTooltip?.id === id) {
+        hideImmediate();
+      }
+    };
+  }, [props, setProps, currentTooltip, id, hideImmediate]);
 
   React.useEffect(() => {
     setAsChild(asChild);
@@ -465,7 +472,7 @@ function TooltipTrigger({
   const suppressNextFocusRef = React.useRef(false);
 
   const handleOpen = React.useCallback(() => {
-    if (!triggerRef.current) return;
+    if (!triggerRef.current || !contentProps.children) return;
     setReferenceEl(triggerRef.current);
     const rect = triggerRef.current.getBoundingClientRect();
     showTooltip({

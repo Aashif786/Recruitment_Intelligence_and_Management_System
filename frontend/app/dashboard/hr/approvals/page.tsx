@@ -176,11 +176,7 @@ export default function ApprovalsPage() {
         description="Manage HR access, approve requests, and deactivate accounts."
         icon={UserCheck}
       >
-        <Link href="/dashboard/hr">
-          <Button variant="outline" className="whitespace-nowrap font-bold h-11 px-6 rounded-xl shadow-sm hover:bg-accent border-border">
-            <ArrowRight className="mr-2 h-4 w-4" /> Back to dashboard
-          </Button>
-        </Link>
+
       </PageHeader>
 
       <Tabs value={status} onValueChange={setStatus} className="w-full">
@@ -222,7 +218,7 @@ export default function ApprovalsPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Full Name</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
