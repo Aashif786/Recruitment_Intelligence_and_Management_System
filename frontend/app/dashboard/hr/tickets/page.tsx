@@ -199,7 +199,7 @@ export default function HRTicketsPage() {
     }
 
     return (
-        <div className="w-full max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-700">
+        <div className="w-full space-y-8 animate-in fade-in duration-700">
             <PageHeader
                 title="Support Tickets"
                 description="Manage candidate issues and interruption reports."

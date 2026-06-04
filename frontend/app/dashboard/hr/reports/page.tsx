@@ -651,7 +651,7 @@ export default function ReportsPage() {
         (allowing for 4rem header + 4rem layout padding + 1rem safety).
       - 'min-h-0' is crucial for allowing flex children to scroll.
     */
-    <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-4 lg:h-[calc(100vh-7.5rem)]">
+    <div className="w-full flex flex-col gap-4 lg:h-[calc(100vh-7.5rem)]">
 
       
       {/* Header - Fixed at the top of the component */}

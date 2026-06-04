@@ -434,7 +434,7 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Requested-With", "TEST_ADMIN_SECRET"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Requested-With", "TEST_ADMIN_SECRET", "X-Request-Source"],
 )
 
 @app.get("/health", tags=["System"])
