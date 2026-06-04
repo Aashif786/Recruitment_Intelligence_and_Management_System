@@ -12,6 +12,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY patch-lightswind.js ./
 
+# Skip downloading heavy Chromium binary in Stage 1 build
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 # Force a fresh install for the current platform
 RUN npm install
 
