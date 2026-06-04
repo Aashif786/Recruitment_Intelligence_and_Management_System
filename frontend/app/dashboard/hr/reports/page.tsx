@@ -11,6 +11,8 @@ import { Slider } from "@/components/ui/slider"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useSearchParams } from 'next/navigation'
 import { MonitoringReviewer } from '@/components/reports/MonitoringReviewer'
+import { ReportFilters, AppliedFilters } from '@/components/reports/ReportFilters'
+import { ReportDashboard } from '@/components/reports/ReportDashboard'
 
 // MUI Imports for Date Pickers
 import dayjs, { Dayjs } from 'dayjs'
@@ -125,7 +127,7 @@ interface CandidateProfile {
   skills?: string[]
 }
 
-interface Report {
+export interface Report {
   id: string | number
   filename: string
   timestamp: string
@@ -186,40 +188,19 @@ export default function ReportsPage() {
   const [reportsPage, setReportsPage] = useState(1);
   const [reportsPerPage, setReportsPerPage] = useState(10);
   const [activeTab, setActiveTab] = useState('detailed');
-  const [statusFilter, setStatusFilter] = useState('Default')
-  const [jobFilter, setJobFilter] = useState('All')
-
-  const [skillFilter, setSkillFilter] = useState('All')
-  const [experienceFilter, setExperienceFilter] = useState('All')
-  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
-
-  const [scoreRange, setScoreRange] = useState([0, 10])
-  const [pendingScoreRange, setPendingScoreRange] = useState([0, 10])
-  const [searchQuery, setSearchQuery] = useState(urlSearch || '')
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery)
-
-  // Debounce search query
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  const [fromDate, setFromDate] = useState<Dayjs | null>(null)
-  const [toDate, setToDate] = useState<Dayjs | null>(null)
+  const [hideStats, setHideStats] = useState(false);
 
   // Applied state for manual triggering
-  const [appliedFilters, setAppliedFilters] = useState({
-    search: '',
+  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
+    search: urlSearch || '',
     status: 'Default',
     job: 'All',
     skill: 'All',
     experience: 'All',
     score: [0, 10],
-    from: null as Dayjs | null,
-    to: null as Dayjs | null,
-    date: undefined as Date | undefined
+    from: null,
+    to: null,
+    date: undefined
   })
 
 
@@ -361,7 +342,7 @@ export default function ReportsPage() {
 
   // Derived Data for Filters (Fetch from all reports for heatmap if needed, but for now we use what we have)
   const { data: allJobsData } = useSWR<any[]>('/api/jobs?limit=500', fetcher);
-  const uniqueExperiences = useMemo(() => ["intern", "junior", "mid", "senior", "lead"], [])
+
 
   const [isExportingCsv, setIsExportingCsv] = useState(false)
 
@@ -379,22 +360,7 @@ export default function ReportsPage() {
     return counts
   }, [heatmapResponse])
 
-  const ReportDensityDay = (props: PickerDayProps) => {
-    const dayKey = props.day.toDate().toDateString()
-    const count = interviewCounts[dayKey] || 0
-    const intensity = count >= 5 ? 1 : count >= 3 ? 0.75 : count >= 1 ? 0.5 : 0
-    return (
-      <PickerDay
-        {...props}
-        sx={{
-          ...(count > 0 && {
-            boxShadow: `inset 0 -3px 0 0 hsl(var(--primary) / ${intensity})`,
-            fontWeight: 600,
-          }),
-        }}
-      />
-    )
-  }
+
 
   // Since filtering is now server-side, filteredReports is just reports
   const filteredReports = reports;
@@ -445,46 +411,24 @@ export default function ReportsPage() {
     return { total, selected: selectedCount, hold: holdCount, rejected: rejectedCount, terminated: terminatedCount, incomplete: incompleteCount, avgScore, avgQuestions, totalApplied: 0, totalFinished: 0 }
   }, [filteredReports, reportsResponse])
 
-  const isAnyFilterActive = useMemo(() => {
-    return (
-      searchQuery !== '' ||
-      statusFilter !== 'Default' ||
-      jobFilter !== 'All' ||
-      skillFilter !== 'All' ||
-      experienceFilter !== 'All' ||
-      (scoreRange[0] !== 0 || scoreRange[1] !== 10) ||
-      fromDate !== null ||
-      toDate !== null ||
-      dateFilter !== undefined
-    )
-  }, [searchQuery, statusFilter, jobFilter, skillFilter, experienceFilter, scoreRange, fromDate, toDate, dateFilter])
+  const applyFilters = (newFilters: AppliedFilters) => {
+    setAppliedFilters(newFilters)
+    setReportsPage(1)
+  }
 
-  const isDirty = useMemo(() => {
-    return (
-      searchQuery !== appliedFilters.search ||
-      statusFilter !== appliedFilters.status ||
-      jobFilter !== appliedFilters.job ||
-      skillFilter !== appliedFilters.skill ||
-      experienceFilter !== appliedFilters.experience ||
-      scoreRange[0] !== appliedFilters.score[0] ||
-      scoreRange[1] !== appliedFilters.score[1] ||
-      fromDate !== appliedFilters.from ||
-      toDate !== appliedFilters.to ||
-      dateFilter !== appliedFilters.date
-    )
-  }, [searchQuery, statusFilter, jobFilter, skillFilter, experienceFilter, scoreRange, fromDate, toDate, dateFilter, appliedFilters])
-
-  const applyFilters = () => {
-    setAppliedFilters({
-      search: searchQuery,
-      status: statusFilter,
-      job: jobFilter,
-      skill: skillFilter,
-      experience: experienceFilter,
-      score: scoreRange,
-      from: fromDate,
-      to: toDate,
-      date: dateFilter
+  const removeAppliedFilter = (key: keyof AppliedFilters) => {
+    setAppliedFilters(prev => {
+      const updated = { ...prev }
+      if (key === 'search') updated.search = ''
+      else if (key === 'status') updated.status = 'Default'
+      else if (key === 'job') updated.job = 'All'
+      else if (key === 'skill') updated.skill = 'All'
+      else if (key === 'experience') updated.experience = 'All'
+      else if (key === 'score') updated.score = [0, 10]
+      else if (key === 'from') updated.from = null
+      else if (key === 'to') updated.to = null
+      else if (key === 'date') updated.date = undefined
+      return updated
     })
     setReportsPage(1)
   }
@@ -594,17 +538,6 @@ export default function ReportsPage() {
   }
 
   const clearAllFilters = () => {
-    setStatusFilter('Default')
-    setJobFilter('All')
-    setSkillFilter('All')
-    setExperienceFilter('All')
-    setScoreRange([0, 10])
-    setPendingScoreRange([0, 10])
-    setSearchQuery('')
-    setDateFilter(undefined)
-    setFromDate(null)
-    setToDate(null)
-
     setAppliedFilters({
       search: '',
       status: 'Default',
@@ -616,7 +549,6 @@ export default function ReportsPage() {
       to: null,
       date: undefined
     })
-
     setReportsPage(1)
   }
 
@@ -767,821 +699,35 @@ export default function ReportsPage() {
               - On mobile, it stacks naturally.
             */}
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-start">
-
-
-        {/*
-                  LEFT COMPONENT (Filter Panel)
-                  - On desktop: 'h-full flex flex-col' ensures it fills the grid column height.
-                  - Filters themselves live in a scrollable CardContent.
-                  - It stays "sticky"/fixed effectively because the container doesn't scroll,
-                    only the content inside this Card (if needed) and the Right Component.
-                */}
-        <div className="lg:col-span-1 md:col-span-1 max-h-full lg:max-h-[calc(100vh-10rem)] animate-in fade-in slide-in-from-left-8 duration-700 ease-out fill-mode-both">
-
-          <Card className="h-full flex flex-col shadow-sm border-border/60 !py-0 !gap-0 bg-card/80 backdrop-blur-sm">
-            <CardHeader className="p-4 !pb-0 shrink-0 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-primary" /> Filters
-                </CardTitle>
-                <div className="flex items-center gap-1.5 min-w-[40px] justify-end">
-                  <TooltipProvider delayDuration={100}>
-                    {/* Reset Button - Always shown when filters are active, slides left if dirty */}
-                    {isAnyFilterActive && (
-                      <div className="flex items-center animate-in slide-in-from-right-4 duration-300">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
-                              onClick={clearAllFilters}
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent className="text-[10px]">Clear all filters</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    )}
-
-                    {/* Apply Button (Tick) - Appears when changes are made */}
-                    {isDirty && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-full animate-in zoom-in spin-in-90 duration-300 shadow-sm border border-emerald-100"
-                            onClick={applyFilters}
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="text-[10px] font-bold">Click to apply filters</TooltipContent>
-                      </Tooltip>
-                    )}
-
-                    {/* Initial Reset Button - Only shown when absolutely nothing is active to maintain position */}
-                    {!isAnyFilterActive && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-slate-300 cursor-not-allowed opacity-50"
-                        disabled
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TooltipProvider>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-              {/* Search */}
-              <div className="grid w-full items-center gap-1.5">
-                <Label htmlFor="search" className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">Search</Label>
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
-                  <TooltipProvider delayDuration={150}>
-                    <Tooltip open={searchQuery.length > 0 && debouncedSearchQuery !== searchQuery}>
-                      <TooltipTrigger asChild>
-                        <Input
-                          id="search"
-                          placeholder="Candidate Name"
-                          className="pl-8"
-                          value={searchQuery}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              applyFilters();
-                            }
-                          }}
-                          onChange={(e) => {
-                            setSearchQuery(e.target.value)
-                          }}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" align="start" className="text-xs">
-                        Press Enter after typing
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2">
-                <Label htmlFor="job-filter" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Filter by Job</Label>
-                <Select value={jobFilter} onValueChange={setJobFilter}>
-                  <SelectTrigger id="job-filter" className="w-full h-9 text-sm rounded-lg bg-background/50 border-border/40">
-                    <SelectValue placeholder="All Jobs" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="All">All Jobs</SelectItem>
-                    {allJobsData?.map((job: any) => (
-                      <SelectItem key={job.id} value={String(job.id)}>{job.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Grouped Status/Exp/Skill Filters */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {/* Status Filter */}
-                <div className="space-y-1.5 p-2 rounded-xl border border-border/50 bg-muted/25">
-                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-lg">
-                      <SelectItem value="Default">All Reports</SelectItem>
-                      <SelectItem value="Select">High Score (&gt;6)</SelectItem>
-                      <SelectItem value="Consider">Average Score (4-6)</SelectItem>
-                      <SelectItem value="Reject">Low Score (&lt;4)</SelectItem>
-                      <SelectItem value="Terminated">Terminated</SelectItem>
-                      <SelectItem value="Not Completed">Incomplete</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Experience Filter */}
-                <div className="space-y-1.5 p-2 rounded-xl border border-border/50 bg-muted/25">
-                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Exp.</Label>
-                  <Select value={experienceFilter} onValueChange={setExperienceFilter}>
-                    <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
-                      <SelectValue placeholder="Exp." />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-lg">
-                      <SelectItem value="All">All Levels</SelectItem>
-                      {uniqueExperiences.map((exp, idx) => (
-                        <SelectItem key={idx} value={exp}>{exp}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Skill Filter */}
-                <div className="space-y-1.5 p-2 rounded-xl border border-border/50 bg-muted/25">
-                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Skills</Label>
-                  <Select value={skillFilter} onValueChange={setSkillFilter}>
-                    <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
-                      <SelectValue placeholder="Skills" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-lg max-h-[300px]">
-                      <SelectItem value="All">All Skills</SelectItem>
-                      {SKILL_CATEGORIES.map((skill, idx) => (
-                        <SelectItem key={idx} value={skill}>
-                          {skill.split(/[_-]/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-
-
-              {/* Score Range */}
-              <div className="space-y-1.5 p-3 rounded-xl border border-border/60 bg-muted/30">
-                <div className="flex justify-between items-center">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Score Range</Label>
-                  <span className="text-[13px] font-sembold text-primary">{pendingScoreRange[0]} - {pendingScoreRange[1]}</span>
-                </div>
-                <Slider
-                  defaultValue={[0, 10]}
-                  max={10}
-                  step={0.1}
-                  value={pendingScoreRange}
-                  onValueChange={setPendingScoreRange}
-                  onValueCommit={setScoreRange}
-                  className="py-2"
-                />
-              </div>
-
-
-              <Separator className="my-1" />
-
-              {/* Calendar */}
-              <LocalizationProvider dateAdapter={AdapterDayjs}>
-                <div className="space-y-3 p-3 rounded-xl border border-border/60 bg-muted/30">
-                  <div className="space-y-2">
-                    <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest pb-1">Date Range</Label>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <DatePicker
-                        label="From"
-                        value={fromDate}
-                        minDate={dayjs('1900-01-01')}
-                        maxDate={toDate || dayjs()}
-                        disableFuture
-                        onChange={(newValue) => {
-                          setFromDate(newValue)
-                          if (toDate && newValue && newValue.isAfter(toDate, 'day')) {
-                            setToDate(newValue)
-                          }
-                          if (dateFilter) setDateFilter(undefined)
-                        }}
-                        slotProps={{
-                          textField: {
-                            size: 'small',
-                            fullWidth: true,
-                            sx: {
-                              '& .MuiInputBase-root': { 
-                                fontSize: '0.875rem',
-                                fontFamily: 'var(--font-sans) !important',
-                              },
-                              '& .MuiInputBase-input': {
-                                color: 'hsl(var(--foreground)) !important',
-                                WebkitTextFillColor: 'hsl(var(--foreground)) !important',
-                              },
-                              '& .MuiInputLabel-root': { 
-                                color: 'hsl(var(--muted-foreground))' 
-                              },
-                              '& .MuiOutlinedInput-notchedOutline': { 
-                                borderColor: 'hsl(var(--border) / 0.5)' 
-                              },
-                              '& .MuiSvgIcon-root': {
-                                color: 'hsl(var(--muted-foreground))'
-                              }
-                            }
-                          },
-                          popper: {
-                            sx: {
-                              zIndex: 10000,
-                            }
-                          },
-                          desktopPaper: {
-                            sx: {
-                              backgroundColor: 'hsl(var(--card)) !important',
-                              backgroundImage: 'none !important',
-                              opacity: '1 !important',
-                              border: '1px solid hsl(var(--border))',
-                              boxShadow: 'var(--shadow-xl)',
-                              borderRadius: '12px',
-                            }
-                          }
-                        }}
-                      />
-                      <DatePicker
-                        label="To"
-                        value={toDate}
-                        minDate={fromDate || dayjs('1900-01-01')}
-                        maxDate={dayjs()}
-                        disableFuture
-                        onChange={(newValue) => {
-                          setToDate(newValue)
-                          if (dateFilter) setDateFilter(undefined)
-                        }}
-                        slotProps={{
-                          textField: {
-                            size: 'small',
-                            fullWidth: true,
-                            sx: {
-                              '& .MuiInputBase-root': { 
-                                fontSize: '0.875rem',
-                              },
-                              '& .MuiInputBase-input': {
-                                color: 'hsl(var(--foreground)) !important',
-                                WebkitTextFillColor: 'hsl(var(--foreground)) !important',
-                              },
-                              '& .MuiInputLabel-root': { 
-                                color: 'hsl(var(--muted-foreground))' 
-                              },
-                              '& .MuiOutlinedInput-notchedOutline': { 
-                                borderColor: 'hsl(var(--border) / 0.5)' 
-                              },
-                              '& .MuiSvgIcon-root': {
-                                color: 'hsl(var(--muted-foreground))'
-                              }
-                            }
-                          },
-                          popper: {
-                            sx: {
-                              zIndex: 10000,
-                            }
-                          },
-                          desktopPaper: {
-                            sx: {
-                              backgroundColor: 'hsl(var(--card)) !important',
-                              backgroundImage: 'none !important',
-                              opacity: '1 !important',
-                              border: '1px solid hsl(var(--border))',
-                              boxShadow: 'var(--shadow-xl)',
-                              borderRadius: '12px',
-                            }
-                          }
-                        }}
-                      />
-                    </div>
-                      <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                          setFromDate(null)
-                          setToDate(null)
-                          setDateFilter(undefined)
-                      }}
-                      className="h-7 text-xs text-muted-foreground hover:text-primary px-2 w-full mt-1 flex items-center gap-2"
-                    >
-                      <RotateCcw className="h-3 w-3" /> Reset to Default
-                    </Button>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center px-1">
-                      <Label className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">Select Date</Label>
-                      {dateFilter && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDateFilter(undefined)}
-                          className="h-5 text-[14px] text-muted-foreground hover:text-red-500 px-1"
-                        >
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                    <Box sx={{
-                      position: 'relative',
-                      zIndex: 1,
-                      bgcolor: 'hsl(var(--muted) / 0.3)',
-                      borderRadius: '12px',
-                      border: '1px solid hsl(var(--border))',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      fontFamily: 'var(--font-sans)',
-                      '& *': { fontFamily: 'var(--font-sans) !important' },
-                      '& .MuiDateCalendar-root': {
-                        width: '100%',
-                        height: 'auto',
-                        maxWidth: '100%',
-                        margin: '0',
-                      },
-                      '& .MuiPickersDay-root': {
-                        width: '32px',
-                        height: '32px',
-                        fontSize: '0.8rem',
-                        color: 'hsl(var(--foreground))',
-                      },
-                      '& .MuiTypography-root': {
-                        fontSize: '0.8rem',
-                        color: 'hsl(var(--foreground))',
-                      },
-                      '& .MuiSvgIcon-root': {
-                        color: 'hsl(var(--foreground))',
-                      },
-                      '& .MuiPickersDay-root.Mui-selected': {
-                        bgcolor: 'hsl(var(--primary)) !important',
-                        color: 'hsl(var(--primary-foreground)) !important',
-                      },
-                      '& .MuiDayCalendar-weekDayLabel': {
-                        color: 'hsl(var(--muted-foreground))',
-                      }
-                    }}>
-                      <DateCalendar
-                        value={dateFilter ? dayjs(dateFilter) : null}
-                        maxDate={dayjs()}
-                        disableFuture
-                        onChange={(newValue) => {
-                          setDateFilter(newValue?.toDate())
-                          if (newValue) {
-                            setFromDate(null)
-                            setToDate(null)
-                          }
-                        }}
-                        sx={{
-                          backgroundColor: 'transparent',
-                          '& .MuiPickersDay-root': {
-                            color: 'hsl(var(--foreground))',
-                          },
-                          '& .MuiTypography-root': {
-                            color: 'hsl(var(--foreground))'
-                          },
-                          '& .MuiSvgIcon-root': {
-                            color: 'hsl(var(--foreground))'
-                          }
-                        }}
-                        slots={{ day: ReportDensityDay }}
-                      />
-                    </Box>
-                  </div>
-                </div>
-              </LocalizationProvider>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/*
-                  RIGHT COMPONENT (Reports & Metrics)
-                  - On desktop: 'h-full overflow-y-auto' enables independent scrolling.
-                  - The Main Layout/Body will NOT scroll; this div scrolls instead.
-                  - Added padding-right/bottom for scrollbar comfort.
-                */}
-        <div className="lg:col-span-3 md:col-span-2 space-y-4">
-
-
-          {/* Compact Metrics Strip */}
-          <div className="animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-100 rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2">
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
-              <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Applied</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalApplied}</p>
-              </div>
-              <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Finished</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.totalFinished}</p>
-              </div>
-              <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Total Reports</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.total}</p>
-              </div>
-              <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Avg Score</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.avgScore}</p>
-              </div>
-              <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Avg Questions</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.avgQuestions}</p>
-              </div>
-              <div className="rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Selection Rate</p>
-                <p className="text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">{metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Active Filters Summary */}
-          {isAnyFilterActive && (
-            <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-4 duration-500">
-              {appliedFilters.search && (
-                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  Search: {appliedFilters.search}
-                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setSearchQuery('')} />
-                </Badge>
-              )}
-              {appliedFilters.status !== 'Default' && (
-                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  Status: {appliedFilters.status === 'Select' ? 'High Score' : appliedFilters.status === 'Consider' ? 'Avg Score' : appliedFilters.status === 'Reject' ? 'Low Score' : getStatusLabel(appliedFilters.status)}
-                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setStatusFilter('Default')} />
-                </Badge>
-              )}
-              {appliedFilters.job !== 'All' && (
-                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  Job: {allJobsData?.find((j: any) => String(j.id) === String(appliedFilters.job))?.title || 'Selected Job'}
-                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setJobFilter('All')} />
-                </Badge>
-              )}
-              {appliedFilters.skill !== 'All' && (
-                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  Skill: {appliedFilters.skill.split(/[_-]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
-                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setSkillFilter('All')} />
-                </Badge>
-              )}
-              {appliedFilters.experience !== 'All' && (
-                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  Exp: {appliedFilters.experience}
-                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setExperienceFilter('All')} />
-                </Badge>
-              )}
-              {(appliedFilters.score[0] !== 0 || appliedFilters.score[1] !== 10) && (
-                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  Score: {appliedFilters.score[0]} - {appliedFilters.score[1]}
-                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setScoreRange([0, 10])} />
-                </Badge>
-              )}
-              {appliedFilters.from && (
-                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  From: {appliedFilters.from.format('MMM D, YYYY')}
-                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setFromDate(null)} />
-                </Badge>
-              )}
-              {appliedFilters.to && (
-                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  To: {appliedFilters.to.format('MMM D, YYYY')}
-                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setToDate(null)} />
-                </Badge>
-              )}
-              {appliedFilters.date && (
-                <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-                  On: {dayjs(appliedFilters.date).format('MMM D, YYYY')}
-                  <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => setDateFilter(undefined)} />
-                </Badge>
-              )}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  setSearchQuery('')
-                  setStatusFilter('Default')
-                  setJobFilter('All')
-                  setSkillFilter('All')
-                  setExperienceFilter('All')
-                  setScoreRange([0, 10])
-                  setFromDate(null)
-                  setToDate(null)
-                  setDateFilter(undefined)
-                  setAppliedFilters({
-                    search: '',
-                    status: 'Default',
-                    job: 'All',
-                    skill: 'All',
-                    experience: 'All',
-                    score: [0, 10],
-                    from: null,
-                    to: null,
-                    date: undefined
-                  })
-                }}
-                className="h-6 text-[10px] uppercase text-muted-foreground hover:text-destructive font-bold"
-              >
-                Clear All
-              </Button>
-            </div>
-          )}
-
-          {!Array.isArray(reportsResponse) && (reportsResponse?.failed ?? 0) > 0 && (
-            <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-              {reportsResponse?.failed} report(s) on this page could not be loaded. Remaining rows are shown below.
-            </div>
-          )}
-
-          {/* Status Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
-            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-emerald-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">High Performers (&gt; 6)</p>
-              <div className="text-emerald-500 font-bold text-2xl">{metrics.selected}</div>
-            </div>
-            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-amber-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Average Performers (4-6)</p>
-              <div className="text-amber-500 font-bold text-2xl">{metrics.hold}</div>
-            </div>
-            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-red-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Low Performers (&lt; 4)</p>
-              <div className="text-red-500 font-bold text-2xl">{metrics.rejected}</div>
-            </div>
-            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-gray-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Terminated</p>
-              <div className="text-gray-500 font-bold text-2xl">{metrics.terminated}</div>
-            </div>
-            <div className="bg-card p-4 rounded-lg border border-l-4 border-l-orange-500 shadow-sm">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">Incomplete</p>
-              <div className="text-orange-500 font-bold text-2xl">{metrics.incomplete}</div>
-            </div>
-          </div>
-
-          {/* Reports List / Results */}
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="flex justify-between items-center mb-4">
-              <TabsList className="h-11 rounded-full p-1 bg-slate-100/80 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50">
-                <TabsTrigger value="detailed" className="rounded-full px-5 h-full">Detailed View</TabsTrigger>
-                <TabsTrigger value="table" className="rounded-full px-5 h-full">Table View</TabsTrigger>
-                <TabsTrigger value="analytics" className="rounded-full px-5 h-full">Summary Analytics</TabsTrigger>
-              </TabsList>
-              
-              <div className="flex items-center gap-3">
-                {activeTab === 'table' && (
-                  <Button
-                    onClick={() => void downloadCSV()}
-                    disabled={isExportingCsv || totalCount === 0}
-                    variant="outline" 
-                    className="gap-2 bg-background hover:bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-300 shadow-sm h-11 rounded-full px-6 font-bold animate-in fade-in slide-in-from-right-4 duration-300"
-                  >
-                    <FileText className="h-4 w-4" /> {isExportingCsv ? 'Exporting…' : 'Export all filtered'}
-                  </Button>
-                )}
-
-                <div className="flex items-center gap-2.5 bg-slate-100/80 dark:bg-slate-800/50 px-4 h-11 rounded-full border border-slate-200/60 dark:border-slate-700/50 shadow-sm animate-in fade-in zoom-in duration-500">
-                  <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 tracking-tight">Show</span>
-                  <Select
-                    value={String(reportsPerPage)}
-                    onValueChange={(v) => {
-                      setReportsPerPage(Number(v))
-                      setReportsPage(1)
-                    }}
-                  >
-                    <SelectTrigger className="h-8 w-[84px] rounded-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-[14px] font-extrabold text-slate-700 dark:text-slate-200 shadow-none focus:ring-2 focus:ring-primary/20 transition-all hover:border-primary/40 px-3">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-slate-200 dark:border-slate-700 shadow-xl">
-                      <SelectItem value="10" className="rounded-lg focus:bg-primary/10">10</SelectItem>
-                      <SelectItem value="25" className="rounded-lg focus:bg-primary/10">25</SelectItem>
-                      <SelectItem value="50" className="rounded-lg focus:bg-primary/10">50</SelectItem>
-                      <SelectItem value="100" className="rounded-lg focus:bg-primary/10">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 tracking-tight">per page</span>
-                </div>
-              </div>
-            </div>
-
-            <TabsContent value="detailed" className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both delay-300">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  {filteredReports.length > 0 ? (
-                    filteredReports.map((report: Report) => (
-                      <ReportCard
-                        key={report.id}
-                        report={report}
-                        onClick={() => setViewingReport(report)}
-                      />
-                    ))
-                  ) : (
-                    <div className="h-64 flex flex-col items-center justify-center border border-dashed rounded-2xl bg-muted/10 animate-in fade-in zoom-in duration-500">
-                      <div className="bg-muted/20 p-4 rounded-full mb-4">
-                        <AlertCircle className="h-10 w-10 text-muted-foreground/30" />
-                      </div>
-                      <p className="text-lg font-bold text-muted-foreground">No reports found</p>
-                      <p className="text-sm text-muted-foreground/60 max-w-[280px] text-center mt-1">
-                        Try adjusting your filters or search query to find what you're looking for.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            </TabsContent>
-
-            <TabsContent value="table" className="animate-in fade-in zoom-in-95 duration-300">
-
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Candidate</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Applied For</TableHead>
-                        <TableHead className="text-right">Aptitude</TableHead>
-                        <TableHead className="text-right">Behavioral</TableHead>
-                        <TableHead className="text-right">Score</TableHead>
-                        <TableHead className="text-center">Suggestion</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredReports.map((report: Report) => (
-                        <TableRow
-                          key={report.id}
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => setViewingReport(report)}
-                        >
-                          <TableCell className="font-semibold text-slate-700 dark:text-slate-200">
-                            {report.candidate_profile.candidate_name || report.filename.replace('.json', '')}
-                          </TableCell>
-                          <TableCell>{report.display_date_short}</TableCell>
-                          <TableCell className="text-sm">{report.candidate_profile.applied_role || 'N/A'}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            {report.aptitude_score !== undefined && report.aptitude_score !== null ? report.aptitude_score.toFixed(1) : '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {report.behavioral_score !== undefined && report.behavioral_score !== null ? report.behavioral_score.toFixed(1) : '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-bold text-primary">{report.overall_score.toFixed(1)}</TableCell>
-                          <TableCell className="text-center">
-                            {isInterviewNotCompleted(report) ? (
-                              <Badge
-                                variant="outline"
-                                className="bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
-                              >
-                                Incomplete
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className={getRecommendationColor(report.overall_score)}>
-                                {getRecommendationLabel(report.overall_score)}
-                              </Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {filteredReports.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="h-24 text-center">
-                            No reports found.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Common Pagination Controls for Detailed and Table views */}
-            {activeTab !== 'analytics' && totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-border">
-                  <div className="text-sm text-muted-foreground font-medium">
-                    Showing <span className="font-semibold text-foreground/80">{Math.min(reportsPerPage, totalCount)}</span> of <span className="font-semibold text-foreground/80">{totalCount}</span> reports
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-6">
-                    <div className="text-sm font-medium text-muted-foreground">
-                      Page <span className="text-foreground/80 font-semibold">{reportsPage}</span> of {totalPages}
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setReportsPage(prev => prev - 1)}
-                        disabled={reportsPage <= 1}
-                        className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setReportsPage(prev => prev + 1)}
-                        disabled={reportsPage >= totalPages}
-                        className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
-                      >
-                        Next
-                      </Button>
-                    </div>
-
-                    <div className="text-sm font-semibold text-foreground/80 uppercase tracking-widest hidden lg:block border-l pl-6 border-border">
-                      Total {totalCount} Reports
-                    </div>
-                  </div>
-                </div>
-            )}
-
-            <TabsContent value="analytics" className="animate-in fade-in zoom-in-95 duration-300">
-              {metrics.total > 0 ? (
-                <Card className="border-none shadow-xl bg-gradient-to-br from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/50">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xl flex items-center gap-2">
-                      <BarChart className="h-5 w-5 text-primary" />
-                      Overview & Analysis
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col lg:flex-row gap-8 items-start py-4">
-                      <div className="flex-1 w-full h-[280px] relative">
-                        <StatusChart data={[
-                          { name: 'Selected', value: metrics.selected, color: '#10b981' },
-                          { name: 'Hold', value: metrics.hold, color: '#f59e0b' },
-                          { name: 'Rejected', value: metrics.rejected, color: '#ef4444' },
-                          { name: 'Terminated', value: metrics.terminated, color: '#b91c1c' },
-                          { name: 'Incomplete', value: metrics.incomplete, color: '#f97316' }
-                        ].filter(d => d.value > 0)} />
-                      </div>
-
-                      <div className="w-full lg:w-1/2 grid grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.avgScore}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Avg Score</div>
-                        </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.total}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Interviews</div>
-                        </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.avgQuestions}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Avg Qs</div>
-                        </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                            {metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%
-                          </div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Success Rate</div>
-                        </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.totalApplied}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Applied</div>
-                        </div>
-                        <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center shadow-sm hover:shadow-md transition-all">
-                          <div className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{metrics.totalFinished}</div>
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Finished</div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="h-80 flex flex-col items-center justify-center border border-dashed rounded-3xl bg-muted/5 animate-in fade-in zoom-in duration-500">
-                  <div className="bg-muted/10 p-5 rounded-full mb-4">
-                    <Activity className="h-12 w-12 text-muted-foreground/20" />
-                  </div>
-                  <p className="text-xl font-black text-muted-foreground tracking-tight">No analysis data available</p>
-                  <p className="text-sm text-muted-foreground/50 max-w-[320px] text-center mt-2 font-medium">
-                    We couldn't find any reports matching your current filter criteria to generate analytics.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={clearAllFilters}
-                    className="mt-6 rounded-full px-6 font-bold hover:bg-primary hover:text-white transition-all"
-                  >
-                    Clear Filters
-                  </Button>
-                </Card>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
+        <ReportFilters
+          appliedFilters={appliedFilters}
+          onApplyFilters={applyFilters}
+          onClearFilters={clearAllFilters}
+          allJobsData={allJobsData}
+          hideStats={hideStats}
+          onHideStatsChange={setHideStats}
+          interviewCounts={interviewCounts}
+        />
+        <ReportDashboard
+          filteredReports={filteredReports}
+          metrics={metrics}
+          hideStats={hideStats}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          reportsPage={reportsPage}
+          setReportsPage={setReportsPage}
+          reportsPerPage={reportsPerPage}
+          setReportsPerPage={setReportsPerPage}
+          totalCount={totalCount}
+          totalPages={totalPages}
+          isExportingCsv={isExportingCsv}
+          downloadCSV={downloadCSV}
+          setViewingReport={setViewingReport}
+          appliedFilters={appliedFilters}
+          onRemoveAppliedFilter={removeAppliedFilter}
+          onClearFilters={clearAllFilters}
+          allJobsData={allJobsData}
+        />
       </div>
 
       {/* FULL VIEW MODAL FOR REPORT */}
@@ -1683,7 +829,7 @@ export default function ReportsPage() {
                                 key={i} 
                                 variant="secondary" 
                                 className={`text-[11px] font-bold px-3 py-1 rounded-lg border-none shadow-sm
-                                  ${skillFilter !== 'All' && (skill || '').toLowerCase().includes(skillFilter.replace('_', ' ').toLowerCase())
+                                  ${appliedFilters.skill !== 'All' && (skill || '').toLowerCase().includes(appliedFilters.skill.replace('_', ' ').toLowerCase())
                                     ? 'bg-primary text-primary-foreground' 
                                     : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                                   }`}

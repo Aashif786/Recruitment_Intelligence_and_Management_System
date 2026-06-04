@@ -273,7 +273,7 @@ export default function HRJobsPage() {
                         <div className="col-span-2 text-center">Experience</div>
                         <div className="col-span-2 text-center">Date Posted</div>
                         <div className="col-span-1 text-center">Analytics</div>
-                        <div className="col-span-2 text-right">Actions</div>
+                        <div className="col-span-2 text-center">Actions</div>
                     </div>
 
                     <div className="divide-y divide-border/50">

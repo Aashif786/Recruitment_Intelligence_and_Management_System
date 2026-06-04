@@ -596,7 +596,7 @@ export default function IngestedEmailsPage() {
                                 <TableHead className="w-[180px]">Received Date</TableHead>
                                 <TableHead className="w-[240px]">Resume File</TableHead>
                                 <TableHead className="w-[200px]">Mapping Status</TableHead>
-                                <TableHead className="text-right w-[150px]">Actions</TableHead>
+                                <TableHead className="w-[150px]">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>

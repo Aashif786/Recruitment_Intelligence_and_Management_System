@@ -447,7 +447,7 @@ export default function HRApplicationsPage() {
             <div className="col-span-2">Skills Match</div>
             <div className="col-span-2">Scores</div>
             <div className="col-span-2 text-center">Status</div>
-            <div className="col-span-1 xl:col-span-2 text-right">Actions</div>
+            <div className="col-span-1 xl:col-span-2">Actions</div>
           </div>
 
           <div className="bg-card divide-y divide-border">
@@ -566,7 +566,7 @@ export default function HRApplicationsPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="col-span-1 xl:col-span-2 text-left lg:text-right mt-4 lg:mt-0 pt-4 lg:pt-0 border-t border-border lg:border-t-0" onClick={(e) => e.stopPropagation()}>
+                <div className="col-span-1 xl:col-span-2 text-left lg:text-center mt-4 lg:mt-0 pt-4 lg:pt-0 border-t border-border lg:border-t-0" onClick={(e) => e.stopPropagation()}>
                   <div className="flex flex-wrap lg:justify-end gap-2 lg:gap-3">
                     {/* Primary Actions based on status */}
                     {app.status === "applied" && (

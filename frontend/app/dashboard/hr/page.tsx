@@ -297,7 +297,6 @@ export default function HRDashboard() {
         />
         <StatsCard
           title="Total Offers Sent"
-          subtitle="Total offer letters ever sent"
           value={r_metrics.offers_released}
           icon={CheckCircle}
           color="text-blue-600"
@@ -459,7 +458,7 @@ export default function HRDashboard() {
                     <TableHead>Job Role</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

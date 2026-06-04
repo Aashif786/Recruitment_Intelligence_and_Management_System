@@ -111,7 +111,7 @@ export default function PipelineIndexPage() {
                             <TableHead className="font-bold py-4">Job Title & ID</TableHead>
                             <TableHead className="font-bold text-center">Status</TableHead>
                             <TableHead className="font-bold text-center">Pipeline</TableHead>
-                            <TableHead className="font-bold text-right pr-6">Action</TableHead>
+                            <TableHead className="font-bold text-center">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
