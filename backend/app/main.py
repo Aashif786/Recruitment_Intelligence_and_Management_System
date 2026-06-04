@@ -375,13 +375,21 @@ app = FastAPI(
     title="HR Recruitment System API",
     description="AI-powered automated recruitment platform",
     version="1.0.0",
-    redirect_slashes=False,
+    redirect_slashes=True,
     lifespan=lifespan,
     docs_url="/docs" if settings.env != "production" else None,
     redoc_url="/redoc" if settings.env != "production" else None,
     openapi_url="/openapi.json" if settings.env != "production" else None,
 )
 app.router.route_class = StandardizedAPIRoute
+
+# Force https scheme for request scope when behind an SSL-terminating reverse proxy
+@app.middleware("http")
+async def override_proxy_scheme(request: FastAPIRequest, call_next):
+    if request.headers.get("x-forwarded-proto") == "https":
+        request.scope["scheme"] = "https"
+    return await call_next(request)
+
 
 
 
