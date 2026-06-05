@@ -221,7 +221,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                     <Input
                       id="search"
                       placeholder="Candidate Name"
-                      className="pl-8"
+                      className="pl-8 hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                       value={searchQuery}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -264,7 +264,7 @@ export const ReportFilters = React.memo(function ReportFilters({
             <div className="space-y-1 rounded-xl border border-border/50 bg-muted/25">
               {/* <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Experience</Label> */}
               <Select value={experienceFilter} onValueChange={setExperienceFilter}>
-                <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
+                <SelectTrigger className="w-full h-9 text-xs rounded-xl bg-background/40 border-border/30 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200">
                   <SelectValue placeholder="Exp." />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
@@ -316,7 +316,7 @@ export const ReportFilters = React.memo(function ReportFilters({
           </div>
 
           {/* Score Range */}
-          <div className="space-y-1 rounded-xl border border-border/60 bg-muted/30">
+          <div className="space-y-2 p-3 rounded-xl border border-border/60 bg-muted/30">
             <div className="flex justify-between items-center">
               <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Score Range</Label>
               <span className="text-[13px] font-semibold text-primary">{pendingScoreRange[0]} - {pendingScoreRange[1]}</span>
@@ -336,9 +336,9 @@ export const ReportFilters = React.memo(function ReportFilters({
 
           {/* Calendar */}
           <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <div className="space-y-1 rounded-xl border border-border/60 bg-muted/30">
+            <div className="space-y-3 p-3 rounded-xl border border-border/60 bg-muted/30">
               <div className="space-y-2">
-                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest pb-1">Date Range</Label>
+                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Date Range</Label>
                 <div className="grid grid-cols-2 gap-1.5">
                   <DatePicker
                     label="From"

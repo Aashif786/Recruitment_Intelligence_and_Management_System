@@ -80,7 +80,7 @@ export default function ProfilePage() {
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header / Hero Section */}
-            <div className="relative h-64 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-white/5 overflow-hidden shadow-2xl">
+            <div className="relative h-64 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-white/10 overflow-hidden shadow-2xl shadow-slate-950/20">
                 <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
                 
@@ -166,7 +166,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Stats & Info */}
                 <div className="space-y-6">
-                <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden rounded-2xl">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 overflow-hidden rounded-2xl">
                         <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground">Account Information</CardTitle>
                         </CardHeader>
@@ -180,7 +180,7 @@ export default function ProfilePage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden rounded-2xl">
+                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 overflow-hidden rounded-2xl">
                         <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-primary">Your Impact</CardTitle>
                         </CardHeader>
@@ -195,7 +195,7 @@ export default function ProfilePage() {
 
                 {/* Right Column: Narrative & Governance */}
                 <div className="lg:col-span-2 space-y-6">
-                    <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden rounded-2xl h-full">
+                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 overflow-hidden rounded-2xl h-full">
                         <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -265,7 +265,7 @@ function InfoRow({ icon: Icon, label, value, valueClass }: any) {
 function ImpactMetric({ icon: Icon, label, value, color }: any) {
     return (
         <div className="flex items-center gap-4 group">
-            <div className={`p-3 rounded-2xl bg-white dark:bg-slate-900/60 shadow-sm border border-border/50 ${color} group-hover:shadow-md group-hover:scale-105 transition-all duration-200`}>
+            <div className={`p-3 rounded-2xl bg-card dark:bg-slate-900/60 shadow-sm border border-border/80 ${color} group-hover:shadow-md group-hover:scale-105 transition-all duration-200`}>
                 <Icon className="h-5 w-5" />
             </div>
             <div>

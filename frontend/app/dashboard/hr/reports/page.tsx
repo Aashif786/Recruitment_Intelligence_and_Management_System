@@ -596,7 +596,7 @@ export default function ReportsPage() {
 
       {/* Question Detail Modal */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && setSelectedQuestion(null)}>
-        <DialogContent className="w-full md:!max-w-[35vw] md:!w-[35vw] max-h-[90vh] overflow-y-auto bg-background/95 p-6">
+        <DialogContent className="w-full md:!max-w-[35vw] md:!w-[35vw] max-h-[90vh] overflow-y-auto bg-background/90 backdrop-blur-xl border border-border/80 shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-6 rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Detailed Question Analysis</DialogTitle>
             <DialogDescription>In-depth review of the candidate's response.</DialogDescription>
@@ -607,7 +607,7 @@ export default function ReportsPage() {
               {/* Row 1: Question */}
               <div className="space-y-2">
                 <h4 className="text-lg font-bold text-foreground">Question:</h4>
-                <p className="text-lg text-foreground bg-muted/30 p-6 rounded-xl border border-border shadow-sm leading-relaxed">
+                <p className="text-lg text-foreground bg-muted/20 p-6 rounded-2xl border border-border/50 leading-relaxed">
                   {cleanQuestionText(selectedQuestion.question)}
                 </p>
               </div>
@@ -615,13 +615,13 @@ export default function ReportsPage() {
               {/* Row 2: Answer */}
               <div className="space-y-2">
                 <h4 className="text-lg font-bold text-foreground">Answer:</h4>
-                <p className={`text-base bg-muted/30 p-6 rounded-xl border border-border shadow-sm leading-relaxed whitespace-pre-wrap ${isAnswerEmpty(selectedQuestion.answer) ? 'text-muted-foreground italic' : 'text-foreground'}`}>
+                <p className={`text-base bg-muted/20 p-6 rounded-2xl border border-border/50 leading-relaxed whitespace-pre-wrap ${isAnswerEmpty(selectedQuestion.answer) ? 'text-muted-foreground italic' : 'text-foreground'}`}>
                   {isAnswerEmpty(selectedQuestion.answer) ? 'Candidate did not provide an answer.' : selectedQuestion.answer}
                 </p>
               </div>
 
               {/* Row 3 & 4: Category Scores & Overall Score */}
-              <div className="grid grid-cols-1 gap-8 items-center bg-card p-6 rounded-xl border shadow-sm">
+              <div className="grid grid-cols-1 gap-8 items-center bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                 <div className="space-y-4">
                   <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Evaluation Scores</h4>
                   {/* Evaluation Details */}
@@ -653,7 +653,7 @@ export default function ReportsPage() {
                 {/* Strengths */}
                 <div>
                   <h4 className="text-lg font-bold text-foreground mb-3">Strengths:</h4>
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-6 h-full shadow-sm">
+                  <div className="bg-primary/[0.03] border border-primary/15 rounded-2xl p-6 h-full shadow-sm">
                     {selectedQuestion.evaluation.strengths && selectedQuestion.evaluation.strengths.length > 0 ? (
                       <ul className="space-y-3">
                         {selectedQuestion.evaluation.strengths.map((s, idx) => (
@@ -672,7 +672,7 @@ export default function ReportsPage() {
                 {/* Weaknesses */}
                 <div>
                   <h4 className="text-lg font-bold text-foreground mb-3">Areas for Improvement:</h4>
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 h-full shadow-sm">
+                  <div className="bg-destructive/[0.03] border border-destructive/15 rounded-2xl p-6 h-full shadow-sm">
                     {selectedQuestion.evaluation.weaknesses && selectedQuestion.evaluation.weaknesses.length > 0 ? (
                       <ul className="space-y-3">
                         {selectedQuestion.evaluation.weaknesses.map((w, idx) => (
@@ -914,7 +914,7 @@ export default function ReportsPage() {
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     {/* Chart 1: Evaluation Radar */}
-                    <div className="bg-card border rounded-xl p-4 h-[250px] shadow-sm flex flex-col items-center">
+                    <div className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl p-4 h-[250px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col items-center">
                       <span className="text-sm font-semibold text-muted-foreground w-full text-left mb-2">Competency Radar</span>
                       {radarShowsPlaceholder ? (
                         <div className="flex flex-1 w-full items-center justify-center text-center text-sm text-muted-foreground px-4">
@@ -934,7 +934,7 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Chart 2: Tech Progression Line */}
-                    <div className="bg-card border rounded-xl p-4 h-[250px] shadow-sm flex flex-col items-center">
+                    <div className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl p-4 h-[250px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col items-center">
                       <span className="text-sm font-semibold text-muted-foreground w-full text-left mb-2">Progression</span>
                       {progressionShowsPlaceholder ? (
                         <div className="flex flex-1 w-full items-center justify-center text-center text-sm text-muted-foreground px-4">
@@ -954,7 +954,7 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Chart 3: Detailed Metrics */}
-                    <div className="bg-card border rounded-xl p-4 h-[250px] shadow-sm flex flex-col">
+                    <div className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl p-4 h-[250px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col">
                       <span className="text-sm font-semibold text-muted-foreground w-full text-left mb-2">Detailed Metrics (Avg)</span>
                       <div className="flex-1 min-h-0">
                         <DetailedMetricsChart report={viewingReport} showNoData={interviewNotCompleted} />
@@ -962,7 +962,7 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Chart 4: Skill Proficiency Distribution */}
-                    <div className="bg-card border rounded-xl p-4 h-[250px] shadow-sm flex flex-col">
+                    <div className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl p-4 h-[250px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col">
                       <span className="text-sm font-semibold text-muted-foreground w-full text-left mb-2">Skill Proficiency</span>
                       <div className="flex-1 min-h-0">
                         <SkillProficiencyChart report={viewingReport} />
@@ -983,7 +983,7 @@ export default function ReportsPage() {
                             const parsedSkills = JSON.parse(viewingReport.evaluated_skills);
                             if (Array.isArray(parsedSkills) && parsedSkills.length > 0) {
                               return parsedSkills.map((skill, index) => (
-                                <div key={index} className="bg-card border rounded-xl p-5 shadow-sm">
+                                <div key={index} className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                                   <div className="flex justify-between items-center mb-2">
                                     <h4 className="font-semibold text-md text-foreground">{skill.skillName || 'Unknown Skill'}</h4>
                                     <Badge variant="secondary" className="font-bold tabular-nums">
@@ -1052,11 +1052,11 @@ export default function ReportsPage() {
                       Aptitude Questions
                     </Button>
                   </div>
-                  <ScrollArea className="h-[400px] w-full pr-4 border rounded-xl bg-card">
+                  <ScrollArea className="h-[400px] w-full pr-4 border border-border/80 rounded-2xl bg-card/45 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                     {reportView === 'aptitude' ? (
                       <div className="p-0">
                         <table className="w-full text-sm text-left">
-                          <thead className="bg-muted/50 sticky top-0 z-10 border-b">
+                          <thead className="bg-muted/30 sticky top-0 z-10 border-b border-border/40">
                             <tr>
                               <th className="px-4 py-3 font-semibold w-12 text-center">#</th>
                               <th className="px-4 py-3 font-semibold">Question</th>
@@ -1066,7 +1066,7 @@ export default function ReportsPage() {
                           </thead>
                           <tbody className="divide-y">
                             {(viewingReport.aptitude_question_evaluations ?? []).map((q, i) => (
-                              <tr key={i} className="hover:bg-muted/30 transition-colors">
+                              <tr key={i} className="hover:bg-muted/20 border-b border-border/10 last:border-b-0 transition-colors duration-200">
                                 <td className="px-4 py-4 text-center font-medium text-muted-foreground">{i + 1}</td>
                                 <td className="px-4 py-4">{cleanQuestionText(q.question)}</td>
                                 <td className="px-4 py-4 text-muted-foreground">{q.answer || <span className="italic text-muted-foreground/50">No answer provided</span>}</td>
@@ -1103,7 +1103,7 @@ export default function ReportsPage() {
                             return (
                               <div
                                 key={i}
-                                className="bg-muted/30 p-4 rounded-xl border cursor-pointer hover:bg-muted/70 hover:border-primary/40 transition-colors group"
+                                className="bg-muted/20 hover:bg-muted/40 p-4 rounded-2xl border border-border/40 hover:border-primary/40 cursor-pointer transition-all duration-200 active:scale-[0.99] shadow-[0_4px_12px_rgb(0,0,0,0.01)] hover:shadow-md group"
                                 onClick={() => setSelectedQuestion(q)}
                               >
                                 <div className="flex justify-between items-start mb-3 gap-2">

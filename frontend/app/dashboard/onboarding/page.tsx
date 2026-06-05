@@ -260,7 +260,7 @@ export default function OnboardingPage() {
 
             {showStats && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-4 duration-500 ease-out">
-                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-blue-500/5 to-primary/5">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-blue-500/5 to-primary/5">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <FileText className="h-4 w-4 text-blue-500" />
@@ -276,7 +276,7 @@ export default function OnboardingPage() {
                             <p className="text-xs text-muted-foreground">Action required: send letters</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-amber-500/5 to-amber-600/5">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-amber-500/5 to-amber-600/5">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <Calendar className="h-4 w-4 text-amber-500" />
@@ -308,7 +308,7 @@ export default function OnboardingPage() {
                             <p className="text-xs text-muted-foreground">Upcoming in next 7 days</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-emerald-500/5 to-emerald-600/5">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-emerald-500/5 to-emerald-600/5">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -332,7 +332,7 @@ export default function OnboardingPage() {
             )}
 
 
-            <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+            <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
                     <div className="flex items-center gap-4">
                         <div className="relative flex-1 max-w-sm">
@@ -378,7 +378,7 @@ export default function OnboardingPage() {
                                 </TableRow>
                             ) : (
                                 paginatedCandidates?.map((candidate) => (
-                                    <TableRow key={candidate.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 group">
+                                    <TableRow key={candidate.id} className="hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200 group">
                                         <TableCell className="py-4">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-9 w-9 shrink-0 border border-border">
@@ -622,18 +622,18 @@ export default function OnboardingPage() {
             )}
 
             <Dialog open={isApproveOpen} onOpenChange={setIsApproveOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Finalize Offer Approval</DialogTitle>
-                        <DialogDescription>
+                <DialogContent className="max-w-md rounded-2xl border border-border bg-card/90 backdrop-blur-lg shadow-2xl p-6">
+                    <DialogHeader className="space-y-2">
+                        <DialogTitle className="text-xl font-bold">Finalize Offer Approval</DialogTitle>
+                        <DialogDescription className="text-sm text-muted-foreground leading-normal">
                             Are you sure you want to approve the offer for <strong>{approvingCandidate?.candidate_name}</strong>? 
                             This will generate the final PDF and email it to the candidate immediately.
                         </DialogDescription>
                     </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsApproveOpen(false)}>Cancel</Button>
+                    <DialogFooter className="mt-4 gap-2 sm:gap-0">
+                        <Button variant="outline" className="rounded-xl active:scale-95 transition-all" onClick={() => setIsApproveOpen(false)}>Cancel</Button>
                         <Button 
-                            className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                            className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-md shadow-amber-600/10 active:scale-[0.98] transition-all"
                             onClick={() => approvingCandidate && handleApprove(approvingCandidate)}
                         >
                             Confirm & Send

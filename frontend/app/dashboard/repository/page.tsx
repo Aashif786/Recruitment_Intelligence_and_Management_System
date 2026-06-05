@@ -58,7 +58,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -122,7 +122,7 @@ function TagInput({
                 {value.map((tag, i) => (
                     <span
                         key={i}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20"
                     >
                         {tag}
                         <button
@@ -146,7 +146,7 @@ function TagInput({
                 }}
                 onBlur={() => { if (input.trim()) addTag(input) }}
                 placeholder={placeholder ?? 'Type and press Enter or comma to add'}
-                className="h-9 text-sm"
+                className="h-10 text-sm bg-background border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 shadow-sm"
             />
         </div>
     )
@@ -186,7 +186,7 @@ function SetCard({
     onDelete: (s: QuestionSet) => void
 }) {
     return (
-        <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] hover:-translate-y-1 transition-all duration-300 group">
+        <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-md shadow-primary/5 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300 group">
             <CardContent className="p-5 space-y-3">
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-3">
@@ -414,7 +414,7 @@ function SetFormModal({ open, onClose, onSaved, initial, sets }: SetFormProps) {
 
     return (
         <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-            <DialogContent className="w-[95vw] sm:max-w-[80vw] max-h-[90vh] overflow-y-auto bg-card/90 backdrop-blur-lg border border-border/80 shadow-2xl rounded-2xl">
+            <DialogContent className="w-[95vw] sm:max-w-[80vw] max-h-[90vh] overflow-y-auto bg-card/90 backdrop-blur-xl border border-border/80 shadow-2xl rounded-3xl p-6 md:p-8">
                 <DialogHeader>
                     <DialogTitle className="text-lg font-bold">
                         {isEdit ? 'Edit Question Set' : 'Create New Question Set'}
@@ -747,14 +747,17 @@ export default function RepositoryPage() {
             </PageHeader>
 
             {/* Filter bar */}
-            <div className="flex flex-col sm:flex-row gap-3">
-                <Input
-                    value={search}
-                    onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
-                    placeholder="Search by title, role, or tag…"
-                    className="h-9 max-w-xs text-sm bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
-                />
-                <div className="flex gap-2 flex-wrap">
+            <div className="bg-card/45 backdrop-blur-xl p-4 rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <div className="relative w-full sm:max-w-xs">
+                    <Input
+                        value={search}
+                        onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
+                        placeholder="Search by title, role, or tag…"
+                        className="h-10 pl-10 text-sm bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
+                    />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="flex gap-2 flex-wrap w-full sm:w-auto justify-start sm:justify-end">
                     {(['all', 'aptitude', 'technical', 'behavioural'] as const).map(rt => (
                         <button
                             key={rt}
@@ -791,7 +794,7 @@ export default function RepositoryPage() {
                 </div>
             ) : (
                 <>
-                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300">
                         <Table>
                             <TableHeader className="bg-muted/30 border-b border-border/40">
                                 <TableRow className="hover:bg-transparent border-none">
@@ -803,13 +806,13 @@ export default function RepositoryPage() {
                             </TableHeader>
                             <TableBody>
                                 {paginatedSets.map((set) => (
-                                    <TableRow key={set.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 group">
+                                    <TableRow key={set.id} className="hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200 group">
                                         <TableCell className="py-4">
                                             <div className="flex flex-col gap-1.5">
                                                 <span className="font-bold text-foreground uppercase tracking-tight">{set.title}</span>
                                                 <div className="flex flex-wrap gap-1">
                                                     {set.topic_tags.map(t => (
-                                                        <Badge key={t} variant="outline" className="text-[9px] px-1.5 py-0 border-primary/20 text-primary/70">{t}</Badge>
+                                                        <Badge key={t} variant="outline" className="text-[9px] px-1.5 py-0 border-primary/20 text-primary">{t}</Badge>
                                                     ))}
                                                 </div>
                                             </div>
@@ -826,10 +829,10 @@ export default function RepositoryPage() {
                                         </TableCell>
                                         <TableCell className="text-right pr-6">
                                             <div className="flex items-center justify-end gap-1">
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10" onClick={() => openEdit(set)}>
+                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-primary hover:bg-primary/10 rounded-lg transition-all" onClick={() => openEdit(set)}>
                                                     <Pencil className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10" onClick={() => setDeleteTarget(set)}>
+                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 rounded-lg transition-all" onClick={() => setDeleteTarget(set)}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>

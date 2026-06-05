@@ -388,7 +388,7 @@ export default function IngestedEmailsPage() {
 
             {/* Credentials Card */}
             {showCredentials && user?.role === 'super_admin' && (
-                <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-6">
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
@@ -475,7 +475,7 @@ export default function IngestedEmailsPage() {
 
             {/* Quick Metrics — always show real counts from global_stats regardless of active filter */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 border border-border/80 group hover:-translate-y-1 rounded-2xl overflow-hidden">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 group hover:-translate-y-1 rounded-2xl overflow-hidden">
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
                             <Inbox className="h-6 w-6 text-primary" />
@@ -489,7 +489,7 @@ export default function IngestedEmailsPage() {
                     </CardContent>
                 </Card>
                 
-                <Card className="bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 border border-border/80 group hover:-translate-y-1 rounded-2xl overflow-hidden">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 group hover:-translate-y-1 rounded-2xl overflow-hidden">
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
                             <CheckCircle2 className="h-6 w-6 text-emerald-600" />
@@ -503,7 +503,7 @@ export default function IngestedEmailsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 border border-border/80 group hover:-translate-y-1 rounded-2xl overflow-hidden">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 group hover:-translate-y-1 rounded-2xl overflow-hidden">
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
                             <AlertTriangle className="h-6 w-6 text-amber-500" />
@@ -519,7 +519,7 @@ export default function IngestedEmailsPage() {
             </div>
 
             {/* Filters and Toolbar */}
-            <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)]">
+            <div className="bg-card/45 backdrop-blur-xl p-4 rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                 <div className="flex flex-col md:flex-row gap-4 items-center">
                     {/* Search */}
                     <div className="relative flex-1 w-full">
@@ -587,7 +587,7 @@ export default function IngestedEmailsPage() {
                     </div>
                 </div>
             ) : (
-                <div className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+                <div className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 rounded-2xl overflow-hidden">
                     <Table>
                         <TableHeader className="bg-muted/30 border-b border-border/40">
                             <TableRow>
@@ -756,7 +756,7 @@ export default function IngestedEmailsPage() {
                     setTargetJobId('')
                 }
             }}>
-                <DialogContent className="max-w-md rounded-2xl border border-border bg-card/90 backdrop-blur-lg p-6 shadow-2xl">
+                <DialogContent className="max-w-md rounded-3xl border border-border/80 bg-background/90 backdrop-blur-xl p-6 shadow-2xl">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-black text-foreground flex items-center gap-2">
                             <Mail className="h-5 w-5 text-amber-500" />

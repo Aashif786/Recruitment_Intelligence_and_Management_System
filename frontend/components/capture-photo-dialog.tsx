@@ -79,7 +79,7 @@ export function CapturePhotoDialog({ isOpen, onOpenChange, applicationId, onSucc
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { onOpenChange(open); if(!open) setImgSrc(null); }}>
-            <DialogContent className="sm:max-w-md border border-border bg-background/95 backdrop-blur-md shadow-2xl rounded-2xl">
+            <DialogContent className="sm:max-w-md border border-border/80 bg-card/90 backdrop-blur-xl shadow-2xl rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-bold tracking-tight">Add Candidate Photo</DialogTitle>
                     <DialogDescription className="text-muted-foreground">
@@ -88,19 +88,19 @@ export function CapturePhotoDialog({ isOpen, onOpenChange, applicationId, onSucc
                 </DialogHeader>
                 
                 <Tabs defaultValue="capture" className="w-full" onValueChange={(v) => { setActiveTab(v); setImgSrc(null); }}>
-                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/60 p-1 rounded-xl">
-                        <TabsTrigger value="capture" className="gap-2 rounded-lg data-[state=active]:shadow-sm">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/40 backdrop-blur-md border border-border/40 p-1 rounded-2xl">
+                        <TabsTrigger value="capture" className="gap-2 rounded-xl data-[state=active]:shadow-sm">
                             <Camera className="h-4 w-4" />
                             Take Photo
                         </TabsTrigger>
-                        <TabsTrigger value="upload" className="gap-2 rounded-lg data-[state=active]:shadow-sm">
+                        <TabsTrigger value="upload" className="gap-2 rounded-xl data-[state=active]:shadow-sm">
                             <Upload className="h-4 w-4" />
                             Upload
                         </TabsTrigger>
                     </TabsList>
  
                     <TabsContent value="capture" className="mt-0">
-                        <div className="flex flex-col items-center justify-center bg-zinc-950 rounded-2xl overflow-hidden aspect-video relative shadow-inner border border-border/40">
+                        <div className="flex flex-col items-center justify-center bg-zinc-950 rounded-2xl overflow-hidden aspect-video relative shadow-2xl border border-border/80 ring-1 ring-primary/10">
                             {!imgSrc ? (
                                 <>
                                     <Webcam
@@ -124,8 +124,8 @@ export function CapturePhotoDialog({ isOpen, onOpenChange, applicationId, onSucc
                                 <>
                                     <img src={imgSrc} className="w-full h-full object-cover" alt="Captured" />
                                     {/* Persistent Glassmorphic Control Overlay */}
-                                    <div className="absolute bottom-3 left-3 right-3 bg-background/70 backdrop-blur-md border border-border/40 rounded-xl p-2 flex items-center justify-between shadow-lg animate-in slide-in-from-bottom-2 duration-300">
-                                        <span className="text-xs font-semibold text-foreground/90 pl-2">Photo Captured</span>
+                                    <div className="absolute bottom-3 left-3 right-3 bg-background/80 backdrop-blur-xl border border-border/80 rounded-2xl p-2.5 flex items-center justify-between shadow-xl animate-in slide-in-from-bottom-2 duration-300">
+                                        <span className="text-xs font-bold text-foreground/90 pl-2">Photo Captured</span>
                                         <Button 
                                             onClick={retake} 
                                             variant="outline" 
@@ -142,14 +142,14 @@ export function CapturePhotoDialog({ isOpen, onOpenChange, applicationId, onSucc
                     </TabsContent>
  
                     <TabsContent value="upload" className="mt-0">
-                        <div className="group flex flex-col items-center justify-center border-2 border-dashed border-border/80 hover:border-primary/40 rounded-2xl aspect-video bg-muted/10 hover:bg-primary/[0.01] transition-all duration-300 relative overflow-hidden">
+                        <div className="group flex flex-col items-center justify-center border-2 border-dashed border-border/80 hover:border-primary/50 rounded-2xl aspect-video bg-muted/20 hover:bg-primary/[0.02] dark:hover:bg-primary/[0.03] transition-all duration-300 relative overflow-hidden cursor-pointer shadow-inner" onClick={() => fileInputRef.current?.click()}>
                             {!imgSrc ? (
                                 <div className="text-center p-6 flex flex-col items-center gap-3">
-                                    <div className="p-3 bg-background border rounded-xl shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                                    <div className="p-3 bg-background border border-border/80 rounded-2xl shadow-md transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:ring-4 group-hover:ring-primary/10">
                                         <ImageIcon className="h-6 w-6 text-muted-foreground" />
                                     </div>
                                     <div className="space-y-0.5">
-                                        <p className="text-sm font-semibold text-foreground">Choose a photo</p>
+                                        <p className="text-sm font-bold text-foreground">Choose a photo</p>
                                         <p className="text-xs text-muted-foreground">JPG, PNG or WEBP (Max 5MB)</p>
                                     </div>
                                     <input 
@@ -172,8 +172,8 @@ export function CapturePhotoDialog({ isOpen, onOpenChange, applicationId, onSucc
                                 <>
                                     <img src={imgSrc} className="w-full h-full object-cover" alt="Uploaded" />
                                     {/* Persistent Glassmorphic Control Overlay */}
-                                    <div className="absolute bottom-3 left-3 right-3 bg-background/70 backdrop-blur-md border border-border/40 rounded-xl p-2 flex items-center justify-between shadow-lg animate-in slide-in-from-bottom-2 duration-300">
-                                        <span className="text-xs font-semibold text-foreground/90 pl-2">Photo Loaded</span>
+                                    <div className="absolute bottom-3 left-3 right-3 bg-background/80 backdrop-blur-xl border border-border/80 rounded-2xl p-2.5 flex items-center justify-between shadow-xl animate-in slide-in-from-bottom-2 duration-300">
+                                        <span className="text-xs font-bold text-foreground/90 pl-2">Photo Loaded</span>
                                         <Button 
                                             onClick={retake} 
                                             variant="outline" 

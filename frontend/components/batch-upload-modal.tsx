@@ -564,7 +564,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent 
-        className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden relative border border-border/80 bg-background/95 backdrop-blur-md shadow-2xl transition-all duration-300"
+        className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden relative border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl transition-all duration-300"
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -723,7 +723,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
               <Label className="text-sm font-semibold text-foreground">Upload Resumes</Label>
               <div className="grid grid-cols-2 gap-4">
                   <div 
-                    className="group relative border-2 border-dashed border-border/80 hover:border-primary/50 rounded-2xl p-6 hover:bg-primary/[0.02] dark:hover:bg-primary/[0.04] transition-all duration-300 cursor-pointer text-center flex flex-col items-center justify-center active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-primary/[0.03]"
+                    className="group relative border-2 border-dashed border-border/80 hover:border-primary/50 bg-card/45 backdrop-blur-xl rounded-2xl p-6 hover:bg-primary/[0.02] dark:hover:bg-primary/[0.04] transition-all duration-300 cursor-pointer text-center flex flex-col items-center justify-center active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-primary/[0.03]"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <input
@@ -742,7 +742,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
                   </div>
 
                   <div 
-                    className="group relative border-2 border-dashed border-border/80 hover:border-primary/50 rounded-2xl p-6 hover:bg-primary/[0.02] dark:hover:bg-primary/[0.04] transition-all duration-300 cursor-pointer text-center flex flex-col items-center justify-center active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-primary/[0.03]"
+                    className="group relative border-2 border-dashed border-border/80 hover:border-primary/50 bg-card/45 backdrop-blur-xl rounded-2xl p-6 hover:bg-primary/[0.02] dark:hover:bg-primary/[0.04] transition-all duration-300 cursor-pointer text-center flex flex-col items-center justify-center active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-primary/[0.03]"
                     onClick={() => folderInputRef.current?.click()}
                   >
                     <input

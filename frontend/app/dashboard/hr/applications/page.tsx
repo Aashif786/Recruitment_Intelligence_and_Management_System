@@ -307,7 +307,7 @@ export default function HRApplicationsPage() {
       </PageHeader>
 
       {/* Filters Toolbar */}
-      <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] mb-8 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
+      <div className="bg-card/45 backdrop-blur-xl p-4 rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] mb-8 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
         <div className="flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-end">
           {/* Combined Search Bar */}
           <div className="w-full md:flex-1 min-w-0">
@@ -330,7 +330,7 @@ export default function HRApplicationsPage() {
                 <input
                     type="text"
                     placeholder="Search name, ID, or job details..."
-                    className="w-full pl-12 pr-4 h-11 bg-background border-2 border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-base placeholder:text-muted-foreground text-foreground"
+                    className="w-full pl-12 pr-4 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-base placeholder:text-muted-foreground text-foreground"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -345,7 +345,7 @@ export default function HRApplicationsPage() {
               type="date"
               min="2020-01-01"
               max={dateTo || new Date().toLocaleDateString('en-CA')}
-              className="w-full px-3 h-11 bg-background border-2 border-input rounded-xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-foreground cursor-pointer"
+              className="w-full px-3 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-sm font-medium text-foreground cursor-pointer"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
             />
@@ -358,7 +358,7 @@ export default function HRApplicationsPage() {
               min={dateFrom || "2020-01-01"}
               max={new Date().toLocaleDateString('en-CA')}
               value={dateTo}
-              className="w-full px-3 h-11 bg-background border-2 border-input rounded-xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-foreground cursor-pointer"
+              className="w-full px-3 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-sm font-medium text-foreground cursor-pointer"
               onChange={(e) => setDateTo(e.target.value)}
             />
           </div>
@@ -367,7 +367,7 @@ export default function HRApplicationsPage() {
           <div className="w-full sm:w-[200px]">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">Status</label>
             <select
-              className="w-full px-4 h-11 bg-background border-2 border-input rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-foreground cursor-pointer"
+              className="w-full px-4 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-base font-medium text-foreground cursor-pointer"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -388,7 +388,7 @@ export default function HRApplicationsPage() {
           <div className="w-full sm:w-[200px]">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">Filter by Job</label>
             <select
-              className="w-full px-4 h-11 bg-background border-2 border-input rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-foreground cursor-pointer"
+              className="w-full px-4 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-base font-medium text-foreground cursor-pointer"
               value={jobIdFilter}
               onChange={(e) => setJobIdFilter(e.target.value)}
             >
@@ -441,9 +441,9 @@ export default function HRApplicationsPage() {
           <p className="text-sm text-muted-foreground/70">Try adjusting or clearing your filters.</p>
         </div>
       ) : (
-        <div className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700">
           {/* List Header */}
-          <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-3 bg-muted/50 border-b border-border text-xs uppercase tracking-widest font-black text-muted-foreground">
+          <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-3 bg-muted/30 border-b border-border/40 text-xs uppercase tracking-widest font-black text-muted-foreground">
             <div className="col-span-3 xl:col-span-2">Candidate</div>
             <div className="col-span-2">Position & IDs</div>
             <div className="col-span-2">Skills Match</div>
@@ -452,11 +452,11 @@ export default function HRApplicationsPage() {
             <div className="col-span-1 xl:col-span-2">Actions</div>
           </div>
 
-          <div className="bg-card divide-y divide-border">
+          <div className="bg-transparent divide-y divide-border/40">
             {applications.map((app, index) => (
               <div
                 key={app.id}
-                className="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 px-4 sm:px-6 lg:px-6 py-4 lg:py-5 lg:items-center hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] transition-all duration-300 cursor-pointer group shadow-sm dark:shadow-none"
+                className="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 px-4 sm:px-6 lg:px-6 py-4 lg:py-5 lg:items-center hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] active:scale-[0.99] border-b border-border/10 last:border-b-0 transition-all duration-300 cursor-pointer group"
                 onClick={() => router.push(`/dashboard/hr/applications/${app.id}`)}
               >
                 {/* Candidate Info */}

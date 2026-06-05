@@ -50,7 +50,7 @@ export function SendOfferDialog({ applicationId, candidateName, onSuccess, trigg
             <DialogTrigger asChild>
                 {trigger}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] border border-border bg-background/95 backdrop-blur-md shadow-2xl rounded-2xl">
+            <DialogContent className="sm:max-w-[425px] border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-bold tracking-tight">Issue Offer Letter</DialogTitle>
                     <DialogDescription className="text-sm text-muted-foreground">

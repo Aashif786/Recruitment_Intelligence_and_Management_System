@@ -249,8 +249,8 @@ export default function BatchAnalysisPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-5">
-            <div className="flex-1 min-h-[300px] bg-gradient-to-br from-primary/5 via-muted/10 to-primary/5 border-2 border-dashed border-primary/25 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-1 transition-all duration-300 hover:border-primary/50 hover:bg-primary/5 group shadow-inner">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 shadow-inner group-hover:scale-105 transition-transform duration-300">
+            <div className="flex-1 min-h-[300px] bg-gradient-to-br from-primary/5 via-muted/10 to-primary/5 border-2 border-dashed border-primary/30 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-1 transition-all duration-300 hover:border-primary/50 hover:bg-primary/[0.03] group shadow-inner cursor-pointer" onClick={() => setIsBatchModalOpen(true)}>
+              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 shadow-inner transition-all duration-300 group-hover:scale-110 group-hover:ring-4 group-hover:ring-primary/15">
                 <UploadCloud className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-lg font-bold mb-1 text-foreground">Ready to ingest resumes</h3>
