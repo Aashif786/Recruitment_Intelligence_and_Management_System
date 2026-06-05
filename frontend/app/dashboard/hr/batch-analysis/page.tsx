@@ -236,7 +236,7 @@ export default function BatchAnalysisPage() {
 
       <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ─── Bulk Upload Card ──────────────────────────── */}
-        <Card className="flex flex-col h-full bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden">
+        <Card className="flex flex-col h-full bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
             <CardTitle className="flex items-center gap-2.5 text-base font-bold">
               <div className="p-1.5 bg-primary/10 rounded-lg">
@@ -249,8 +249,8 @@ export default function BatchAnalysisPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-5">
-            <div className="flex-1 min-h-[300px] bg-gradient-to-br from-primary/5 via-muted/10 to-primary/5 border-2 border-dashed border-primary/25 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-1 transition-all duration-300 hover:border-primary/50 hover:bg-primary/5 group shadow-inner">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 shadow-inner group-hover:scale-105 transition-transform duration-300">
+            <div className="flex-1 min-h-[300px] bg-gradient-to-br from-primary/5 via-muted/10 to-primary/5 border-2 border-dashed border-primary/30 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-1 transition-all duration-300 hover:border-primary/50 hover:bg-primary/[0.03] group shadow-inner cursor-pointer" onClick={() => setIsBatchModalOpen(true)}>
+              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 shadow-inner transition-all duration-300 group-hover:scale-110 group-hover:ring-4 group-hover:ring-primary/15">
                 <UploadCloud className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-lg font-bold mb-1 text-foreground">Ready to ingest resumes</h3>
@@ -270,7 +270,7 @@ export default function BatchAnalysisPage() {
         </Card>
 
         {/* ─── Filtered Export Card ──────────────────────── */}
-        <Card className="flex flex-col h-full bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden">
+        <Card className="flex flex-col h-full bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
             <CardTitle className="flex items-center gap-2.5 text-base font-bold">
               <div className="p-1.5 bg-primary/10 rounded-lg">

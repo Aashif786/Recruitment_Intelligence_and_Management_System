@@ -151,7 +151,7 @@ export default function HRJobsPage() {
                 icon={Briefcase}
             >
                 <div className="flex items-center gap-4">
-                    <div className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl gap-2 px-6 py-4 flex items-center shadow-[0_4px_12px_-2px_rgba(0,0,0,0.06)]">
+                    <div className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl gap-2 px-6 py-4 flex items-center shadow-md shadow-primary/5">
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-primary uppercase tracking-widest leading-tight">Active</span>
                             <span className="text-[18px] font-black text-primary tabular-nums leading-none">
@@ -187,7 +187,7 @@ export default function HRJobsPage() {
                                 <input
                                     type="text"
                                     placeholder="Search by title, ID, or description..."
-                                    className="w-full pl-12 pr-4 h-11 bg-background border-2 border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-base placeholder:text-muted-foreground text-foreground"
+                                    className="w-full pl-12 pr-4 h-11 bg-background border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-base placeholder:text-muted-foreground text-foreground hover:border-primary/40"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -199,7 +199,7 @@ export default function HRJobsPage() {
                     <div className="w-[180px]">
                         <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 px-1">Job Status</label>
                         <select
-                            className="w-full px-4 h-11 bg-background border-2 border-input rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-foreground cursor-pointer"
+                            className="w-full px-4 h-11 bg-background border border-input rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-foreground cursor-pointer hover:border-primary/40"
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
                         >
@@ -214,7 +214,7 @@ export default function HRJobsPage() {
                     <div className="w-[180px]">
                         <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 px-1">Sort Order</label>
                         <select
-                            className="w-full px-4 h-11 bg-background border-2 border-input rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-foreground cursor-pointer"
+                            className="w-full px-4 h-11 bg-background border border-input rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-foreground cursor-pointer hover:border-primary/40"
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                         >
@@ -265,9 +265,9 @@ export default function HRJobsPage() {
                     <Button variant="outline" onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}>Clear Filters</Button>
                 </div>
             ) : (
-                <div className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700">
                     {/* List Header */}
-                    <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-muted/50 border-b border-border text-xs uppercase tracking-widest font-black text-muted-foreground">
+                    <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-muted/30 border-b border-border/40 text-xs uppercase tracking-widest font-black text-muted-foreground">
                         <div className="col-span-4">Job Title & Identification</div>
                         <div className="col-span-1 text-center">Status</div>
                         <div className="col-span-2 text-center">Experience</div>
@@ -280,7 +280,7 @@ export default function HRJobsPage() {
                         {paginatedJobs.map((job, index) => (
                             <div
                                 key={job.id}
-                                className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 cursor-pointer group"
+                                className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200 cursor-pointer group"
                                 onClick={() => router.push(`/dashboard/hr/jobs/${job.id}/edit`)}
                             >
                                 {/* Job Title & ID */}

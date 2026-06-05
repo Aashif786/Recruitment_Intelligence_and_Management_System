@@ -155,16 +155,16 @@ export default function ApprovalsPage() {
 
   const getStatusBadge = (user: HRUser) => {
     if (user.approval_status === 'pending') {
-      return <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-200">Pending</Badge>
+      return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 font-semibold">Pending</Badge>
     }
     if (user.approval_status === 'approved' && user.is_active) {
-      return <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">Approved</Badge>
+      return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-semibold">Approved</Badge>
     }
     if (user.approval_status === 'approved' && !user.is_active) {
-      return <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200">Deactivated</Badge>
+      return <Badge variant="outline" className="bg-slate-500/10 text-slate-600 border-slate-500/20 font-semibold">Deactivated</Badge>
     }
     if (user.approval_status === 'rejected') {
-      return <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">Rejected</Badge>
+      return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 font-semibold">Rejected</Badge>
     }
     return <Badge variant="outline">{user.approval_status}</Badge>
   }
@@ -187,7 +187,7 @@ export default function ApprovalsPage() {
         </TabsList>
       </Tabs>
 
-      <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+      <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300">
         <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
           <div>
             <CardTitle>{status.charAt(0).toUpperCase() + status.slice(1)} HR Users</CardTitle>
@@ -223,7 +223,7 @@ export default function ApprovalsPage() {
               </TableHeader>
               <TableBody>
                 {hrUsers.map((hrUser) => (
-                  <TableRow key={hrUser.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300">
+                  <TableRow key={hrUser.id} className="hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200">
                     <TableCell>{hrUser.id}</TableCell>
                     <TableCell>
                       <Button 
@@ -244,7 +244,7 @@ export default function ApprovalsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary font-bold"
+                            className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary font-bold rounded-lg active:scale-95 transition-all duration-200"
                             onClick={() => setOtpConfirmUser(hrUser)}
                           >
                             Send OTP
@@ -255,7 +255,7 @@ export default function ApprovalsPage() {
                             <Button
                               size="sm"
                               variant="destructive"
-                              className="h-8 text-xs font-bold"
+                              className="h-8 text-xs font-bold rounded-lg active:scale-95 transition-all duration-200"
                               disabled={processingId === hrUser.id}
                               onClick={() => handleReject(hrUser.id)}
                             >
@@ -263,7 +263,7 @@ export default function ApprovalsPage() {
                             </Button>
                             <Button
                               size="sm"
-                              className="h-8 text-xs font-bold shadow-sm shadow-primary/20"
+                              className="h-8 text-xs font-bold shadow-sm shadow-primary/20 rounded-lg active:scale-[0.97] transition-all duration-200"
                               disabled={processingId === hrUser.id}
                               onClick={() => handleApprove(hrUser.id)}
                             >
@@ -276,7 +276,7 @@ export default function ApprovalsPage() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            className="h-8 text-xs font-bold"
+                            className="h-8 text-xs font-bold rounded-lg active:scale-95 transition-all duration-200"
                             disabled={processingId === hrUser.id}
                             onClick={() => handleRemove(hrUser.id)}
                           >

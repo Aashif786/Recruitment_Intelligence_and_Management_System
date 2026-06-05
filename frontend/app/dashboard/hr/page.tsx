@@ -243,7 +243,7 @@ export default function HRDashboard() {
 
 
       {isSuperAdmin && pendingApprovals.length > 0 && (
-        <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 p-6 animate-in fade-in duration-300">
+        <Card className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 p-6 animate-in fade-in duration-300">
           <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -309,7 +309,7 @@ export default function HRDashboard() {
 
         {/* Chart Section */}
         <div className="lg:col-span-2 animate-in fade-in duration-500 delay-300">
-          <Card className="h-full bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+          <Card className="h-full bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -332,7 +332,7 @@ export default function HRDashboard() {
 
         {/* Recent Activity / Quick Actions */}
         <div className="space-y-6 animate-in fade-in duration-500 delay-500">
-          <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+          <Card className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
               <CardTitle className="text-foreground/80">Quick Actions</CardTitle>
             </CardHeader>
@@ -348,7 +348,7 @@ export default function HRDashboard() {
         </div>
       </div>
       {/* Recent Interviews Table */}
-      <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 animate-in fade-in duration-500 delay-700">
+      <Card className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 animate-in fade-in duration-500 delay-700">
         <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
           <div className="flex items-center justify-between">
             <div>
@@ -360,7 +360,7 @@ export default function HRDashboard() {
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
           {/* Filter Bar */}
-          <div className="flex flex-col md:flex-row gap-4 p-4 bg-muted/30 backdrop-blur-lg rounded-xl border border-border/60 items-center shadow-inner">
+          <div className="flex flex-col md:flex-row gap-4 p-4 bg-muted/20 backdrop-blur-md rounded-2xl border border-border/60 items-center shadow-inner">
             <div className="flex-1 w-full relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -451,40 +451,40 @@ export default function HRDashboard() {
                 </div>
               )}
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Candidate ID</TableHead>
-                    <TableHead>Candidate</TableHead>
-                    <TableHead>Job Role</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
+                <TableHeader className="bg-muted/30 border-b border-border/40">
+                  <TableRow className="hover:bg-transparent border-none">
+                    <TableHead className="font-bold py-4">Candidate ID</TableHead>
+                    <TableHead className="font-bold">Candidate</TableHead>
+                    <TableHead className="font-bold">Job Role</TableHead>
+                    <TableHead className="font-bold">Date</TableHead>
+                    <TableHead className="font-bold">Status</TableHead>
+                    <TableHead className="font-bold text-right pr-6">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recentInterviews.map((interview: any) => (
-                    <TableRow key={interview.id} className="group hover:bg-muted/40 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-300">
+                    <TableRow key={interview.id} className="hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200">
                       <TableCell className="font-mono text-sm text-muted-foreground">
                         {interview.test_id || 'N/A'}
                       </TableCell>
-                      <TableCell className="font-medium">{interview.candidate_name}</TableCell>
-                      <TableCell>{interview.job_title}</TableCell>
-                      <TableCell>{new Date(interview.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-medium text-foreground">{interview.candidate_name}</TableCell>
+                      <TableCell className="text-foreground/80">{interview.job_title}</TableCell>
+                      <TableCell className="text-muted-foreground">{new Date(interview.date).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge variant={
                           interview.status === 'completed' ? 'default' :
                             interview.status === 'scheduled' ? 'secondary' : 'outline'
                         } className={
-                          interview.status === 'completed' ? 'bg-primary/10 text-primary hover:bg-primary/20 ' :
-                            interview.status === 'scheduled' ? 'bg-secondary/10 text-secondary hover:bg-secondary/20 ' : ''
+                          interview.status === 'completed' ? 'bg-primary/10 text-primary hover:bg-primary/20 border-primary/20' :
+                            interview.status === 'scheduled' ? 'bg-secondary/15 text-secondary-foreground border-border hover:bg-secondary/20' : ''
                         }>
                           {interview.status.replace('_', ' ')}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right pr-6">
                         <Link 
                           href={interview.report_id ? `/dashboard/hr/reports?search=${encodeURIComponent(interview.candidate_name)}&reportId=${interview.report_id}` : `/dashboard/hr/reports`} 
-                          className="text-primary hover:underline text-sm font-medium"
+                          className="text-primary hover:underline text-sm font-semibold"
                         >
                           View Details
                         </Link>
@@ -543,7 +543,7 @@ export default function HRDashboard() {
 
 const StatsCard = React.memo(({ title, subtitle, value, icon: Icon, color, bg }: any) => {
   return (
-    <Card className="bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 border border-border/80 group hover:-translate-y-1 rounded-2xl overflow-hidden">
+    <Card className="bg-card/45 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 border border-border/80 group hover:-translate-y-1 rounded-2xl overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <CardTitle className="text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wide">

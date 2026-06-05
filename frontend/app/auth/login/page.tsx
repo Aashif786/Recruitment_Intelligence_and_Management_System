@@ -294,7 +294,7 @@ function LoginContent() {
               <Button
                 type="submit"
                 disabled={isSubmitting || isLoading}
-                className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-[0_4px_20px_-4px_rgba(var(--primary),0.5)] hover:shadow-[0_6px_28px_-4px_rgba(var(--primary),0.7)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
+                className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/35 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
               >
                 {isSubmitting ? (
                   <>
