@@ -12,11 +12,11 @@ import {
 } from 'recharts'
 
 const GRADIENTS = [
-    'url(#blueGrad)',
-    'url(#purpleGrad)',
-    'url(#amberGrad)',
-    'url(#emeraldGrad)',
-    'url(#roseGrad)'
+    'url(#chartGrad1)',
+    'url(#chartGrad2)',
+    'url(#chartGrad3)',
+    'url(#chartGrad4)',
+    'url(#chartGrad5)'
 ]
 
 interface DashboardChartProps {
@@ -36,25 +36,25 @@ export function DashboardChart({ data }: DashboardChartProps) {
         <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
                 <defs>
-                    <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.95}/>
-                        <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.4}/>
+                    <linearGradient id="chartGrad1" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.95}/>
+                        <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.35}/>
                     </linearGradient>
-                    <linearGradient id="purpleGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.95}/>
-                        <stop offset="100%" stopColor="#6d28d9" stopOpacity={0.4}/>
+                    <linearGradient id="chartGrad2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.95}/>
+                        <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0.35}/>
                     </linearGradient>
-                    <linearGradient id="amberGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.95}/>
-                        <stop offset="100%" stopColor="#b45309" stopOpacity={0.4}/>
+                    <linearGradient id="chartGrad3" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-3)" stopOpacity={0.95}/>
+                        <stop offset="100%" stopColor="var(--chart-3)" stopOpacity={0.35}/>
                     </linearGradient>
-                    <linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/>
-                        <stop offset="100%" stopColor="#047857" stopOpacity={0.4}/>
+                    <linearGradient id="chartGrad4" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-4)" stopOpacity={0.95}/>
+                        <stop offset="100%" stopColor="var(--chart-4)" stopOpacity={0.35}/>
                     </linearGradient>
-                    <linearGradient id="roseGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#ef4444" stopOpacity={0.95}/>
-                        <stop offset="100%" stopColor="#b91c1c" stopOpacity={0.4}/>
+                    <linearGradient id="chartGrad5" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-5)" stopOpacity={0.95}/>
+                        <stop offset="100%" stopColor="var(--chart-5)" stopOpacity={0.35}/>
                     </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.6} />

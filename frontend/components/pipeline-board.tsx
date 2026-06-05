@@ -252,7 +252,7 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                 const selectedInCol = selectedApps.filter(id => colApps.map(a => a.id).includes(id));
 
                 return (
-                <div key={colKey} style={{ animationDelay: `${colIndex * 150}ms` }} className="min-w-[280px] flex-1 max-w-[350px] h-full max-h-full flex flex-col bg-muted/30 backdrop-blur-lg rounded-xl border border-border/60 p-3 shadow-inner overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both">
+                <div key={colKey} style={{ animationDelay: `${colIndex * 150}ms` }} className="min-w-[280px] flex-1 max-w-[350px] h-full max-h-full flex flex-col bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 p-3 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both">
                     <div className="flex items-center justify-between p-2 mb-2 shrink-0">
                         <div className="flex items-center gap-2">
                             <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wide">{column.label}</h3>
@@ -287,7 +287,7 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                                     <Card 
                                         key={app.id} 
                                         style={{ animationDelay: `${index * 50}ms` }} 
-                                        className={`relative cursor-pointer transition-all duration-300 bg-card border group animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both hover:-translate-y-1.5 hover:shadow-[0_12px_24px_-6px_rgba(0,0,0,0.08)] hover:border-primary/30 active:scale-[0.98] ${selectedApps.includes(app.id) ? 'border-primary shadow-sm bg-primary/5' : 'border-border/50'}`}
+                                        className={`relative cursor-pointer transition-all duration-300 bg-card/75 backdrop-blur-md border rounded-xl group animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both hover:-translate-y-1.5 hover:shadow-[0_12px_30px_-6px_rgba(0,0,0,0.06)] hover:border-primary/40 active:scale-[0.98] ${selectedApps.includes(app.id) ? 'border-primary shadow-md bg-primary/5' : 'border-border/50'}`}
                                         onClick={() => router.push(`/dashboard/hr/applications/${app.id}`)}
                                     >
                                         {/* Right side controls */}
@@ -341,24 +341,24 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                                                         className={`text-[9px] px-1.5 py-0 h-4 border transition-colors ${
                                                             (app.resume_score <= 10 ? app.resume_score * 10 : app.resume_score) > 80
                                                                 ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15"
-                                                                : "bg-secondary/10 text-secondary-foreground border-border hover:bg-secondary/15"
+                                                                : "bg-secondary/15 text-secondary-foreground border-border hover:bg-secondary/20"
                                                             }`}
                                                     >
                                                         Job Comp: {(app.resume_score <= 10 ? app.resume_score * 10 : app.resume_score).toFixed(0)}%
                                                     </Badge>
                                                 )}
                                                 {app.aptitude_score !== null && app.aptitude_score !== undefined && (
-                                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400 font-bold hover:bg-purple-500/15 transition-colors">
+                                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-indigo-500/10 text-indigo-600 border-indigo-500/20 dark:text-indigo-400 dark:border-indigo-500/30 font-semibold hover:bg-indigo-500/15 transition-colors">
                                                         Apt: {app.aptitude_score.toFixed(1)}
                                                     </Badge>
                                                 )}
                                                 {app.behavioral_score !== null && app.behavioral_score !== undefined && (
-                                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400 font-bold hover:bg-emerald-500/15 transition-colors">
+                                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30 font-semibold hover:bg-emerald-500/15 transition-colors">
                                                         Behav: {app.behavioral_score.toFixed(1)}
                                                     </Badge>
                                                 )}
                                                 {app.technical_skills_score !== null && app.technical_skills_score !== undefined && (
-                                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400 font-bold hover:bg-blue-500/15 transition-colors">
+                                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-sky-500/10 text-sky-600 border-sky-500/20 dark:text-sky-400 dark:border-sky-500/30 font-semibold hover:bg-sky-500/15 transition-colors">
                                                         Tech: {app.technical_skills_score.toFixed(1)}
                                                     </Badge>
                                                 )}
@@ -372,9 +372,9 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                                                             key={btn.action}
                                                             variant={btn.variant === 'primary' ? 'default' : btn.variant === 'destructive' ? 'destructive' : 'outline'}
                                                             size="sm"
-                                                            className={`h-6 px-2 text-[10px] font-bold uppercase tracking-wider ${
+                                                            className={`h-6 px-2 text-[10px] font-bold uppercase tracking-wider rounded-md active:scale-95 transition-all duration-200 ${
                                                                 btn.variant === 'success' 
-                                                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700' 
+                                                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-sm' 
                                                                     : btn.variant === 'secondary'
                                                                         ? 'bg-amber-500/10 text-amber-600 border-amber-500/30 hover:bg-amber-500/20'
                                                                         : ''

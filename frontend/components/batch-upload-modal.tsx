@@ -603,9 +603,9 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
                 Processing {Math.min(progressCount + 1, processingQueueTotal)} of {processingQueueTotal} resumes
               </p>
               
-              <div className="relative w-full bg-secondary/80 rounded-full h-2.5 mt-4 overflow-hidden border border-border/20">
+              <div className="relative w-full bg-secondary/85 rounded-full h-3 mt-4 overflow-hidden border border-border/20 shadow-inner">
                 <div 
-                  className="bg-gradient-to-r from-primary to-primary/80 h-full rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-primary via-primary/90 to-primary/80 h-full rounded-full transition-all duration-300 shadow-md shadow-primary/20 animate-pulse"
                   style={{ width: `${(progressCount / processingQueueTotal) * 100}%` }}
                 />
               </div>
@@ -629,21 +629,21 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
               
               <div className="grid grid-cols-3 gap-4 w-full max-w-md mt-4">
                 {/* Success Card */}
-                <div className="bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center shadow-sm">
+                <div className="bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center shadow-sm hover:scale-[1.02] hover:shadow-md hover:shadow-emerald-500/5 transition-all duration-300">
                   <CheckCircle2 className="h-5 w-5 text-emerald-500 mb-1" />
                   <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{stats.success}</span>
                   <span className="text-[10px] font-bold text-emerald-600/80 dark:text-emerald-400/80 uppercase tracking-wide">Success</span>
                 </div>
                 
                 {/* Failed Card */}
-                <div className={`border rounded-2xl p-4 flex flex-col items-center justify-center text-center shadow-sm transition-all ${stats.failed > 0 ? 'bg-destructive/5 dark:bg-destructive/10 border-destructive/20 text-destructive' : 'bg-muted/30 border-border/40 opacity-40'}`}>
+                <div className={`border rounded-2xl p-4 flex flex-col items-center justify-center text-center shadow-sm transition-all hover:scale-[1.02] hover:shadow-md duration-300 ${stats.failed > 0 ? 'bg-destructive/5 dark:bg-destructive/10 border-destructive/20 text-destructive hover:shadow-destructive/5' : 'bg-muted/20 border-border/40 opacity-40'}`}>
                   <XCircle className={`h-5 w-5 mb-1 ${stats.failed > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
                   <span className="text-2xl font-extrabold">{stats.failed}</span>
                   <span className="text-[10px] font-bold uppercase tracking-wide">Failed</span>
                 </div>
 
                 {/* Skipped Card */}
-                <div className={`border rounded-2xl p-4 flex flex-col items-center justify-center text-center shadow-sm transition-all ${stats.skipped > 0 ? 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-muted/30 border-border/40 opacity-40'}`}>
+                <div className={`border rounded-2xl p-4 flex flex-col items-center justify-center text-center shadow-sm transition-all hover:scale-[1.02] hover:shadow-md duration-300 ${stats.skipped > 0 ? 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400 hover:shadow-amber-500/5' : 'bg-muted/20 border-border/40 opacity-40'}`}>
                   <AlertCircle className={`h-5 w-5 mb-1 ${stats.skipped > 0 ? 'text-amber-500 animate-pulse' : 'text-muted-foreground'}`} />
                   <span className="text-2xl font-extrabold">{stats.skipped}</span>
                   <span className="text-[10px] font-bold uppercase tracking-wide">Skipped</span>
@@ -734,7 +734,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
                       ref={fileInputRef}
                       onChange={handleFileChange}
                     />
-                    <div className="w-12 h-12 bg-primary/5 border border-primary/10 text-primary rounded-xl flex items-center justify-center mb-3 mx-auto transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_10%,transparent)]">
+                    <div className="w-12 h-12 bg-primary/5 border border-primary/10 text-primary rounded-xl flex items-center justify-center mb-3 mx-auto transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:ring-4 group-hover:ring-primary/15">
                       <UploadCloud className="h-6 w-6 transition-transform duration-300 group-hover:-translate-y-0.5" />
                     </div>
                     <h4 className="font-semibold text-sm text-foreground mb-1">Select Files / ZIP</h4>
@@ -755,7 +755,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
                       ref={folderInputRef}
                       onChange={handleFileChange}
                     />
-                    <div className="w-12 h-12 bg-primary/5 border border-primary/10 text-primary rounded-xl flex items-center justify-center mb-3 mx-auto transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_10%,transparent)]">
+                    <div className="w-12 h-12 bg-primary/5 border border-primary/10 text-primary rounded-xl flex items-center justify-center mb-3 mx-auto transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:ring-4 group-hover:ring-primary/15">
                       <FolderUp className="h-6 w-6 transition-transform duration-300 group-hover:translate-y-[-2px]" />
                     </div>
                     <h4 className="font-semibold text-sm text-foreground mb-1">Select Folder</h4>
