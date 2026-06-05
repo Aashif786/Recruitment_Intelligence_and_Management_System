@@ -1,7 +1,7 @@
 import os
 import io
 from jinja2.sandbox import SandboxedEnvironment as Environment
-from jinja2 import Template, select_autoescape
+from jinja2 import select_autoescape
 from xhtml2pdf import pisa
 from datetime import datetime
 from app.core.config import get_settings

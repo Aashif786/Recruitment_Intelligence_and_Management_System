@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-import os
-from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel
 from app.infrastructure.database import get_db
-from app.domain.models import User, Application, HiringDecision, Notification, Job, Interview, GlobalSettings
+from app.domain.models import User, Application, HiringDecision, Job, Interview, GlobalSettings
 from app.domain.schemas import HiringDecisionMake, HiringDecisionResponse
 from app.core.auth import get_current_user, get_current_hr
 from app.core.ownership import validate_hr_ownership

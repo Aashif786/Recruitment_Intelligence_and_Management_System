@@ -1,5 +1,5 @@
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List
 from datetime import datetime
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
