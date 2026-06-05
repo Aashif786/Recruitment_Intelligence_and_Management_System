@@ -419,13 +419,21 @@ function TooltipContent({ asChild = false, ...props }: TooltipContentProps) {
       lastPropsRef.current = props;
       setProps(props);
     }
+  }, [props, setProps]);
+
+  const currentTooltipRef = React.useRef(currentTooltip);
+  React.useEffect(() => {
+    currentTooltipRef.current = currentTooltip;
+  }, [currentTooltip]);
+
+  React.useEffect(() => {
     return () => {
       setProps({});
-      if (currentTooltip?.id === id) {
+      if (currentTooltipRef.current?.id === id) {
         hideImmediate();
       }
     };
-  }, [props, setProps, currentTooltip, id, hideImmediate]);
+  }, [id, hideImmediate, setProps]);
 
   React.useEffect(() => {
     setAsChild(asChild);

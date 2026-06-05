@@ -3,7 +3,7 @@ Repository API — manages reusable question sets for interview rounds.
 Each set belongs to a round_type (aptitude | technical | behavioural) and
 can be tagged with one or more job_roles for auto-matching.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional

@@ -103,81 +103,86 @@ export function UserNav() {
                     </Avatar>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64" align="end" sideOffset={8} forceMount>
-                <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1.5 p-1">
-                        <p className="text-sm font-semibold leading-none tracking-tight">{user?.full_name || 'User'}</p>
-                        <p className="text-xs leading-none text-muted-foreground/80 truncate">
+            <DropdownMenuContent className="w-64 rounded-2xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden" align="end" sideOffset={8} forceMount>
+                <DropdownMenuLabel className="font-normal p-0">
+                    <div className="flex flex-col space-y-0.5 p-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
+                        <p className="text-sm font-bold leading-none tracking-tight">{user?.full_name || 'User'}</p>
+                        <p className="text-xs leading-none text-muted-foreground/80 truncate pt-1">
                             {user?.email || 'user@example.com'}
                         </p>
                     </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator className="opacity-50" />
-                <DropdownMenuGroup>
-                    <DropdownMenuItem className="cursor-pointer py-2.5 focus:bg-accent/40" onClick={() => router.push('/dashboard/settings')}>
-                        <Settings className="mr-3 h-4 w-4 text-muted-foreground" />
+                <DropdownMenuSeparator className="opacity-50 my-1" />
+                <DropdownMenuGroup className="p-1">
+                    <DropdownMenuItem className="cursor-pointer py-2.5 rounded-xl focus:bg-primary/5 gap-2.5" onClick={() => router.push('/dashboard/settings')}>
+                        <Settings className="h-4 w-4 text-muted-foreground" />
                         <span>Settings</span>
                     </DropdownMenuItem>
                     {user?.role === 'super_admin' && (
-                        <DropdownMenuItem 
-                            className="cursor-pointer py-2.5 focus:bg-accent/40" 
+                        <DropdownMenuItem
+                            className="cursor-pointer py-2.5 rounded-xl focus:bg-primary/5 gap-2.5"
                             onClick={() => {
                                 setLogoUrl(settings?.company_logo_url || '')
                                 setIsLogoDialogOpen(true)
                             }}
                         >
-                            <ImageIcon className="mr-3 h-4 w-4 text-muted-foreground" />
+                            <ImageIcon className="h-4 w-4 text-muted-foreground" />
                             <span>Update Brand Logo</span>
                         </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem className="cursor-pointer py-2.5 focus:bg-accent/40" onClick={() => router.push('/dashboard/repository')}>
-                        <GitFork className="mr-3 h-4 w-4 text-muted-foreground" />
+                    <DropdownMenuItem className="cursor-pointer py-2.5 rounded-xl focus:bg-primary/5 gap-2.5" onClick={() => router.push('/dashboard/repository')}>
+                        <GitFork className="h-4 w-4 text-muted-foreground" />
                         <span>Repository</span>
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator className="opacity-50" />
-                <DropdownMenuItem 
-                    onClick={handleLogout} 
-                    className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer py-2.5"
+                <DropdownMenuSeparator className="opacity-50 my-1" />
+                <div className="p-1">
+                <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer py-2.5 rounded-xl gap-2.5"
                 >
-                    <LogOut className="mr-3 h-4 w-4" />
+                    <LogOut className="h-4 w-4" />
                     <span>Log out</span>
                 </DropdownMenuItem>
+                </div>
             </DropdownMenuContent>
 
             <Dialog open={isLogoDialogOpen} onOpenChange={setIsLogoDialogOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Update Brand Logo</DialogTitle>
-                        <DialogDescription>
-                            Provide a direct URL to your company logo (PNG, SVG, or JPG).
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
+                <DialogContent className="sm:max-w-md rounded-2xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden p-0">
+                    <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 p-6">
+                        <DialogHeader>
+                            <DialogTitle className="font-black">Update Brand Logo</DialogTitle>
+                            <DialogDescription className="text-muted-foreground">
+                                Provide a direct URL to your company logo (PNG, SVG, or JPG).
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
+                    <div className="space-y-4 p-6">
                         <div className="space-y-2">
-                            <Label htmlFor="logo-url">Logo URL</Label>
+                            <Label htmlFor="logo-url" className="font-semibold">Logo URL</Label>
                             <Input
                                 id="logo-url"
                                 placeholder="https://example.com/logo.png"
                                 value={logoUrl}
                                 onChange={(e) => setLogoUrl(e.target.value)}
+                                className="rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                             />
                         </div>
                         {logoUrl && (
-                            <div className="flex flex-col items-center gap-2 p-4 border rounded-lg bg-muted/20">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground">Preview</span>
-                                <img 
-                                    src={logoUrl} 
-                                    alt="Preview" 
+                            <div className="flex flex-col items-center gap-2 p-4 border border-border/50 rounded-xl bg-muted/20">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Preview</span>
+                                <img
+                                    src={logoUrl}
+                                    alt="Preview"
                                     className="h-16 w-auto object-contain"
                                     onError={(e) => (e.currentTarget.style.display = 'none')}
                                 />
                             </div>
                         )}
                     </div>
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setIsLogoDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleUpdateLogo} disabled={isUpdating}>
+                    <DialogFooter className="px-6 pb-6 gap-2">
+                        <Button variant="ghost" onClick={() => setIsLogoDialogOpen(false)} className="rounded-xl active:scale-95 transition-all">Cancel</Button>
+                        <Button onClick={handleUpdateLogo} disabled={isUpdating} className="rounded-xl active:scale-[0.98] transition-all font-bold">
                             {isUpdating ? "Updating..." : "Save Changes"}
                         </Button>
                     </DialogFooter>

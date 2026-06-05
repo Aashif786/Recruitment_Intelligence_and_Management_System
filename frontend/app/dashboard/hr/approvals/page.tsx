@@ -187,8 +187,8 @@ export default function ApprovalsPage() {
         </TabsList>
       </Tabs>
 
-      <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-        <CardHeader className="flex flex-row items-center justify-between">
+      <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+        <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
           <div>
             <CardTitle>{status.charAt(0).toUpperCase() + status.slice(1)} HR Users</CardTitle>
             <CardDescription>
@@ -201,7 +201,7 @@ export default function ApprovalsPage() {
             {userCount} {status}
           </Badge>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {error ? (
             <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
               Failed to load users. Please refresh the page.
@@ -212,8 +212,8 @@ export default function ApprovalsPage() {
             </div>
           ) : (
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="bg-muted/30 border-b border-border/40">
+                <TableRow className="hover:bg-transparent border-none">
                   <TableHead>ID</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Full Name</TableHead>
@@ -223,7 +223,7 @@ export default function ApprovalsPage() {
               </TableHeader>
               <TableBody>
                 {hrUsers.map((hrUser) => (
-                  <TableRow key={hrUser.id} className="hover:bg-muted/50 transition-colors">
+                  <TableRow key={hrUser.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300">
                     <TableCell>{hrUser.id}</TableCell>
                     <TableCell>
                       <Button 
@@ -298,7 +298,7 @@ export default function ApprovalsPage() {
       </Card>
 
       <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
-        <DialogContent className="max-w-md rounded-2xl">
+        <DialogContent className="max-w-md rounded-2xl border border-border bg-card/90 backdrop-blur-lg shadow-2xl p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Confirm Action</DialogTitle>
             <DialogDescription className="text-base">{confirmAction?.message}</DialogDescription>
@@ -312,7 +312,7 @@ export default function ApprovalsPage() {
 
       {/* Password Reset OTP Confirmation Dialog */}
       <Dialog open={!!otpConfirmUser} onOpenChange={() => setOtpConfirmUser(null)}>
-        <DialogContent className="max-w-md rounded-2xl border-primary/20 shadow-2xl">
+        <DialogContent className="max-w-md rounded-2xl border border-primary/20 bg-card/90 backdrop-blur-lg shadow-2xl p-6">
           <DialogHeader className="space-y-3">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
               <UserCheck className="h-6 w-6 text-primary" />

@@ -60,10 +60,18 @@ export default function DashboardLayout({
 
   if (!isMounted || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-500">
+          <div className="relative">
+            <div className="h-16 w-16 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-full bg-primary/10 animate-pulse" />
+            </div>
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-base font-bold text-foreground tracking-tight">Loading your workspace</p>
+            <p className="text-sm text-muted-foreground">Preparing everything for you...</p>
+          </div>
         </div>
       </div>
     )
@@ -78,18 +86,20 @@ export default function DashboardLayout({
 
   if (isOffline && !isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6 text-center">
-        <div className="max-w-md space-y-6">
-          <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto border border-destructive/20">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-destructive/5 p-6 text-center">
+        <div className="max-w-md space-y-6 animate-in fade-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto border border-destructive/20 shadow-[0_0_0_8px_rgba(239,68,68,0.05)]">
             <span className="text-4xl text-destructive font-black">!</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Connection Lost</h1>
-          <p className="text-muted-foreground leading-relaxed">
-            Unable to connect to the recruitment server. Please check your internet connection or verify the backend is running.
-          </p>
-          <button 
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black tracking-tight">Connection Lost</h1>
+            <p className="text-muted-foreground leading-relaxed">
+              Unable to connect to the recruitment server. Please check your internet connection or verify the backend is running.
+            </p>
+          </div>
+          <button
             onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:opacity-90 transition-all"
+            className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98] transition-all duration-200"
           >
             Retry Connection
           </button>

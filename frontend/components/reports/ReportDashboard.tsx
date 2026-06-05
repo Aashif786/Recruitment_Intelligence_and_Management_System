@@ -93,27 +93,31 @@ export const ReportDashboard = React.memo(function ReportDashboard({
     <div className="lg:col-span-3  flex-1 md:col-span-2 space-y-4 lg:h-[calc(100vh-8.5rem)] lg:max-h-[calc(100vh-8.5rem)] lg:overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
       {/* Compact Metrics Strip */}
       {!hideStats && (
-        <div className="animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-100 rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
-            <div className="rounded-md bg-muted/40 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Total Applied</p>
-              <p className="text-2xl font-bold leading-tight text-foreground">{metrics.totalApplied}</p>
+        <div className="animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-100 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] px-4 py-3">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+            <div className="rounded-xl bg-muted/40 border border-border/40 px-3 py-2 hover:bg-muted/60 transition-colors">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Total Applied</p>
+              <p className="text-2xl font-black leading-tight text-foreground tabular-nums">{metrics.totalApplied}</p>
             </div>
-            <div className="rounded-md bg-muted/40 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Total Reports</p>
-              <p className="text-2xl font-bold leading-tight text-foreground">{metrics.total}</p>
+            <div className="rounded-xl bg-muted/40 border border-border/40 px-3 py-2 hover:bg-muted/60 transition-colors">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Total Finished</p>
+              <p className="text-2xl font-black leading-tight text-foreground tabular-nums">{metrics.totalFinished}</p>
             </div>
-            <div className="rounded-md bg-muted/40 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Avg Score</p>
-              <p className="text-2xl font-bold leading-tight text-foreground">{metrics.avgScore}</p>
+            <div className="rounded-xl bg-muted/40 border border-border/40 px-3 py-2 hover:bg-muted/60 transition-colors">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Total Reports</p>
+              <p className="text-2xl font-black leading-tight text-foreground tabular-nums">{metrics.total}</p>
             </div>
-            <div className="rounded-md bg-muted/40 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Avg Questions</p>
-              <p className="text-2xl font-bold leading-tight text-foreground">{metrics.avgQuestions}</p>
+            <div className="rounded-xl bg-primary/5 border border-primary/15 px-3 py-2 hover:bg-primary/10 transition-colors">
+              <p className="text-[10px] uppercase tracking-widest text-primary/70 font-bold">Avg Score</p>
+              <p className="text-2xl font-black leading-tight text-primary tabular-nums">{metrics.avgScore}</p>
             </div>
-            <div className="rounded-md bg-muted/40 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Selection Rate</p>
-              <p className="text-2xl font-bold leading-tight text-foreground">{metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%</p>
+            <div className="rounded-xl bg-muted/40 border border-border/40 px-3 py-2 hover:bg-muted/60 transition-colors">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Avg Questions</p>
+              <p className="text-2xl font-black leading-tight text-foreground tabular-nums">{metrics.avgQuestions}</p>
+            </div>
+            <div className="rounded-xl bg-emerald-500/5 border border-emerald-500/15 px-3 py-2 hover:bg-emerald-500/10 transition-colors">
+              <p className="text-[10px] uppercase tracking-widest text-emerald-600/70 dark:text-emerald-400/70 font-bold">Selection Rate</p>
+              <p className="text-2xl font-black leading-tight text-emerald-600 dark:text-emerald-400 tabular-nums">{metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%</p>
             </div>
           </div>
         </div>
@@ -189,26 +193,26 @@ export const ReportDashboard = React.memo(function ReportDashboard({
 
       {/* Status Stats */}
       {!hideStats && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
-          <div className="bg-card p-4 rounded-lg border border-l-4 border-l-emerald-500 shadow-sm">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">High Performers (&gt; 6)</p>
-            <div className="text-emerald-500 font-bold text-2xl">{metrics.selected}</div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
+          <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/60 border-l-[3px] border-l-emerald-500 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">High Performers (&gt; 6)</p>
+            <div className="text-emerald-500 font-black text-2xl tabular-nums">{metrics.selected}</div>
           </div>
-          <div className="bg-card p-4 rounded-lg border border-l-4 border-l-amber-500 shadow-sm">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Average Performers (4-6)</p>
-            <div className="text-amber-500 font-bold text-2xl">{metrics.hold}</div>
+          <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/60 border-l-[3px] border-l-amber-500 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Average (4-6)</p>
+            <div className="text-amber-500 font-black text-2xl tabular-nums">{metrics.hold}</div>
           </div>
-          <div className="bg-card p-4 rounded-lg border border-l-4 border-l-red-500 shadow-sm">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Low Performers (&lt; 4)</p>
-            <div className="text-red-500 font-bold text-2xl">{metrics.rejected}</div>
+          <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/60 border-l-[3px] border-l-red-500 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Low Performers (&lt; 4)</p>
+            <div className="text-red-500 font-black text-2xl tabular-nums">{metrics.rejected}</div>
           </div>
-          <div className="bg-card p-4 rounded-lg border border-l-4 border-l-border shadow-sm">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Terminated</p>
-            <div className="text-muted-foreground font-bold text-2xl">{metrics.terminated}</div>
+          <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/60 border-l-[3px] border-l-slate-400 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Terminated</p>
+            <div className="text-muted-foreground font-black text-2xl tabular-nums">{metrics.terminated}</div>
           </div>
-          <div className="bg-card p-4 rounded-lg border border-l-4 border-l-orange-500 shadow-sm">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Incomplete</p>
-            <div className="text-orange-500 font-bold text-2xl">{metrics.incomplete}</div>
+          <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/60 border-l-[3px] border-l-orange-500 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Incomplete</p>
+            <div className="text-orange-500 font-black text-2xl tabular-nums">{metrics.incomplete}</div>
           </div>
         </div>
       )}
@@ -292,7 +296,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
         </TabsContent>
 
         <TabsContent value="table" className="animate-in fade-in zoom-in-95 duration-300">
-          <Card>
+          <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] rounded-2xl overflow-hidden">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>

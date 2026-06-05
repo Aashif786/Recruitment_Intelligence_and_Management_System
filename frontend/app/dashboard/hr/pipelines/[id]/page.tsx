@@ -36,10 +36,10 @@ export default function PipelinePage() {
                         icon={GitBranch}
                     />
 
-                    <div className="inline-flex items-center rounded-xl border border-border/60 bg-muted/30 p-1">
+                    <div className="inline-flex items-center rounded-xl border border-border/80 bg-muted/20 backdrop-blur-md p-1 shadow-sm">
                         <Button
                             size="sm"
-                            className="rounded-lg h-8 px-3"
+                            className="rounded-lg h-8 px-3 active:scale-[0.98] transition-all duration-200"
                         >
                             <Users className="h-4 w-4 mr-1.5" />
                             Pipeline View
@@ -48,7 +48,7 @@ export default function PipelinePage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => router.push(`/dashboard/hr/ranking/${jobId}`)}
-                            className="rounded-lg h-8 px-3 text-muted-foreground"
+                            className="rounded-lg h-8 px-3 text-muted-foreground active:scale-[0.98] hover:text-foreground transition-all duration-200"
                         >
                             <Trophy className="h-4 w-4 mr-1.5" />
                             Candidate Ranking

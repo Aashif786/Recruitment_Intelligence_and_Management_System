@@ -31,33 +31,33 @@ import { toast } from "sonner"
 // ─── FSM Button Config ──────────────────────────────────────────────────
 const FSM_BUTTONS: Record<string, { action: string; label: string; icon: React.ReactNode; className: string }[]> = {
     applied: [
-        { action: "mark_screened", label: "MARK AS SCREENED", icon: <CheckCircle2 className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg" },
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg" },
+        { action: "mark_screened", label: "MARK AS SCREENED", icon: <CheckCircle2 className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
     ],
     screened: [
-        { action: "approve_for_interview", label: "APPROVE FOR INTERVIEW", icon: <CheckCircle2 className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg" },
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg" },
+        { action: "approve_for_interview", label: "APPROVE FOR INTERVIEW", icon: <CheckCircle2 className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
     ],
     interview_scheduled: [
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg" },
+        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
     ],
     interview_completed: [
-        { action: "hire", label: "HIRE CANDIDATE", icon: <Star className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg" },
-        { action: "call_for_interview", label: "CALL FOR INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg" },
-        { action: "review_later", label: "REVIEW LATER", icon: <Clock className="h-4 w-4" />, className: "bg-amber-500 hover:bg-amber-600 text-white shadow-lg" },
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg" },
+        { action: "hire", label: "HIRE CANDIDATE", icon: <Star className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "call_for_interview", label: "CALL FOR INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "review_later", label: "REVIEW LATER", icon: <Clock className="h-4 w-4" />, className: "bg-amber-500 hover:bg-amber-600 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
     ],
     review_later: [
-        { action: "call_for_interview", label: "CALL FOR INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg" },
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg" },
+        { action: "call_for_interview", label: "CALL FOR INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
     ],
     physical_interview: [
-        { action: "hire", label: "HIRE CANDIDATE", icon: <Star className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg" },
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg" },
+        { action: "hire", label: "HIRE CANDIDATE", icon: <Star className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
     ],
     hired: [],
     accepted: [
-        { action: "onboard", label: "FINALIZE JOINING", icon: <UserPlus className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg" },
+        { action: "onboard", label: "FINALIZE JOINING", icon: <UserPlus className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
     ],
 }
 
@@ -317,7 +317,7 @@ export default function HRApplicationDetailPage() {
     return (
         <div className=" space-y-5 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* ─── Candidate Info Card ───────────────────────────────── */}
-            <Card className=" border shadow-md bg-gradient-to-br from-card to-muted/20 relative overflow-hidden">
+            <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] bg-gradient-to-br from-card to-muted/20 relative overflow-hidden transition-all duration-300">
                 <div className="absolute top-4 right-4 z-10 md:top-6 md:right-6">
                     <Badge className={`px-4 py-1.5 text-xs font-bold uppercase border shadow-sm whitespace-nowrap ${statusInfo.color}`}>
                         {statusInfo.label}
@@ -338,14 +338,20 @@ export default function HRApplicationDetailPage() {
 
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative pr-12 md:pr-0">
                         {application.photo_url ? (
-                            <img
-                                src={application.photo_url}
-                                alt={application.candidate_name}
-                                className="w-24 h-24 rounded-2xl object-cover border-4 border-card shadow-xl ring-1 ring-border"
-                            />
+                            <div className="relative group shrink-0">
+                                <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-md -z-10 group-hover:bg-primary/20 transition-all" />
+                                <img
+                                    src={application.photo_url}
+                                    alt={application.candidate_name}
+                                    className="w-24 h-24 rounded-2xl object-cover border-4 border-card shadow-xl ring-1 ring-border"
+                                />
+                            </div>
                         ) : (
-                            <div className="w-24 h-24 rounded-2xl bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-inner">
-                                <span className="text-3xl font-bold text-primary">{application.candidate_name?.[0]}</span>
+                            <div className="relative group shrink-0">
+                                <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-md -z-10 group-hover:bg-primary/20 transition-all" />
+                                <div className="w-24 h-24 rounded-2xl bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-inner">
+                                    <span className="text-3xl font-bold text-primary">{application.candidate_name?.[0]}</span>
+                                </div>
                             </div>
                         )}
                         <div className="text-center md:text-left space-y-1">
@@ -369,8 +375,8 @@ export default function HRApplicationDetailPage() {
                 <div className="xl:col-span-2 space-y-6">
                     <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6">
                         {/* ─── AI Resume Analysis ─── */}
-                        <Card className="border shadow-sm h-full flex flex-col">
-                            <CardHeader>
+                        <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 h-full flex flex-col">
+                            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
                                 <CardTitle className="text-lg flex flex-wrap items-center gap-2 font-bold text-foreground">
                                     <FileText className="h-5 w-5 text-primary" />
                                     AI Resume Analysis
@@ -492,7 +498,7 @@ export default function HRApplicationDetailPage() {
                                                                 View More <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                                                             </Button>
                                                         </DialogTrigger>
-                                                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw]">
+                                                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] bg-card/90 backdrop-blur-lg border border-border/80 shadow-2xl rounded-2xl">
                                                             <DialogHeader>
                                                                 <DialogTitle className="flex items-center gap-2 text-xl font-bold">
                                                                     <FileText className="h-5 w-5 text-primary" />
@@ -583,8 +589,8 @@ export default function HRApplicationDetailPage() {
                         </Card>
 
                         {/* ─── Interview Report ─── */}
-                        <Card className="border shadow-sm h-full flex flex-col">
-                            <CardHeader>
+                        <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 h-full flex flex-col">
+                            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
                                 <CardTitle className="text-lg flex items-center gap-2 font-bold text-foreground">
                                     <Star className="h-5 w-5 text-amber-500" />
                                     Interview Report
@@ -691,9 +697,8 @@ export default function HRApplicationDetailPage() {
                 {/* ─── Sidebar (Right) ─── */}
                 <div className="space-y-6">
                     {!isTerminal && buttons.length > 0 && (
-                        <Card className="border shadow-lg bg-card overflow-hidden">
-                            <div className="h-1.5 bg-primary w-full" />
-                            <CardHeader>
+                        <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden">
+                            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
                                 <CardTitle className="text-lg font-bold">Pipeline Actions</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
@@ -734,16 +739,15 @@ export default function HRApplicationDetailPage() {
                     )}
 
                     {/* ─── HR Notes ─── */}
-                    <Card className="border shadow-sm overflow-hidden">
-                        <div className="h-1 bg-amber-400 w-full" />
-                        <CardHeader className="flex flex-row items-center justify-between">
+                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden">
+                        <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-b border-border/40 pb-4">
                             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">HR Notes</CardTitle>
-                            {!isEditingNotes && <Button variant="ghost" size="sm" onClick={() => setIsEditingNotes(true)}><Edit2 className="h-4 w-4" /></Button>}
+                            {!isEditingNotes && <Button variant="ghost" size="sm" className="active:scale-[0.98]" onClick={() => setIsEditingNotes(true)}><Edit2 className="h-4 w-4" /></Button>}
                         </CardHeader>
                         <CardContent>
                             {isEditingNotes ? (
                                 <div className="space-y-3">
-                                    <Textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} placeholder="Add notes..." className="min-h-[120px] rounded-xl" />
+                                    <Textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} placeholder="Add notes..." className="min-h-[120px] bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200" />
                                     <div className="flex justify-end gap-2">
                                         <Button size="sm" variant="ghost" onClick={() => { setIsEditingNotes(false); setNotesDraft(application.hr_notes || "") }}>Cancel</Button>
                                         <Button size="sm" onClick={handleSaveNotes} className="bg-amber-500 hover:bg-amber-600 text-white">Save</Button>

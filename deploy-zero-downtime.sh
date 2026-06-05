@@ -15,10 +15,13 @@ if [ -d ~/.ssh ]; then
     chmod 644 ~/.ssh/*.pub 2>/dev/null || true
 fi
 
-# 0. Pull latest changes from GitHub
+# 0. Pull latest changes from GitHub (optional/fallback in case script is run manually)
 echo "📥 Syncing code from GitHub..."
-git fetch origin
-git reset --hard origin/main
+if git fetch origin 2>/dev/null; then
+    git reset --hard origin/main || true
+else
+    echo "⚠️ Warning: Git sync failed. Proceeding with existing code state."
+fi
 
 # 0.5 Ensure INTERVIEW_JWT_SECRET and ENCRYPTION_KEY exist in backend/.env
 echo "🔧 Checking environment variables..."
@@ -116,9 +119,19 @@ echo "⏳ Ensuring nginx container is running before reload..."
 NGINX_RETRIES=12
 NGINX_COUNT=0
 NGINX_STATUS="restarting"
+
+# Dynamically find the Nginx container name to handle prefixes/suffixes correctly
+NGINX_CONTAINER_NAME=$(docker ps --format '{{.Names}}' -f "name=nginx" | head -n 1)
+if [ -z "$NGINX_CONTAINER_NAME" ]; then
+    echo "⚠️ Warning: Could not find container for nginx. Defaulting to rims-nginx-1"
+    NGINX_CONTAINER_NAME="rims-nginx-1"
+fi
+
+echo "Watching nginx container: $NGINX_CONTAINER_NAME"
+
 while [ "$NGINX_STATUS" != "running" ] && [ $NGINX_COUNT -lt $NGINX_RETRIES ]; do
     sleep 5
-    NGINX_STATUS=$(docker inspect --format='{{.State.Status}}' rims-nginx-1 2>/dev/null || echo "unknown")
+    NGINX_STATUS=$(docker inspect --format='{{.State.Status}}' $NGINX_CONTAINER_NAME 2>/dev/null || echo "unknown")
     echo "Nginx status: $NGINX_STATUS ($((NGINX_COUNT * 5))s / 60s)"
     NGINX_COUNT=$((NGINX_COUNT + 1))
 done
@@ -127,6 +140,8 @@ if [ "$NGINX_STATUS" != "running" ]; then
     echo "⚠️ Nginx is not running (status: $NGINX_STATUS). Attempting to start it..."
     docker compose -f docker-compose.prod.yml up -d nginx
     sleep 10
+    # Re-evaluate status after attempting to start
+    NGINX_STATUS=$(docker inspect --format='{{.State.Status}}' $NGINX_CONTAINER_NAME 2>/dev/null || echo "unknown")
 fi
 
 # Restart nginx to ensure Docker propagates the bind-mounted nginx.conf file changes and picks up the new upstream

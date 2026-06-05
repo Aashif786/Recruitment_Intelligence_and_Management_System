@@ -56,23 +56,30 @@ function InterviewAccessForm() {
   }, [e, k])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
-        <Card className="max-w-md w-full shadow-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl">
-            <CardHeader className="text-center">
-                <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-200">Interview Access</CardTitle>
-                <CardDescription>Enter your email and access key to begin.</CardDescription>
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Subtle background decoration */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+           <div className="absolute top-[-10%] right-[-10%] w-[350px] h-[350px] bg-primary/8 rounded-full blur-[120px] animate-pulse duration-[8s]" />
+           <div className="absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] bg-accent/8 rounded-full blur-[100px] animate-pulse duration-[8s] delay-1000" />
+        </div>
+
+        <Card className="max-w-md w-full bg-card/65 backdrop-blur-xl border border-border/80 shadow-[0_8px_40px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden relative z-10">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-accent" />
+            <CardHeader className="text-center pt-8 pb-4">
+                <CardTitle className="text-3xl font-black text-foreground tracking-tight">Interview Access</CardTitle>
+                <CardDescription className="text-sm font-semibold text-muted-foreground mt-1">Enter your credentials to enter the assessment room.</CardDescription>
             </CardHeader>
             <CardContent>
                 {(e || k) && (
-                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300 mb-4 flex items-start gap-2 animate-in fade-in duration-300">
+                  <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-4 text-xs text-amber-800 dark:text-amber-300 mb-4 flex items-start gap-2 animate-in fade-in duration-300">
                     <span className="text-sm">⚠️</span>
-                    <span><strong>Security Notice:</strong> Please do not share this access link. It contains a unique key meant solely for your interview session.</span>
+                    <span className="font-semibold leading-relaxed"><strong>Security Notice:</strong> Please do not share this access link. It contains a unique key meant solely for your interview session.</span>
                   </div>
                 )}
                 <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
-                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                    {error && <p className="text-red-500 text-sm text-center font-bold">{error}</p>}
                     <div className="space-y-1">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Email</Label>
                         <Input
                             id="email"
                             type="email"
@@ -81,10 +88,11 @@ function InterviewAccessForm() {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                             disabled={loading}
+                            className="h-12 bg-muted/40 focus:bg-background/80 border-border/80 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary rounded-xl transition-all"
                         />
                     </div>
                     <div className="space-y-1">
-                        <Label htmlFor="key">Access Key</Label>
+                        <Label htmlFor="key" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Access Key</Label>
                         <Input
                             id="key"
                             type="text"
@@ -93,9 +101,10 @@ function InterviewAccessForm() {
                             onChange={(e) => setAccessKey(e.target.value.trim())}
                             required
                             disabled={loading}
+                            className="h-12 bg-muted/40 focus:bg-background/80 border-border/80 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary rounded-xl transition-all"
                         />
                     </div>
-                    <Button type="submit" className="w-full" disabled={loading || !email || !accessKey}>
+                    <Button type="submit" className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/95 text-primary-foreground active:scale-[0.98] hover:shadow-lg hover:shadow-primary/20 transition-all duration-200 cursor-pointer" disabled={loading || !email || !accessKey}>
                         {loading ? 'Verifying...' : 'Enter Interview'}
                     </Button>
                 </form>

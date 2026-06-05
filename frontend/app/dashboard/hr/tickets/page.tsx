@@ -254,7 +254,7 @@ export default function HRTicketsPage() {
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
             ) : (filter !== 'feedback' && tickets.length === 0) || (filter === 'feedback' && feedbacks.length === 0) ? (
-                <Card className="border-dashed py-20 bg-card/50">
+                <Card className="bg-card/45 backdrop-blur-md border border-dashed border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] py-20 rounded-2xl">
                     <CardContent className="flex flex-col items-center justify-center text-center space-y-4">
                         <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
                             <CheckCircle2 className="h-8 w-8 text-primary" />
@@ -266,9 +266,9 @@ export default function HRTicketsPage() {
                     </CardContent>
                 </Card>
             ) : filter === 'feedback' ? (
-                <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                <div className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
                     {/* List Header */}
-                    <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-muted/50 border-b border-border text-xs uppercase tracking-widest font-black text-muted-foreground">
+                    <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-muted/30 border-b border-border/40 text-xs uppercase tracking-widest font-black text-muted-foreground">
                         <div className="col-span-2">Rating</div>
                         <div className="col-span-3">Candidate</div>
                         <div className="col-span-3">Position</div>
@@ -281,7 +281,7 @@ export default function HRTicketsPage() {
                                 <TooltipTrigger asChild>
                                     <div 
                                         onClick={() => setSelectedFeedback(fb)}
-                                        className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-muted/30 transition-colors group cursor-pointer relative"
+                                        className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 cursor-pointer group relative"
                                     >
                                         <div className="col-span-2 flex gap-0.5">
                                             {[1, 2, 3, 4, 5].map(star => (
@@ -313,9 +313,9 @@ export default function HRTicketsPage() {
                     </div>
                 </div>
             ) : (
-                <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                <div className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
                     {/* List Header */}
-                    <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-muted/50 border-b border-border text-xs uppercase tracking-widest font-black text-muted-foreground">
+                    <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-muted/30 border-b border-border/40 text-xs uppercase tracking-widest font-black text-muted-foreground">
                         <div className="col-span-1 text-center">#</div>
                         <div className="col-span-2">Type</div>
                         <div className="col-span-3">Candidate</div>
@@ -328,7 +328,7 @@ export default function HRTicketsPage() {
                             <div
                                 key={ticket.id}
                                 onClick={() => { setSelectedTicket(ticket); setHrResponse(ticket.hr_response || '') }}
-                                className="flex flex-col md:grid md:grid-cols-12 gap-4 px-4 py-4 items-start md:items-center hover:bg-muted/30 transition-all cursor-pointer group w-full"
+                                className="flex flex-col md:grid md:grid-cols-12 gap-4 px-4 py-4 items-start md:items-center hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 cursor-pointer group w-full"
                             >
                                 <div className="hidden md:flex col-span-1 justify-center text-sm font-bold text-muted-foreground">
                                     {ticket.id}
@@ -428,14 +428,13 @@ export default function HRTicketsPage() {
                 </div>
             )}
 
-            {/* Resolution Dialog */}
             <Dialog open={!!selectedTicket} onOpenChange={(open) => {
                 if (!open) {
                     setSelectedTicket(null)
                     setHrResponse('')
                 }
             }}>
-                <DialogContent className="max-w-5xl w-[95vw] sm:w-[90vw] bg-card border-border shadow-2xl p-0 overflow-hidden">
+                <DialogContent className="max-w-5xl w-[95vw] sm:w-[90vw] bg-card/90 backdrop-blur-lg border border-border/80 shadow-2xl p-0 overflow-hidden rounded-2xl">
                     <DialogHeader className="p-6 pb-0">
                         <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-2">
                             Ticket Details
@@ -628,7 +627,7 @@ export default function HRTicketsPage() {
             </Dialog>
             {/* Feedback Details Dialog */}
             <Dialog open={!!selectedFeedback} onOpenChange={(open) => !open && setSelectedFeedback(null)}>
-                <DialogContent className="max-w-xl bg-card border-border shadow-2xl p-0 overflow-hidden">
+                <DialogContent className="max-w-xl bg-card/90 backdrop-blur-lg border border-border/80 shadow-2xl p-0 overflow-hidden rounded-2xl">
                     <DialogHeader className="p-6 pb-2">
                         <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-2">
                             Candidate Feedback

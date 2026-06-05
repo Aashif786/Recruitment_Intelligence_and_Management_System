@@ -120,7 +120,7 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
 
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
-        <div className="absolute top-16 left-0 w-full bg-background border-b border-border md:hidden animate-in slide-in-from-top duration-300">
+        <div className="absolute top-16 left-0 w-full bg-background/95 backdrop-blur-xl border-b border-border md:hidden animate-in slide-in-from-top-2 fade-in duration-200 shadow-xl z-50">
           <NavContent />
         </div>
       )}

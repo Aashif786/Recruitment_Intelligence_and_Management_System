@@ -113,27 +113,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return (
         <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border bg-sidebar/90 backdrop-blur-2xl text-sidebar-foreground shadow-[2px_0_20px_-4px_rgba(0,0,0,0.12)] transition-colors duration-300">
             <SidebarHeader className="border-b border-sidebar-border/60 px-4 py-5">
-                <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center">
-                    {/* User Profile Info */}
-                    <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:hidden">
-                        <Avatar className="h-10 w-10 border-2 border-sidebar-primary/30 shadow-sm ring-2 ring-sidebar-primary/20 ring-offset-1 ring-offset-sidebar">
-                            <AvatarImage
+                <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center gap-2">
+                    {/* Brand Identity */}
+                    <div className="flex items-center gap-2.5 overflow-hidden group-data-[collapsible=icon]:hidden">
+                        <div className="bg-sidebar-primary/10 p-1.5 rounded-lg border border-sidebar-primary/20 shrink-0">
+                            <img
                                 src={companyLogo || '/calrims/logo.png'}
-                                alt={user?.full_name || 'Company logo'}
-                                className="bg-background object-contain p-0.5"
+                                alt="Company logo"
+                                className="h-6 w-auto object-contain max-w-[80px]"
                             />
-                            <AvatarFallback className="bg-gradient-to-br from-primary via-primary/80 to-accent text-primary-foreground font-black text-sm">
-                                {initials}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col gap-0.5">
-                            <span className="font-bold text-sm text-sidebar-foreground truncate max-w-[120px] leading-tight">
-                                {user?.full_name}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground/70 truncate max-w-[120px] uppercase tracking-wider font-medium">
-                                HR Manager
-                            </span>
                         </div>
+                        <span className="font-extrabold text-xs tracking-tight text-sidebar-foreground truncate uppercase border-l border-sidebar-border/60 pl-2 leading-none">
+                            {branding.companyName || 'RIMS'}
+                        </span>
+                    </div>
+
+                    {/* Collapsed Brand Icon */}
+                    <div className="hidden group-data-[collapsible=icon]:flex bg-sidebar-primary/10 p-1.5 rounded-lg border border-sidebar-primary/20 hover:scale-105 transition-transform" onClick={toggleSidebar}>
+                        <img
+                            src={companyLogo || '/calrims/logo.png'}
+                            alt="Logo"
+                            className="h-5 w-5 object-contain"
+                        />
                     </div>
 
                     {/* Collapse Button - hidden in mobile, shown in desktop */}
@@ -141,7 +142,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         variant="ghost"
                         size="icon"
                         onClick={toggleSidebar}
-                        className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl transition-all duration-200 group-data-[collapsible=icon]:rotate-180"
+                        className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl transition-all duration-200 group-data-[collapsible=icon]:rotate-180 group-data-[collapsible=icon]:hidden"
                     >
                         <PanelLeft className="h-4 w-4" />
                     </Button>
@@ -171,11 +172,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 >
                                     <Link href={link.href} prefetch={false} className="flex items-center justify-between w-full">
                                         {isActive && (
-                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-gradient-to-b from-primary to-primary/60 rounded-r-full z-20 shadow-[2px_0_8px_color-mix(in_oklab,var(--primary)_40%,transparent)]" />
+                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-gradient-to-b from-primary to-primary/60 rounded-r-full z-20 shadow-[2px_0_8px_color-mix(in_oklab,var(--primary)_40%,transparent)] animate-in fade-in slide-in-from-left-1 duration-300" />
                                         )}
                                         <div className="flex items-center gap-3">
                                             <Icon className={cn(
-                                                "h-5 w-5 shrink-0 transition-colors",
+                                                "h-5 w-5 shrink-0 transition-all duration-200 group-hover/item:scale-110 group-hover/item:rotate-[4deg]",
                                                 isActive ? "text-primary" : "text-muted-foreground group-hover/item:text-sidebar-foreground"
                                             )} />
                                             <span className={cn(
@@ -188,7 +189,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                         {link.label === 'Applications' && pendingCount > 0 && (
                                             <Badge
                                                 variant="secondary"
-                                                className="ml-auto h-5 min-w-5 flex items-center justify-center rounded-full px-1 text-[10px] font-bold bg-primary text-primary-foreground group-data-[collapsible=icon]:hidden"
+                                                className="ml-auto h-5 min-w-5 flex items-center justify-center rounded-full px-1 text-[10px] font-bold bg-primary text-primary-foreground group-data-[collapsible=icon]:hidden animate-pulse shadow-sm shadow-primary/25"
                                             >
                                                 {pendingCount}
                                             </Badge>
@@ -209,21 +210,49 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenu>
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-sidebar-border/60 p-4">
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton
-                            onClick={logout}
-                            tooltip="Sign Out"
-                            className="flex-1 gap-3 rounded-xl text-muted-foreground/70 hover:bg-gradient-to-r hover:from-destructive/10 hover:to-destructive/5 hover:text-destructive transition-all duration-200 border border-transparent hover:border-destructive/10"
-                        >
-                            <LogOut className="h-4 w-4 shrink-0" />
-                            <span className="group-data-[collapsible=icon]:hidden font-medium">
-                                Sign Out
+            <SidebarFooter className="border-t border-sidebar-border/60 p-3 bg-gradient-to-t from-sidebar-accent/10 to-transparent">
+                <div className="flex items-center justify-between gap-3 overflow-hidden group-data-[collapsible=icon]:justify-center w-full">
+                    {/* User Info (Visible when expanded) */}
+                    <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:hidden flex-1">
+                        <Avatar className="h-9 w-9 border-2 border-primary/20 shadow-sm ring-2 ring-primary/5 hover:ring-primary/20 hover:scale-105 transition-all duration-200 cursor-pointer">
+                            <AvatarFallback className="bg-gradient-to-br from-primary via-primary/80 to-accent text-primary-foreground font-black text-xs">
+                                {initials}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col overflow-hidden min-w-0">
+                            <span className="font-bold text-xs text-sidebar-foreground truncate leading-tight">
+                                {user?.full_name}
                             </span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+                            <span className="text-[10px] text-primary/60 truncate uppercase tracking-wider font-bold mt-0.5">
+                                {user?.role === 'hr' ? 'HR Manager' : user?.role === 'super_admin' ? 'Super Admin' : 'User'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Collapsed Avatar / Sign Out trigger */}
+                    <div className="hidden group-data-[collapsible=icon]:flex">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={logout}
+                            title="Sign Out"
+                            className="h-9 w-9 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all active:scale-95 duration-200"
+                        >
+                            <LogOut className="h-4 w-4" />
+                        </Button>
+                    </div>
+
+                    {/* Sign Out Button (Visible when expanded) */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={logout}
+                        title="Sign Out"
+                        className="h-8 w-8 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all active:scale-95 duration-200 group-data-[collapsible=icon]:hidden shrink-0"
+                    >
+                        <LogOut className="h-4 w-4" />
+                    </Button>
+                </div>
             </SidebarFooter>
 
             <SidebarRail />

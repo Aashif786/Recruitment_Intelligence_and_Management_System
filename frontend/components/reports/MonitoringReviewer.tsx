@@ -76,6 +76,17 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
     return events.filter((ev) => ['focus_lost', 'multiple_faces', 'no_face'].includes(ev.event_type)).length
   }, [events])
 
+  const counts = useMemo(() => {
+    const res = { focus_lost: 0, multiple_faces: 0, no_face: 0, normal: 0 }
+    if (!Array.isArray(events)) return res
+    for (const ev of events) {
+      if (ev.event_type in res) {
+        res[ev.event_type as keyof typeof res]++
+      }
+    }
+    return res
+  }, [events])
+
   const formatTimeOffset = (videoRef?: string, timestamp?: string) => {
     if (videoRef && videoRef.startsWith('offset_')) {
       const sec = parseInt(videoRef.replace('offset_', '').replace('s', ''), 10)
@@ -122,7 +133,10 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
   }
 
   const getEventColorStyle = (type: MonitoringEvent['event_type']) => {
-    if (['focus_lost', 'multiple_faces', 'no_face'].includes(type)) {
+    if (type === 'focus_lost') {
+      return 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/10 shadow-amber-500/10 hover:border-amber-600'
+    }
+    if (['multiple_faces', 'no_face'].includes(type)) {
       return 'border-red-500 bg-red-50/50 dark:bg-red-950/10 shadow-red-500/10 hover:border-red-600'
     }
     return 'border-green-500 bg-green-50/50 dark:bg-green-950/10 shadow-green-500/10 hover:border-green-600'
@@ -176,9 +190,9 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-muted border border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-card/70 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08)]">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/20">
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div>
@@ -189,7 +203,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
                   {warningCount} Anomalies
                 </Badge>
               ) : (
-                <Badge className="bg-chart-4 text-white font-bold px-2 py-0.5 text-xs">
+                <Badge className="bg-emerald-500 text-white font-bold px-2 py-0.5 text-xs">
                   100% Secure
                 </Badge>
               )}
@@ -205,7 +219,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
             variant={filter === 'all' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('all')}
-            className="rounded-xl text-xs font-bold"
+            className="rounded-xl text-xs font-bold active:scale-95 transition-all"
           >
             All Frames ({events.length})
           </Button>
@@ -213,7 +227,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
             variant={filter === 'warnings' ? 'destructive' : 'outline'}
             size="sm"
             onClick={() => setFilter('warnings')}
-            className="rounded-xl text-xs font-bold gap-1"
+            className="rounded-xl text-xs font-bold gap-1 active:scale-95 transition-all"
           >
             <AlertCircle className="w-3.5 h-3.5" /> Anomalies ({warningCount})
           </Button>
@@ -221,33 +235,33 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
             variant={filter === 'focus_lost' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('focus_lost')}
-            className="rounded-xl text-xs font-bold"
+            className="rounded-xl text-xs font-bold active:scale-95 transition-all"
           >
-            Focus Away
+            Focus Away ({counts.focus_lost})
           </Button>
           <Button
             variant={filter === 'multiple_faces' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('multiple_faces')}
-            className="rounded-xl text-xs font-bold"
+            className="rounded-xl text-xs font-bold active:scale-95 transition-all"
           >
-            Multiple People
+            Multiple People ({counts.multiple_faces})
           </Button>
           <Button
             variant={filter === 'no_face' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('no_face')}
-            className="rounded-xl text-xs font-bold"
+            className="rounded-xl text-xs font-bold active:scale-95 transition-all"
           >
-            No Face
+            No Face ({counts.no_face})
           </Button>
           <Button
             variant={filter === 'normal' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('normal')}
-            className="rounded-xl text-xs font-bold"
+            className="rounded-xl text-xs font-bold active:scale-95 transition-all"
           >
-            Secure
+            Secure ({counts.normal})
           </Button>
         </div>
       </div>
@@ -310,26 +324,28 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
       </ScrollArea>
 
       <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-        <DialogContent className="max-w-5xl rounded-3xl p-6 bg-background border border-border shadow-2xl">
-          <DialogHeader>
-            <div className="flex items-center justify-between pr-8 mb-2">
-              <div className="flex items-center gap-3">
-                {selectedEvent && getEventBadge(selectedEvent.event_type)}
-                <DialogTitle className="text-xl font-black text-foreground">
-                  Frame Audit Inspection
-                </DialogTitle>
+        <DialogContent className="max-w-5xl rounded-3xl p-0 bg-card/95 backdrop-blur-xl border border-border/80 shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 p-6">
+            <DialogHeader>
+              <div className="flex items-center justify-between pr-8">
+                <div className="flex items-center gap-3">
+                  {selectedEvent && getEventBadge(selectedEvent.event_type)}
+                  <DialogTitle className="text-xl font-black text-foreground">
+                    Frame Audit Inspection
+                  </DialogTitle>
+                </div>
+                <span className="flex items-center gap-1.5 text-sm font-black text-primary bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20">
+                  <Clock className="w-4 h-4" />
+                  {selectedEvent && formatTimeOffset(selectedEvent.video_reference, selectedEvent.timestamp)}
+                </span>
               </div>
-              <span className="flex items-center gap-1.5 text-sm font-black text-primary bg-primary/10 px-3 py-1.5 rounded-xl">
-                <Clock className="w-4 h-4" />
-                {selectedEvent && formatTimeOffset(selectedEvent.video_reference, selectedEvent.timestamp)}
-              </span>
-            </div>
-            <DialogDescription className="text-xs font-bold text-muted-foreground">
-              Captured at exact timestamp: {selectedEvent && parseNaiveDateTime(selectedEvent.timestamp).toLocaleString()}
-            </DialogDescription>
-          </DialogHeader>
+              <DialogDescription className="text-xs font-bold text-muted-foreground pt-1">
+                Captured at exact timestamp: {selectedEvent && parseNaiveDateTime(selectedEvent.timestamp).toLocaleString()}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <div className="mt-4 space-y-4">
+          <div className="p-6 space-y-4">
             <div className="flex flex-col gap-2">
               <span className="text-xs font-extrabold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <Eye className="w-4 h-4 text-primary" /> Frame Snapshot
@@ -351,8 +367,8 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
             </div>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-border mt-4">
-            <Button variant="default" className="rounded-xl font-bold" onClick={() => setSelectedEvent(null)}>
+          <div className="flex justify-end px-6 pb-6 pt-2 border-t border-border/40 mt-2">
+            <Button variant="default" className="rounded-xl font-bold active:scale-[0.98] transition-all" onClick={() => setSelectedEvent(null)}>
               Done Inspecting
             </Button>
           </div>

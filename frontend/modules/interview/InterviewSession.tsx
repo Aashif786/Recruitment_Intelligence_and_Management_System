@@ -1106,19 +1106,18 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     };
   }, [isStarted, interviewId, token, handleStrike, uploadVideo]);
 
-
-  // ─── RENDERS ───────────────────────────────────────────────────────────────
   if (isTerminated) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-        <Card className="max-w-md w-full border-destructive shadow-2xl text-center p-8 rounded-3xl animate-in zoom-in-95 duration-500">
-          <ShieldAlert className="mx-auto w-16 h-16 text-destructive mb-6" />
+        <Card className="max-w-md w-full bg-card/70 backdrop-blur-xl border-destructive/50 border shadow-2xl text-center p-8 rounded-[2rem] animate-in zoom-in-95 duration-500">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-destructive"></div>
+          <ShieldAlert className="mx-auto w-16 h-16 text-destructive mb-6 mt-4" />
           <CardTitle className="text-3xl font-black text-destructive mb-4">Session Terminated</CardTitle>
-          <p className="text-slate-600 font-medium mb-4">
-            {terminationReason || "This interview has been deactivated."}
+          <p className="text-muted-foreground font-semibold mb-4 leading-relaxed">
+            {terminationReason || "This interview has been deactivated due to security protocol violations."}
           </p>
-          <p className="text-xs text-red-500/70 font-mono mb-8 uppercase tracking-widest">Access Key Invalidated</p>
-          <Button variant="outline" className="w-full h-14 rounded-2xl font-bold shadow-lg" onClick={() => window.location.href = '/calrims/'}>Return to Home</Button>
+          <p className="text-xs text-destructive/70 font-mono font-bold mb-8 uppercase tracking-widest bg-destructive/10 py-2 rounded-lg">Access Key Invalidated</p>
+          <Button variant="outline" className="w-full h-14 rounded-xl font-bold shadow-lg active:scale-95 transition-all" onClick={() => window.location.href = '/calrims/'}>Return to Home</Button>
         </Card>
       </div>
     );
@@ -1126,27 +1125,27 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
   if (pollingError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-6 animate-in zoom-in duration-500">
-        <Card className="max-w-md w-full bg-white shadow-2xl border-destructive/20 rounded-3xl overflow-hidden">
-          <div className="h-2 bg-destructive w-full" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-6 animate-in zoom-in duration-500">
+        <Card className="max-w-md w-full bg-card/65 backdrop-blur-xl shadow-2xl border border-border/80 rounded-3xl overflow-hidden">
+          <div className="h-1.5 bg-destructive w-full" />
           <CardHeader className="text-center p-8 pb-4">
             <ShieldAlert className="mx-auto w-16 h-16 text-destructive mb-4 animate-bounce" />
-            <CardTitle className="text-2xl font-black text-slate-800 tracking-tight">Initialization Delay</CardTitle>
+            <CardTitle className="text-2xl font-black text-foreground tracking-tight">Initialization Delay</CardTitle>
           </CardHeader>
           <CardContent className="px-8 pb-8 space-y-6 text-center">
-            <p className="text-slate-600 font-medium text-sm leading-relaxed">
+            <p className="text-muted-foreground font-semibold text-sm leading-relaxed">
               {pollingError}
             </p>
             <div className="flex flex-col gap-3 pt-2">
               <Button
-                className="w-full h-14 rounded-2xl font-black text-base shadow-lg shadow-primary/20"
+                className="w-full h-14 rounded-xl font-black text-base shadow-lg shadow-primary/20 active:scale-95 transition-all"
                 onClick={handleRetryPoll}
               >
                 Retry Initialization
               </Button>
               <Button
                 variant="outline"
-                className="w-full h-14 rounded-2xl font-bold text-slate-500 hover:text-slate-700"
+                className="w-full h-14 rounded-xl font-bold text-slate-500 hover:text-slate-700 active:scale-95 transition-all"
                 onClick={() => window.location.href = '/calrims/'}
               >
                 Go Back to Dashboard
@@ -1160,28 +1159,28 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[80vh] space-y-6">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10 space-y-6">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Initializing AI Board...</h2>
-        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Preparing Your Questions</p>
+        <h2 className="text-2xl font-black text-foreground tracking-tight">Initializing AI Board...</h2>
+        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Preparing Your Questions</p>
       </div>
     );
   }
 
   if (!isStarted) {
     return (
-      <div className="min-h-screen w-full overflow-y-auto py-12 flex items-center justify-center bg-[#f8fafc] px-6">
-        <Card className="max-w-3xl w-full bg-white shadow-2xl border-primary/20 rounded-3xl overflow-hidden animate-in zoom-in duration-500 my-auto">
-          <div className="h-2 bg-primary w-full" />
+      <div className="min-h-screen w-full overflow-y-auto py-12 flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 px-6 relative">
+        <Card className="max-w-3xl w-full bg-card/65 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-border/80 rounded-[2.2rem] overflow-hidden animate-in zoom-in duration-500 my-auto relative">
+          <div className="h-1.5 bg-gradient-to-r from-primary to-accent w-full" />
           <CardHeader className="text-center p-8 pb-4">
             <BrainCircuit className="w-16 h-16 text-primary mx-auto mb-4" />
-            <CardTitle className="text-3xl font-black text-slate-900 tracking-tight">Ready to Begin?</CardTitle>
-            <p className="text-base text-slate-500 font-medium mt-2 italic">"True intelligence is the ability to adapt to change."</p>
+            <CardTitle className="text-3xl font-black text-foreground tracking-tight">Ready to Begin?</CardTitle>
+            <p className="text-base text-muted-foreground font-semibold mt-2 italic">"True intelligence is the ability to adapt to change."</p>
           </CardHeader>
           <CardContent className="px-8 space-y-6">
             {/* Live Camera Preview */}
             <div className="flex flex-col items-center justify-center">
-              <div className="w-full max-w-md aspect-video bg-slate-900 rounded-2xl border border-slate-100 shadow-inner overflow-hidden relative">
+              <div className="w-full max-w-md aspect-video bg-slate-950 rounded-2xl border border-border/80 shadow-2xl overflow-hidden relative">
                 <video
                   ref={sessionVideoRef}
                   autoPlay
@@ -1189,45 +1188,45 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                   playsInline
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl text-white">
+                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl text-white">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/90">Camera Preview</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/95">Camera Preview</span>
                   </div>
                   <span className="text-[9px] font-bold text-white/70">Verify framing before entering</span>
                 </div>
               </div>
 
               {/* Microphone Volume Indicator */}
-              <div className="w-full max-w-md mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-2">
+              <div className="w-full max-w-md mt-4 p-4 bg-muted/40 rounded-2xl border border-border/60 flex flex-col gap-2 shadow-sm">
                 <div className="flex justify-between items-center w-full">
-                   <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Microphone Test</span>
-                   <span className="text-[10px] font-bold text-slate-400">Speak to check levels</span>
+                   <span className="text-xs font-black text-foreground uppercase tracking-widest">Microphone Test</span>
+                   <span className="text-[10px] font-bold text-muted-foreground">Speak to check levels</span>
                 </div>
-                <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                   <div id="mic-volume-bar" className="h-full bg-blue-500 transition-all duration-100 ease-out" style={{ width: '0%' }} />
+                <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                   <div id="mic-volume-bar" className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-100 ease-out" style={{ width: '0%' }} />
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs mb-3">Session Secure</h3>
-                <p className="text-sm text-slate-500 font-medium leading-relaxed">System will monitor your window focus to ensure interview integrity.</p>
+              <div className="p-6 bg-muted/40 rounded-2xl border border-border/60">
+                <h3 className="font-black text-foreground uppercase tracking-widest text-xs mb-3">Session Secure</h3>
+                <p className="text-sm text-muted-foreground font-semibold leading-relaxed">System will monitor your window focus to ensure interview integrity.</p>
               </div>
-              <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs mb-3">Session Recording</h3>
-                <p className="text-sm text-slate-500 font-medium leading-relaxed">Video and audio will be recorded for HR review. Ensure a quiet, well-lit environment.</p>
+              <div className="p-6 bg-muted/40 rounded-2xl border border-border/60">
+                <h3 className="font-black text-foreground uppercase tracking-widest text-xs mb-3">Session Recording</h3>
+                <p className="text-sm text-muted-foreground font-semibold leading-relaxed">Video and audio will be recorded for HR review. Ensure a quiet, well-lit environment.</p>
               </div>
             </div>
             <div className="flex flex-col items-center gap-4 pt-4 w-full">
               {/* Premium Device Test Warning */}
               {!isDeviceTestSuccess && (
-                <div className="w-full p-6 bg-red-500/10 border border-red-500/30 rounded-2xl flex gap-4 items-start text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="w-full p-6 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-4 items-start text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
                   <ShieldAlert className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-black text-red-500 uppercase tracking-wider text-xs mb-1">Hardware Authorization Required</h4>
-                    <p className="text-xs text-red-600/90 font-medium leading-relaxed">
+                    <p className="text-xs text-red-600/90 font-bold leading-relaxed">
                       Camera and Microphone permissions are strictly mandatory to start the assessment. 
                       {deviceTestError && <span className="block mt-1 font-mono text-[10px] text-red-500/70">Error: {deviceTestError}</span>}
                     </p>
@@ -1237,10 +1236,10 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
               <Button
                 disabled={!isDeviceTestSuccess}
-                className={`w-full h-16 rounded-2xl font-black text-xl shadow-xl transition-all duration-300 ${
+                className={`w-full h-16 rounded-2xl font-black text-xl shadow-xl transition-all duration-300 active:scale-[0.98] ${
                   !isDeviceTestSuccess 
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none hover:bg-slate-300' 
-                    : 'shadow-primary/20'
+                    : 'shadow-primary/20 cursor-pointer'
                 }`}
                 onClick={async () => {
                   // Request fullscreen before starting interview
@@ -1258,7 +1257,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
               >
                 Enter Interview Board
               </Button>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">By clicking, you agree to the assessment monitoring protocol</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">By clicking, you agree to the assessment monitoring protocol</p>
             </div>
           </CardContent>
         </Card>
@@ -1268,9 +1267,9 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
   if (isFinished) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-6">
-        <Card className="max-w-3xl w-full bg-white shadow-2xl border-primary/20 rounded-3xl overflow-hidden animate-in zoom-in duration-500">
-          <div className="h-2 bg-gradient-to-r from-primary via-green-500 to-emerald-400 w-full" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-6">
+        <Card className="max-w-3xl w-full bg-card/65 backdrop-blur-xl border border-border/80 shadow-2xl rounded-[2.2rem] overflow-hidden animate-in zoom-in duration-500">
+          <div className="h-1.5 bg-gradient-to-r from-primary via-green-500 to-emerald-400 w-full" />
           <CardHeader className="text-center p-12 space-y-6">
             <div className="relative flex items-center justify-center mx-auto w-24 h-24">
               <div className="absolute inset-0 rounded-full bg-green-500/10 animate-ping" />
@@ -1278,12 +1277,12 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                 <ShieldCheck className="w-10 h-10 text-green-500 animate-pulse" />
               </div>
             </div>
-            <CardTitle className="text-4xl font-black text-slate-900 tracking-tight">Interview Completed</CardTitle>
-            <p className="text-xl text-slate-500 font-medium leading-relaxed max-w-2xl mx-auto">
+            <CardTitle className="text-4xl font-black text-foreground tracking-tight">Interview Completed</CardTitle>
+            <p className="text-xl text-muted-foreground font-semibold leading-relaxed max-w-2xl mx-auto">
               Thank you for completing your interview! Your responses and proctoring logs have been securely submitted to the hiring team.
             </p>
             <div className="pt-4">
-              <span className="text-sm font-black text-green-700 bg-green-50 border border-green-200/50 py-3.5 px-8 rounded-2xl inline-block shadow-sm">
+              <span className="text-sm font-bold text-green-800 dark:text-green-300 bg-green-500/10 border border-green-500/20 py-3.5 px-8 rounded-2xl inline-block shadow-sm">
                 You can now safely close this window. HR will contact you regarding next steps.
               </span>
             </div>
@@ -1300,11 +1299,11 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f8fafc]">
+    <div className="flex flex-col min-h-screen bg-background/50">
       <div className="flex flex-1 overflow-hidden">
 
         {/* Left Sidebar */}
-        <div className="w-[320px] hidden lg:block border-r border-slate-100 bg-white">
+        <div className="w-[320px] hidden lg:block border-r border-border/60 bg-card/45 backdrop-blur-md">
           <InterviewSidebar
             currentQuestion={currentQuestionNumber}
             completedQuestions={completedQuestions}
@@ -1317,29 +1316,29 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-8 lg:p-12 relative no-scrollbar">
+        <main className="flex-1 overflow-y-auto p-8 lg:p-12 relative no-scrollbar bg-background/20">
           <div className="max-w-5xl mx-auto space-y-10">
 
             {/* Header */}
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                <div className="p-3 rounded-2xl bg-card/85 border border-border/80 shadow-sm">
                   <BrainCircuit className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-black text-slate-900 tracking-tight">Assessment Board</h1>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Secure Experience Protocol</p>
+                  <h1 className="text-2xl font-black text-foreground tracking-tight">Assessment Board</h1>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Secure Experience Protocol</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-100 rounded-xl shadow-sm">
+                <div className="flex items-center gap-2 px-4 py-2 bg-card/85 border border-border/80 rounded-xl shadow-sm">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Live Session</span>
+                  <span className="text-[10px] font-black text-foreground uppercase tracking-widest">Live Session</span>
                 </div>
                 <Button
                   size="sm"
                   onClick={handleEndSession}
-                  className="text-xs font-black uppercase tracking-widest bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 hover:border-red-500 rounded-xl px-4 py-2 transition-all duration-200 flex items-center gap-2"
+                  className="text-xs font-black uppercase tracking-widest bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 hover:border-red-500 rounded-xl px-4 py-2 transition-all duration-200 flex items-center gap-2 active:scale-95 cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   End Session
@@ -1384,7 +1383,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             />
 
             {/* Status bar */}
-            <div className="flex justify-between items-center pt-8 border-t border-slate-100">
+            <div className="flex justify-between items-center pt-8 border-t border-border/40">
               <div className="flex items-center gap-8">
                 <div className="flex items-center gap-3">
                   <UserCheck className={`w-5 h-5 ${isFaceDetected ? 'text-green-500' : 'text-slate-300'}`} />
@@ -1412,7 +1411,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       </div>
 
       {/* Floating Video Feed — uses its own ref, separate from the pre-start preview */}
-      <div className="fixed bottom-8 right-8 w-64 aspect-video bg-slate-900 rounded-3xl border-4 border-white shadow-2xl overflow-hidden group z-50">
+      <div className="fixed bottom-8 right-8 w-64 aspect-video bg-slate-950 rounded-[2rem] border-4 border-border/90 shadow-2xl overflow-hidden group z-50 hover:border-primary/50 transition-colors">
         <video
           ref={floatingVideoRef}
           autoPlay
@@ -1437,7 +1436,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             <p className="text-[10px] font-bold text-white mb-2">Camera Disconnected</p>
             <Button 
               size="sm" 
-              className="h-7 px-3 text-[9px] font-black uppercase tracking-widest bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              className="h-7 px-3 text-[9px] font-black uppercase tracking-widest bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
               onClick={async () => {
                 if (initCameraRef.current) {
                   await initCameraRef.current();
@@ -1452,20 +1451,20 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
       {/* ── FULLSCREEN GATE OVERLAY ──────────────────────────────────────────────── */}
       {showFullscreenGate && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-in fade-in duration-200">
-          <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full bg-card/75 border border-border/80 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 relative">
             <div className="h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 w-full" />
             <div className="p-10 text-center">
               <div className="w-20 h-20 rounded-full bg-amber-500/10 border-2 border-amber-500/20 flex items-center justify-center mx-auto mb-6">
-                <ShieldAlert className="w-10 h-10 text-amber-500" />
+                <ShieldAlert className="w-10 h-10 text-amber-500 animate-bounce" />
               </div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Fullscreen Required</h2>
-              <p className="text-slate-500 font-medium text-sm leading-relaxed mb-8">
+              <h2 className="text-2xl font-black text-foreground tracking-tight mb-3">Fullscreen Required</h2>
+              <p className="text-muted-foreground font-semibold text-sm leading-relaxed mb-8">
                 This assessment must be taken in <strong>fullscreen mode</strong> to maintain exam integrity.
                 You cannot proceed until fullscreen is active.
               </p>
               <Button
-                className="w-full h-14 rounded-2xl font-black text-base shadow-xl shadow-amber-500/20 bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center gap-2"
+                className="w-full h-14 rounded-xl font-black text-base shadow-xl shadow-amber-500/20 bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center gap-2 active:scale-95 transition-all duration-200 cursor-pointer"
                 onClick={enterFullscreen}
               >
                 Re-enter Fullscreen to Continue
@@ -1477,22 +1476,22 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
       {/* ── ALL DONE MODAL ────────────────────────────────────────────────────── */}
       {showAllDoneModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-lg p-4 animate-in fade-in duration-300">
-          <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-lg p-4 animate-in fade-in duration-300">
+          <div className="max-w-md w-full bg-card/75 border border-border/80 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 relative">
             <div className="h-1.5 bg-gradient-to-r from-primary via-green-500 to-emerald-400 w-full" />
             <div className="p-10 text-center space-y-5">
               {/* Icon */}
-              <div className="w-18 h-18 rounded-full bg-green-500/10 border-2 border-green-500/20 flex items-center justify-center mx-auto w-20 h-20">
+              <div className="w-20 h-20 rounded-full bg-green-500/10 border-2 border-green-500/20 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-10 h-10 text-green-500" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">All Questions Answered</h2>
-                <p className="text-slate-500 font-medium text-sm mt-2 leading-relaxed">
-                  You have completed all <span className="font-black text-slate-800">{allQuestions.length}</span> questions in this assessment.
+                <h2 className="text-2xl font-black text-foreground tracking-tight">All Questions Answered</h2>
+                <p className="text-muted-foreground font-semibold text-sm mt-2 leading-relaxed">
+                  You have completed all <span className="font-black text-foreground">{allQuestions.length}</span> questions in this assessment.
                 </p>
               </div>
               <Button
-                className="w-full h-14 rounded-2xl font-black text-base shadow-xl shadow-red-500/20 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2 transition-all duration-200"
+                className="w-full h-14 rounded-xl font-black text-base shadow-xl shadow-red-500/20 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] cursor-pointer"
                 onClick={handleFinalSubmit}
               >
                 <LogOut className="w-5 h-5" />
@@ -1502,8 +1501,6 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           </div>
         </div>
       )}
-
-
     </div>
   );
 }

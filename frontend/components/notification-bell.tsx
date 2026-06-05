@@ -106,31 +106,46 @@ export function NotificationBell() {
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-muted/50">
-                    <Bell className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="group relative h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all active:scale-95 duration-200">
+                    <style>{`
+                        @keyframes bell-ring {
+                            0%, 100% { transform: rotate(0); }
+                            15% { transform: rotate(12deg); }
+                            30% { transform: rotate(-12deg); }
+                            45% { transform: rotate(8deg); }
+                            60% { transform: rotate(-8deg); }
+                            75% { transform: rotate(4deg); }
+                            90% { transform: rotate(-4deg); }
+                        }
+                        .group:hover .animate-bell {
+                            animation: bell-ring 0.6s ease-in-out;
+                            transform-origin: top center;
+                        }
+                    `}</style>
+                    <Bell className="h-5 w-5 animate-bell transition-transform" />
                     {unreadCount > 0 && (
                         <span 
                             key={unreadCount} 
-                            className="absolute -top-1 -right-1 flex min-w-[18px] h-[18px] px-1 items-center justify-center rounded-full bg-destructive text-[9px] font-black text-destructive-foreground ring-2 ring-background animate-in zoom-in duration-300 pointer-events-none shadow-sm"
+                            className="absolute -top-0.5 -right-0.5 flex min-w-[18px] h-[18px] px-1 items-center justify-center rounded-full bg-destructive text-[9px] font-black text-destructive-foreground ring-2 ring-background animate-in zoom-in duration-300 pointer-events-none shadow-sm shadow-destructive/25 animate-pulse"
                         >
                             {unreadCount}
                         </span>
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[410px] p-0 shadow-2xl border border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md overflow-hidden rounded-2xl" align="end" sideOffset={8}>
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Notifications</h4>
+            <PopoverContent className="w-[360px] sm:w-[410px] p-0 shadow-2xl border border-border/80 bg-card/95 backdrop-blur-xl overflow-hidden rounded-2xl" align="end" sideOffset={8}>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+                    <h4 className="font-bold text-sm text-foreground">Notifications</h4>
                     {unreadCount > 0 && (
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
+                            <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">
                                 {unreadCount} new
                             </span>
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
+                            <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={markAllAsRead}
-                                className="text-[10px] h-7 font-black text-slate-500 hover:text-primary hover:bg-primary/5 px-2 rounded-lg"
+                                className="text-[10px] h-7 font-bold text-muted-foreground hover:text-primary hover:bg-primary/5 px-2 rounded-lg transition-colors"
                             >
                                 Mark all as read
                             </Button>
@@ -140,14 +155,14 @@ export function NotificationBell() {
                 <ScrollArea className={cn(notificationsArray.length > 0 ? "h-[450px]" : "h-auto")}>
                     {notificationsArray.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                            <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-4">
-                                <Bell className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                                <Bell className="h-6 w-6 text-muted-foreground" />
                             </div>
-                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No new notifications</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">We'll alert you when something happens.</p>
+                            <p className="text-sm font-semibold text-foreground">No new notifications</p>
+                            <p className="text-xs text-muted-foreground mt-1">We'll alert you when something happens.</p>
                         </div>
                     ) : (
-                        <div className="flex flex-col w-[408px]">
+                        <div className="flex flex-col w-[358px] sm:w-[408px]">
                             {sortedNotifications.map(n => (
                                 <button
                                     key={n.id}
@@ -159,9 +174,9 @@ export function NotificationBell() {
                                         }
                                     }}
                                     className={cn(
-                                        "w-full text-left pl-4 py-4 pr-8 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-all border-l-4 group border-b border-slate-100 dark:border-slate-800 last:border-b-0 relative",
+                                        "w-full text-left pl-4 py-4 pr-8 hover:bg-muted/40 transition-all border-l-4 group border-b border-border/50 last:border-b-0 relative",
                                         !n.is_read 
-                                            ? 'bg-slate-50/60 dark:bg-slate-800/40 border-l-primary' 
+                                            ? 'bg-muted/20 border-l-primary' 
                                             : 'bg-transparent border-l-transparent'
                                     )}
                                 >
@@ -170,27 +185,27 @@ export function NotificationBell() {
                                             <p className={cn(
                                                 "text-sm truncate flex-1 min-w-0 pr-1",
                                                 !n.is_read 
-                                                    ? 'font-bold text-slate-900 dark:text-slate-100' 
-                                                    : 'font-normal text-slate-400 dark:text-slate-500'
+                                                    ? 'font-bold text-foreground' 
+                                                    : 'font-normal text-muted-foreground'
                                             )}>
                                                 {n.title}
                                             </p>
-                                            <span className="text-[10px] font-black text-slate-400/80 whitespace-nowrap shrink-0">
+                                            <span className="text-[10px] font-semibold text-muted-foreground/60 whitespace-nowrap shrink-0">
                                                 {formatNotificationDate(n.created_at)}
                                             </span>
                                         </div>
                                         <p className={cn(
                                             "text-xs line-clamp-2 leading-relaxed pr-2",
                                             !n.is_read 
-                                                ? 'text-slate-600 dark:text-slate-300 font-medium' 
-                                                : 'text-slate-400/80 dark:text-slate-500/80 font-normal'
+                                                ? 'text-foreground/80 font-medium' 
+                                                : 'text-muted-foreground/80 font-normal'
                                         )}>
                                             {n.message}
                                         </p>
 
                                         {n.related_application_id && (
                                             <div className={cn(
-                                                "absolute top-1/2 -translate-y-1/2 -right-4 transition-all duration-200 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 text-slate-400 dark:text-slate-500"
+                                                "absolute top-1/2 -translate-y-1/2 -right-4 transition-all duration-200 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 text-muted-foreground"
                                             )}>
                                                 <ChevronRight className="h-4 w-4" />
                                             </div>

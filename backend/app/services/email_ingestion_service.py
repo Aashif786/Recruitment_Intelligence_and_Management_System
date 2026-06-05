@@ -350,19 +350,22 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
         # After a successful sync, the checkpoint is updated to now.
         # The database's Message-ID unique constraint prevents duplicates.
         from app.domain.models import GlobalSettings as GS
+        from app.infrastructure.database import SessionLocal
 
-        checkpoint_row = db.query(GS).filter(GS.key == "last_email_sync_at").first()
-        if checkpoint_row and checkpoint_row.value:
-            try:
-                last_sync_dt = datetime.fromisoformat(checkpoint_row.value)
-                since_date_str = last_sync_dt.strftime("%d-%b-%Y")  # IMAP date format
-                logger.info(f"📌 Checkpoint found: last sync was {checkpoint_row.value} → SINCE {since_date_str}")
-            except Exception:
+        since_date_str = None
+        with SessionLocal() as local_db:
+            checkpoint_row = local_db.query(GS).filter(GS.key == "last_email_sync_at").first()
+            if checkpoint_row and checkpoint_row.value:
+                try:
+                    last_sync_dt = datetime.fromisoformat(checkpoint_row.value)
+                    since_date_str = last_sync_dt.strftime("%d-%b-%Y")  # IMAP date format
+                    logger.info(f"📌 Checkpoint found: last sync was {checkpoint_row.value} → SINCE {since_date_str}")
+                except Exception:
+                    since_date_str = datetime.utcnow().strftime("%d-%b-%Y")
+                    logger.warning(f"⚠️  Could not parse checkpoint '{checkpoint_row.value}'. Using today: {since_date_str}")
+            else:
                 since_date_str = datetime.utcnow().strftime("%d-%b-%Y")
-                logger.warning(f"⚠️  Could not parse checkpoint '{checkpoint_row.value}'. Using today: {since_date_str}")
-        else:
-            since_date_str = datetime.utcnow().strftime("%d-%b-%Y")
-            logger.info(f"📌 No checkpoint found (first sync). Using today: {since_date_str}")
+                logger.info(f"📌 No checkpoint found (first sync). Using today: {since_date_str}")
 
         # 1. Fetch UNSEEN emails
         status, unseen_messages = mail.search(None, 'UNSEEN')
@@ -400,7 +403,8 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
 
         # Pre-fetch open job titles for job-relevance matching
         # This allows emails whose subject mentions an actual job title to be accepted
-        open_job_titles = [j.title for j in db.query(Job.title).filter(Job.status == 'open').all() if j.title]
+        with SessionLocal() as local_db:
+            open_job_titles = [j.title for j in local_db.query(Job.title).filter(Job.status == 'open').all() if j.title]
         logger.info(f"📋 Loaded {len(open_job_titles)} open job titles for subject matching: {open_job_titles}")
         
         logger.info(f"📧 Processing {len(email_ids)} email(s) for resume attachments...")
@@ -460,30 +464,33 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                     logger.info(f"Generated synthetic message ID for email from {raw_email}")
                 
                 # Duplicate check - Message-ID first
-                existing = db.query(AttachmentResume).filter(
-                    AttachmentResume.message_id == msg_id
-                ).first()
-                
-                if existing:
-                    duplicate_count += 1
-                    logger.debug(f"⏭️  Skipping duplicate email (Message-ID): {subject} from {raw_email}")
-                    continue
-                
-                # Secondary duplicate check - more specific composite key
-                if not existing and subject and raw_email:
-                    # Include Message-ID in the search if it exists, or check for exact received_at timestamp
-                    # to allow multiple emails from the same sender with same subject on the same day
-                    # (e.g. if they sent multiple versions or applied for multiple roles)
-                    existing = db.query(AttachmentResume).filter(
-                        AttachmentResume.subject == subject,
-                        AttachmentResume.sender_email.ilike(f"%{raw_email}%"),
-                        AttachmentResume.received_at == received_at
+                is_duplicate_check = False
+                with SessionLocal() as local_db:
+                    existing = local_db.query(AttachmentResume).filter(
+                        AttachmentResume.message_id == msg_id
                     ).first()
                     
                     if existing:
-                        duplicate_count += 1
-                        logger.debug(f"⏭️  Skipping duplicate email (composite key): {subject} from {raw_email}")
-                        continue
+                        is_duplicate_check = True
+                    
+                    # Secondary duplicate check - more specific composite key
+                    if not existing and subject and raw_email:
+                        # Include Message-ID in the search if it exists, or check for exact received_at timestamp
+                        # to allow multiple emails from the same sender with same subject on the same day
+                        # (e.g. if they sent multiple versions or applied for multiple roles)
+                        existing = local_db.query(AttachmentResume).filter(
+                            AttachmentResume.subject == subject,
+                            AttachmentResume.sender_email.ilike(f"%{raw_email}%"),
+                            AttachmentResume.received_at == received_at
+                        ).first()
+                        
+                        if existing:
+                            is_duplicate_check = True
+                
+                if is_duplicate_check:
+                    duplicate_count += 1
+                    logger.debug(f"⏭️  Skipping duplicate email: {subject} from {raw_email}")
+                    continue
                 
                 # Fetch full email
                 res, msg = mail.fetch(email_id, "(RFC822)")
@@ -615,11 +622,19 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                             retry_count=0,
                                             last_error=None
                                         )
-                                        db.add(new_resume)
-                                        saved_count += 1
-                                        resume_count += 1
-                                        found_resume = True
-                                        logger.info(f"Ingested new resume from {raw_email}: {safe_filename}")
+                                        with SessionLocal() as local_db:
+                                            existing_check = local_db.query(AttachmentResume).filter(
+                                                AttachmentResume.message_id == msg_id
+                                            ).first()
+                                            if not existing_check:
+                                                local_db.add(new_resume)
+                                                local_db.commit()
+                                                saved_count += 1
+                                                resume_count += 1
+                                                found_resume = True
+                                                logger.info(f"Ingested new resume from {raw_email}: {safe_filename}")
+                                            else:
+                                                duplicate_count += 1
                         
                         if resume_count == 0:
                             logger.info(f"Email from {raw_email} had no resume attachments. Ingesting email metadata only.")
@@ -638,19 +653,21 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                 retry_count=0,
                                 last_error="No resume attachment found in email."
                             )
-                            db.add(new_resume)
-                            saved_count += 1
-                
-                # Commit after each email
-                db.commit()
-
+                            with SessionLocal() as local_db:
+                                existing_check = local_db.query(AttachmentResume).filter(
+                                    AttachmentResume.message_id == msg_id
+                                ).first()
+                                if not existing_check:
+                                    local_db.add(new_resume)
+                                    local_db.commit()
+                                    saved_count += 1
+                                else:
+                                    duplicate_count += 1
             except Exception as e:
                 logger.error(f"Error processing email {email_id.decode() if isinstance(email_id, bytes) else email_id}: {e}", exc_info=True)
                 error_count += 1
-                db.rollback()
 
         # BUG-003 Fix: Comprehensive summary logging
-        logger.info(f"📊 Email Sync Summary:")
         logger.info(f"   • UNSEEN: {len(unseen_ids)}, SINCE {since_date_str}: {len(since_ids)}")
         logger.info(f"   • Processed: {len(email_ids)}")
         logger.info(f"   • ✅ Saved: {saved_count}")
@@ -662,15 +679,16 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
         # sync only fetches emails from this moment forward.
         sync_now = datetime.utcnow().isoformat()
         try:
-            if checkpoint_row:
-                checkpoint_row.value = sync_now
-            else:
-                db.add(GS(key="last_email_sync_at", value=sync_now))
-            db.commit()
+            with SessionLocal() as local_db:
+                checkpoint_row = local_db.query(GS).filter(GS.key == "last_email_sync_at").first()
+                if checkpoint_row:
+                    checkpoint_row.value = sync_now
+                else:
+                    local_db.add(GS(key="last_email_sync_at", value=sync_now))
+                local_db.commit()
             logger.info(f"📌 Checkpoint updated: last_email_sync_at = {sync_now}")
         except Exception as ckpt_err:
             logger.warning(f"⚠️  Failed to save sync checkpoint: {ckpt_err}")
-            db.rollback()
         
         mail.close()
         mail.logout()
@@ -693,253 +711,282 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
         return {"success": False, "error": "Mailbox sync failed. Please verify your IMAP credentials and try again."}
 
 
-async def run_batch_resume_processing(db: Session):
+async def run_batch_resume_processing(db: Session = None):
     """
     Finds all unprocessed resumes from the email ingestion database,
     automatically creates target Job Applications for them, and triggers the AI analysis pipeline.
     Uses row-level locking to prevent concurrent processing issues.
     """
-    # Use SELECT FOR UPDATE SKIP LOCKED to prevent concurrent processing
-    unprocessed = db.query(AttachmentResume).filter(
-        AttachmentResume.processed == False
-    ).with_for_update(skip_locked=True).order_by(AttachmentResume.id.asc()).limit(30).all()
+    from app.infrastructure.database import SessionLocal
+    from app.domain.models import Job, Application, AttachmentResume
     
-    if not unprocessed:
+    # 1. Fetch the IDs of unprocessed resumes first using a short-lived session
+    with SessionLocal() as init_db:
+        unprocessed_ids = [r.id for r in init_db.query(AttachmentResume.id).filter(
+            AttachmentResume.processed == False
+        ).order_by(AttachmentResume.id.asc()).limit(30).all()]
+        
+    if not unprocessed_ids:
         return {"message": "No new resumes to process.", "count": 0}
         
-    open_jobs = db.query(Job).filter(Job.status == 'open').all()
-    if not open_jobs:
-        logger.warning("No open jobs available to assign incoming emailed resumes to.")
-        # Mark as unprocessed so they can be retried when jobs are available
-        return {"message": "No open jobs to map resumes.", "count": 0}
+    # 2. Fetch open jobs data using a short-lived session
+    with SessionLocal() as jobs_db:
+        open_jobs = jobs_db.query(Job).filter(Job.status == 'open').all()
+        if not open_jobs:
+            logger.warning("No open jobs available to assign incoming emailed resumes to.")
+            return {"message": "No open jobs to map resumes.", "count": 0}
+        
+        # Capture open jobs as serialized dicts to safely use across sessions without detach errors
+        open_jobs_data = [
+            {
+                "id": j.id,
+                "title": j.title,
+                "job_id": j.job_id,
+                "hr_id": j.hr_id,
+                "status": j.status
+            }
+            for j in open_jobs
+        ]
         
     processed_count = 0
     
-    for resume in unprocessed:
-        try:
-            if not resume.file_url:
-                resume.processed = True
-                db.commit()
-                continue
-            
-            # Map to target Job
-            target_job = None
-            subject_str = resume.subject or ""
-            body_str = resume.email_body or ""
-            # BUG-005 Fix: Pattern A — Match Job Code ONLY in subject line (not body).
-            # Matching in body allowed attackers to inject any job code in email text.
-            job_codes = re.findall(r'JOB-[A-Z0-9]{6}', subject_str, re.IGNORECASE)
-            if job_codes:
-                for code in job_codes:
-                    extracted_code = code.upper().strip()
-                    target_job = db.query(Job).filter(
-                        func.upper(Job.job_id) == extracted_code,
-                        Job.status == 'open'
-                    ).first()
-                    if target_job:
-                        logger.info(f"Successfully mapped emailed resume {resume.id} to Job Code {extracted_code}")
-                        if len(job_codes) > 1:
-                            logger.info(f"Alternative job codes found in subject: {[c for c in job_codes if c.upper() != extracted_code]}")
-                        break
-            
-            # Pattern B: Match numeric Job ID with word boundaries in subject line only
-            if not target_job:
-                subject_lower = subject_str.lower()
-                numeric_id_match = re.search(r'\bjob\s*(?:id|code)?\s*[:\-\#]?\s*(\d+)\b', subject_lower)
-                if numeric_id_match:
-                    extracted_id = int(numeric_id_match.group(1).strip())
-                    target_job = db.query(Job).filter(Job.id == extracted_id, Job.status == 'open').first()
-                    if target_job:
-                        logger.info(f"Mapped resume {resume.id} to Job ID {extracted_id}")
-            
-            # Pattern C: Job title matching with 80% threshold in subject line only
-            if not target_job:
-                subject_words = set(subject_str.lower().split())
-                for job in open_jobs:
-                    job_title_words = set(job.title.lower().split())
+    for resume_id in unprocessed_ids:
+        # 3. Process each resume in its own short-lived session block
+        with SessionLocal() as local_db:
+            try:
+                # Use SELECT FOR UPDATE SKIP LOCKED to prevent concurrent processing
+                resume = local_db.query(AttachmentResume).filter(
+                    AttachmentResume.id == resume_id,
+                    AttachmentResume.processed == False
+                ).with_for_update(skip_locked=True).first()
+                
+                if not resume:
+                    continue
                     
-                    if len(job_title_words) > 0:
-                        match_count = len(job_title_words & subject_words)
-                        match_percentage = match_count / len(job_title_words)
-                        
-                        if match_percentage >= 0.8:
-                            target_job = job
-                            logger.info(f"Mapped resume {resume.id} to Job Title '{job.title}' ({match_percentage:.0%} match in subject)")
+                if not resume.file_url:
+                    resume.processed = True
+                    local_db.commit()
+                    continue
+                
+                # Map to target Job
+                target_job_data = None
+                subject_str = resume.subject or ""
+                body_str = resume.email_body or ""
+                
+                # Pattern A: Match Job Code ONLY in subject line (not body).
+                job_codes = re.findall(r'JOB-[A-Z0-9]{6}', subject_str, re.IGNORECASE)
+                if job_codes:
+                    for code in job_codes:
+                        extracted_code = code.upper().strip()
+                        for job in open_jobs_data:
+                            if job["job_id"] and job["job_id"].upper() == extracted_code:
+                                target_job_data = job
+                                break
+                        if target_job_data:
+                            logger.info(f"Successfully mapped emailed resume {resume.id} to Job Code {extracted_code}")
+                            if len(job_codes) > 1:
+                                logger.info(f"Alternative job codes found in subject: {[c for c in job_codes if c.upper() != extracted_code]}")
                             break
-
-            if not target_job:
-                logger.warning(f"Could not map resume {resume.id} from {resume.sender_email} to any open job.")
-                resume.processed = True
-                resume.mapping_failed = True
-                db.commit()
-                continue
-
-            # Re-query job status to ensure it's still open
-            target_job = db.query(Job).filter(Job.id == target_job.id).first()
-            if not target_job or target_job.status != 'open':
-                logger.warning(f"Job {target_job.id if target_job else 'N/A'} is no longer open. Skipping.")
-                resume.processed = True
-                resume.mapping_failed = True
-                db.commit()
-                continue
-
-            # Extract candidate info
-            sender_raw = resume.sender_email
-            match = re.search(r'([^<]+)<', sender_raw)
-            if match:
-                candidate_name = match.group(1).strip()
-            else:
-                # Fallback to email local part
-                email_match = re.search(r'([^@]+)@', sender_raw)
-                candidate_name = email_match.group(1).replace('.', ' ').title() if email_match else "Candidate"
-            
-            match_email = re.search(r'<([^>]+)>', sender_raw)
-            candidate_email = match_email.group(1).lower().strip() if match_email else sender_raw.lower().strip()
-            
-            # Validate email
-            if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', candidate_email):
-                logger.error(f"Invalid email format: {candidate_email}. Skipping.")
-                resume.processed = True
-                resume.last_error = f"Invalid email format: {candidate_email}"
-                db.commit()
-                continue
-            
-            # Get resume file path
-            resume_file_path = None
-            if resume.file_url and "/MAIL_ATTACHMENTS/" in resume.file_url:
-                bucket_path = resume.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
-                resume_file_path = f"MAIL_ATTACHMENTS/{bucket_path}"
-            
-            if not resume_file_path:
-                logger.error(f"Resume file path could not be determined for resume {resume.id}")
-                resume.processed = True
-                resume.last_error = "Resume file path could not be determined"
-                db.commit()
-                continue
-            
-            # SSRF Protection: validate resume.file_url before fetching (P2-H05)
-            from urllib.parse import urlparse
-            try:
-                parsed_url = urlparse(resume.file_url)
-                if not parsed_url.scheme or parsed_url.scheme.lower() != "https":
-                    raise ValueError("Only HTTPS scheme is allowed for safety.")
                 
-                # Check netloc/domain
-                settings = get_settings()
-                allowed_domains = []
-                if settings.supabase_url:
-                    supabase_netloc = urlparse(settings.supabase_url).netloc
-                    if supabase_netloc:
-                        allowed_domains.append(supabase_netloc)
+                # Pattern B: Match numeric Job ID with word boundaries in subject line only
+                if not target_job_data:
+                    subject_lower = subject_str.lower()
+                    numeric_id_match = re.search(r'\bjob\s*(?:id|code)?\s*[:\-\#]?\s*(\d+)\b', subject_lower)
+                    if numeric_id_match:
+                        extracted_id = int(numeric_id_match.group(1).strip())
+                        for job in open_jobs_data:
+                            if job["id"] == extracted_id:
+                                target_job_data = job
+                                break
+                        if target_job_data:
+                            logger.info(f"Mapped resume {resume.id} to Job ID {extracted_id}")
                 
-                netloc_lower = parsed_url.netloc.lower()
-                is_allowed = netloc_lower.endswith(".supabase.co") or netloc_lower == "supabase.co" or any(d == netloc_lower for d in allowed_domains)
-                
-                if not is_allowed:
-                    raise ValueError(f"Domain '{netloc_lower}' is not in the list of allowed Supabase storage domains.")
-            except Exception as ssrf_err:
-                logger.error(f"SSRF Prevention: Blocked fetching URL '{resume.file_url}': {ssrf_err}")
-                resume.processed = True
-                resume.last_error = f"SSRF Prevention: Blocked fetching URL: {ssrf_err}"
-                db.commit()
-                continue
-
-            # Download file and calculate hash
-            content = b""
-            try:
-                response = requests.get(resume.file_url, timeout=30)
-                if response.status_code == 200:
-                    content = response.content
+                # Pattern C: Job title matching with 80% threshold in subject line only
+                if not target_job_data:
+                    subject_words = set(subject_str.lower().split())
+                    for job in open_jobs_data:
+                        job_title_words = set(job["title"].lower().split())
+                        if len(job_title_words) > 0:
+                            match_count = len(job_title_words & subject_words)
+                            match_percentage = match_count / len(job_title_words)
+                            if match_percentage >= 0.8:
+                                target_job_data = job
+                                logger.info(f"Mapped resume {resume.id} to Job Title '{job['title']}' ({match_percentage:.0%} match in subject)")
+                                break
+    
+                if not target_job_data:
+                    logger.warning(f"Could not map resume {resume.id} from {resume.sender_email} to any open job.")
+                    resume.processed = True
+                    resume.mapping_failed = True
+                    local_db.commit()
+                    continue
+    
+                # Re-query job status in DB to ensure it's still open
+                job_record = local_db.query(Job).filter(Job.id == target_job_data["id"]).first()
+                if not job_record or job_record.status != 'open':
+                    logger.warning(f"Job {target_job_data['id']} is no longer open. Skipping.")
+                    resume.processed = True
+                    resume.mapping_failed = True
+                    local_db.commit()
+                    continue
+    
+                # Extract candidate info
+                sender_raw = resume.sender_email
+                match = re.search(r'([^<]+)<', sender_raw)
+                if match:
+                    candidate_name = match.group(1).strip()
                 else:
-                    logger.error(f"Failed to download resume: HTTP {response.status_code}")
+                    # Fallback to email local part
+                    email_match = re.search(r'([^@]+)@', sender_raw)
+                    candidate_name = email_match.group(1).replace('.', ' ').title() if email_match else "Candidate"
+                
+                match_email = re.search(r'<([^>]+)>', sender_raw)
+                candidate_email = match_email.group(1).lower().strip() if match_email else sender_raw.lower().strip()
+                
+                # Validate email
+                if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', candidate_email):
+                    logger.error(f"Invalid email format: {candidate_email}. Skipping.")
+                    resume.processed = True
+                    resume.last_error = f"Invalid email format: {candidate_email}"
+                    local_db.commit()
+                    continue
+                
+                # Get resume file path
+                resume_file_path = None
+                if resume.file_url and "/MAIL_ATTACHMENTS/" in resume.file_url:
+                    bucket_path = resume.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
+                    resume_file_path = f"MAIL_ATTACHMENTS/{bucket_path}"
+                
+                if not resume_file_path:
+                    logger.error(f"Resume file path could not be determined for resume {resume.id}")
+                    resume.processed = True
+                    resume.last_error = "Resume file path could not be determined"
+                    local_db.commit()
+                    continue
+                
+                # SSRF Protection: validate resume.file_url before fetching (P2-H05)
+                from urllib.parse import urlparse
+                try:
+                    parsed_url = urlparse(resume.file_url)
+                    if not parsed_url.scheme or parsed_url.scheme.lower() != "https":
+                        raise ValueError("Only HTTPS scheme is allowed for safety.")
+                    
+                    # Check netloc/domain
+                    settings = get_settings()
+                    allowed_domains = []
+                    if settings.supabase_url:
+                        supabase_netloc = urlparse(settings.supabase_url).netloc
+                        if supabase_netloc:
+                            allowed_domains.append(supabase_netloc)
+                    
+                    netloc_lower = parsed_url.netloc.lower()
+                    is_allowed = netloc_lower.endswith(".supabase.co") or netloc_lower == "supabase.co" or any(d == netloc_lower for d in allowed_domains)
+                    
+                    if not is_allowed:
+                        raise ValueError(f"Domain '{netloc_lower}' is not in the list of allowed Supabase storage domains.")
+                except Exception as ssrf_err:
+                    logger.error(f"SSRF Prevention: Blocked fetching URL '{resume.file_url}': {ssrf_err}")
+                    resume.processed = True
+                    resume.last_error = f"SSRF Prevention: Blocked fetching URL: {ssrf_err}"
+                    local_db.commit()
+                    continue
+    
+                # Download file and calculate hash
+                content = b""
+                try:
+                    response = requests.get(resume.file_url, timeout=30)
+                    if response.status_code == 200:
+                        content = response.content
+                    else:
+                        logger.error(f"Failed to download resume: HTTP {response.status_code}")
+                        resume.processed = False
+                        resume.retry_count += 1
+                        resume.last_error = f"Download failed: HTTP {response.status_code}"
+                        local_db.commit()
+                        continue
+                except Exception as e:
+                    logger.error(f"Failed to download resume file from URL: {e}")
                     resume.processed = False
                     resume.retry_count += 1
-                    resume.last_error = f"Download failed: HTTP {response.status_code}"
-                    db.commit()
+                    resume.last_error = str(e)
+                    local_db.commit()
                     continue
-            except Exception as e:
-                logger.error(f"Failed to download resume file from URL: {e}")
-                resume.processed = False
-                resume.retry_count += 1
-                resume.last_error = str(e)
-                db.commit()
-                continue
-            
-            # Calculate hash
-            if len(content) == 0:
-                resume_hash = f"no_hash_{resume.id}_{int(time.time())}"
-                logger.warning(f"Empty content for resume {resume.id}. Using synthetic hash.")
-            else:
-                resume_hash = hashlib.sha256(content).hexdigest()
-            
-            # Duplicate check with job_id
-            existing_res = db.query(Application).filter(
-                Application.job_id == target_job.id,
-                Application.resume_hash == resume_hash
-            ).first()
-            
-            if existing_res:
-                logger.info(f"Resume with hash {resume_hash} already applied to job {target_job.id}. Skipping.")
-                resume.processed = True
-                db.commit()
-                continue
-
-            # Check if candidate has already applied to this job (uq_application_job_email constraint)
-            existing_app = db.query(Application).filter(
-                Application.job_id == target_job.id,
-                Application.candidate_email == candidate_email
-            ).first()
-            
-            if existing_app:
-                logger.info(f"Candidate {candidate_email} has already applied to job {target_job.id}. Skipping duplicate application ingestion.")
-                resume.processed = True
-                db.commit()
-                continue
-
-            # Create application
-            new_app = Application(
-                job_id=target_job.id,
-                hr_id=target_job.hr_id,
-                candidate_name=candidate_name,
-                candidate_email=candidate_email,
-                resume_file_name=resume.file_name,
-                resume_file_path=resume_file_path,
-                resume_hash=resume_hash,
-                status='applied',
-                hr_notes="Ingested automatically from Email Recruiter Channel.",
-                applied_at=datetime.utcnow(),
-                resume_status='pending'
-            )
-            db.add(new_app)
-            db.flush()
-            
-            # Trigger AI analysis in the background to avoid blocking the sync request
-            try:
-                from app.api.applications import process_application_background
-                import asyncio
-                asyncio.create_task(
-                    process_application_background(
-                        new_app.id,
-                        target_job.id,
-                        new_app.resume_file_path,
-                        candidate_email,
-                        candidate_name
-                    )
+                
+                # Calculate hash
+                if len(content) == 0:
+                    resume_hash = f"no_hash_{resume.id}_{int(time.time())}"
+                    logger.warning(f"Empty content for resume {resume.id}. Using synthetic hash.")
+                else:
+                    resume_hash = hashlib.sha256(content).hexdigest()
+                
+                # Duplicate check with job_id
+                existing_res = local_db.query(Application).filter(
+                    Application.job_id == job_record.id,
+                    Application.resume_hash == resume_hash
+                ).first()
+                
+                if existing_res:
+                    logger.info(f"Resume with hash {resume_hash} already applied to job {job_record.id}. Skipping.")
+                    resume.processed = True
+                    local_db.commit()
+                    continue
+    
+                # Check if candidate has already applied to this job (uq_application_job_email constraint)
+                existing_app = local_db.query(Application).filter(
+                    Application.job_id == job_record.id,
+                    Application.candidate_email == candidate_email
+                ).first()
+                
+                if existing_app:
+                    logger.info(f"Candidate {candidate_email} has already applied to job {job_record.id}. Skipping duplicate application ingestion.")
+                    resume.processed = True
+                    local_db.commit()
+                    continue
+    
+                # Create application
+                new_app = Application(
+                    job_id=job_record.id,
+                    hr_id=job_record.hr_id,
+                    candidate_name=candidate_name,
+                    candidate_email=candidate_email,
+                    resume_file_name=resume.file_name,
+                    resume_file_path=resume_file_path,
+                    resume_hash=resume_hash,
+                    status='applied',
+                    hr_notes="Ingested automatically from Email Recruiter Channel.",
+                    applied_at=datetime.utcnow(),
+                    resume_status='pending'
                 )
+                local_db.add(new_app)
+                local_db.flush()
+                
+                # Trigger AI analysis in the background to avoid blocking the sync request
+                try:
+                    from app.api.applications import process_application_background
+                    import asyncio
+                    asyncio.create_task(
+                        process_application_background(
+                            new_app.id,
+                            job_record.id,
+                            new_app.resume_file_path,
+                            candidate_email,
+                            candidate_name
+                        )
+                    )
+                except Exception as e:
+                    logger.error(f"Background processing launch failed for resume {resume.id}: {e}")
+                    resume.processed = False
+                    resume.retry_count += 1
+                    resume.last_error = str(e)
+                    local_db.commit()
+                    continue
+                
+                resume.processed = True
+                local_db.commit()
+                processed_count += 1
+                
             except Exception as e:
-                logger.error(f"Background processing launch failed for resume {resume.id}: {e}")
-                resume.processed = False
-                resume.retry_count += 1
-                resume.last_error = str(e)
-                db.commit()
-                continue
-            
-            resume.processed = True
-            db.commit()
-            processed_count += 1
-            
-        except Exception as e:
-            logger.error(f"Error mapping resume {resume.id}: {e}", exc_info=True)
-            db.rollback()
-            
+                logger.error(f"Error mapping resume {resume_id}: {e}", exc_info=True)
+                local_db.rollback()
+                
     return {"message": f"Successfully processed {processed_count} resumes.", "count": processed_count}

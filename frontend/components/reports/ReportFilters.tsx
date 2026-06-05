@@ -153,9 +153,9 @@ export const ReportFilters = React.memo(function ReportFilters({
   }
 
   return (
-    <div className="lg:sticky lg:col-span-1 md:col-span-1 lg:h-[calc(100vh-08.5rem)] lg:max-h-[calc(100vh-8.5rem)] flex flex-col animate-in fade-in slide-in-from-left-8 duration-700 ease-out fill-mode-both">
-      <Card className="h-full flex flex-col shadow-sm border-border/40 !py-0 !gap-0 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="p-3 !pb-0 shrink-0 border-b border-border/30">
+    <div className="lg:sticky lg:top-4 lg:col-span-1 md:col-span-1 lg:h-[calc(100vh-8.5rem)] lg:max-h-[calc(100vh-8.5rem)] flex flex-col animate-in fade-in slide-in-from-left-8 duration-700 ease-out fill-mode-both">
+      <Card className="h-full flex flex-col shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08)] border-border/80 !py-0 !gap-0 bg-card/80 backdrop-blur-md rounded-2xl overflow-hidden">
+        <CardHeader className="p-4 !pb-3 shrink-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-foreground">Interview Reports</h2>
             <CardTitle className="text-base font-semibold flex items-center gap-2">

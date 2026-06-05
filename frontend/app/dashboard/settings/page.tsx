@@ -166,7 +166,7 @@ export default function SettingsPage() {
             >
                 <Button 
                     size="lg" 
-                    className="font-bold gap-2 px-8 shadow-md rounded-xl h-12"
+                    className="font-bold gap-2 px-8 shadow-md rounded-xl h-12 active:scale-[0.98] hover:shadow-lg transition-all duration-200"
                     onClick={handleSave}
                     disabled={saving}
                 >
@@ -176,8 +176,8 @@ export default function SettingsPage() {
             </PageHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-border/40 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300 overflow-hidden rounded-2xl">
-                    <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+                <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
                                 <Building2 className="h-4 w-4 text-primary" />
@@ -195,6 +195,7 @@ export default function SettingsPage() {
                                     value={settings.company_name} 
                                     onChange={(e) => setSettings({...settings, company_name: e.target.value})}
                                     placeholder="e.g. Acme Corp"
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
                             
@@ -222,7 +223,7 @@ export default function SettingsPage() {
                                                 value={settings.company_logo_url} 
                                                 onChange={(e) => setSettings({...settings, company_logo_url: e.target.value})}
                                                 placeholder="https://example.com/logo.png"
-                                                className="flex-1 h-12"
+                                                className="flex-1 h-12 hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                             />
                                         </div>
                                         <p className="text-[10px] text-muted-foreground italic">Paste a transparent PNG/SVG link for best results in PDFs.</p>
@@ -238,14 +239,15 @@ export default function SettingsPage() {
                                     onChange={(e) => setSettings({...settings, company_address: e.target.value})}
                                     placeholder="123 Silicon Valley, CA"
                                     rows={3}
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="border-border/40 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300 overflow-hidden flex flex-col rounded-2xl">
-                    <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+                <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden flex flex-col rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
                                 <ImageIcon className="h-4 w-4 text-primary" />
@@ -262,7 +264,7 @@ export default function SettingsPage() {
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input 
                                     id="hr_name" 
-                                    className="pl-10"
+                                    className="pl-10 hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                     value={settings.hr_name} 
                                     onChange={(e) => setSettings({...settings, hr_name: e.target.value})}
                                     placeholder="e.g. Jane Smith"
@@ -277,7 +279,7 @@ export default function SettingsPage() {
                                     id="hr_email" 
                                     type="email"
                                     required
-                                    className="pl-10"
+                                    className="pl-10 hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                     value={settings.hr_email} 
                                     onChange={(e) => setSettings({...settings, hr_email: e.target.value})}
                                     placeholder="hr@company.com"
@@ -290,7 +292,7 @@ export default function SettingsPage() {
                                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input 
                                     id="hr_phone" 
-                                    className="pl-10"
+                                    className="pl-10 hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                     value={settings.hr_phone} 
                                     maxLength={15}
                                     onChange={(e) => {
@@ -307,8 +309,8 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* White-Label Branding Config Card */}
-                <Card className="border-border/40 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300 overflow-hidden md:col-span-2 rounded-2xl">
-                    <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+                <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden md:col-span-2 rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
                                 <Settings className="h-4 w-4 text-primary" />
@@ -326,6 +328,7 @@ export default function SettingsPage() {
                                     value={settings.product_name} 
                                     onChange={(e) => setSettings({...settings, product_name: e.target.value})}
                                     placeholder="e.g. CAL-RIMS"
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
 
@@ -338,6 +341,7 @@ export default function SettingsPage() {
                                         onChange={(e) => setSettings({...settings, theme_color: e.target.value})}
                                         placeholder="e.g. #2563eb"
                                         maxLength={7}
+                                        className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                     />
                                     <div 
                                         className="w-12 h-10 rounded-lg border border-border shadow-inner flex-shrink-0" 
@@ -353,6 +357,7 @@ export default function SettingsPage() {
                                     value={settings.dark_logo_url} 
                                     onChange={(e) => setSettings({...settings, dark_logo_url: e.target.value})}
                                     placeholder="e.g. /calrims/logo-dark.png"
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
 
@@ -363,6 +368,7 @@ export default function SettingsPage() {
                                     value={settings.favicon_url} 
                                     onChange={(e) => setSettings({...settings, favicon_url: e.target.value})}
                                     placeholder="e.g. /calrims/logo.png"
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
 
@@ -373,6 +379,7 @@ export default function SettingsPage() {
                                     value={settings.support_email} 
                                     onChange={(e) => setSettings({...settings, support_email: e.target.value})}
                                     placeholder="e.g. support@company.com"
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
 
@@ -383,6 +390,7 @@ export default function SettingsPage() {
                                     value={settings.terms_url} 
                                     onChange={(e) => setSettings({...settings, terms_url: e.target.value})}
                                     placeholder="e.g. /calrims/terms/"
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
 
@@ -393,6 +401,7 @@ export default function SettingsPage() {
                                     value={settings.privacy_url} 
                                     onChange={(e) => setSettings({...settings, privacy_url: e.target.value})}
                                     placeholder="e.g. /calrims/privacy/"
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
 
@@ -403,6 +412,7 @@ export default function SettingsPage() {
                                     value={settings.seo_title_default} 
                                     onChange={(e) => setSettings({...settings, seo_title_default: e.target.value})}
                                     placeholder="e.g. MyBrand - Recruitment Portal"
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
 
@@ -413,6 +423,7 @@ export default function SettingsPage() {
                                     value={settings.footer_text} 
                                     onChange={(e) => setSettings({...settings, footer_text: e.target.value})}
                                     placeholder="e.g. Powered by Acme Corp. Built for teams who care about who they hire."
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
 
@@ -424,6 +435,7 @@ export default function SettingsPage() {
                                     onChange={(e) => setSettings({...settings, seo_description_default: e.target.value})}
                                     placeholder="Enter default SEO meta description..."
                                     rows={2}
+                                    className="hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                                 />
                             </div>
                         </div>
@@ -431,8 +443,8 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* New Theme Preference Card */}
-                <Card className="border-border/40 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300 overflow-hidden md:col-span-2 rounded-2xl">
-                    <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+                <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden md:col-span-2 rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle className="flex items-center gap-2 text-base font-bold">
@@ -457,8 +469,8 @@ export default function SettingsPage() {
                 </Card>
             </div>
 
-                <Card className="border-border/40 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300 overflow-hidden rounded-2xl">
-                    <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+                <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
                                 <CardTitle className="flex items-center gap-2 text-base font-bold">
@@ -473,7 +485,7 @@ export default function SettingsPage() {
                             <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="gap-2"
+                                className="gap-2 active:scale-[0.98] transition-all duration-200"
                                 onClick={() => {
                                     const input = document.createElement('input');
                                     input.type = 'file';
@@ -505,7 +517,7 @@ export default function SettingsPage() {
                             <Button 
                                 variant="secondary" 
                                 size="sm" 
-                                className="gap-2"
+                                className="gap-2 active:scale-[0.98] transition-all duration-200"
                                 onClick={() => {
                                     if (!settings.offer_letter_template) {
                                         toast.error("Template is empty");
@@ -567,7 +579,7 @@ export default function SettingsPage() {
                         </div>
                         <Textarea 
                             id="offer_letter_template" 
-                            className="min-h-[250px] max-h-[500px] font-mono text-[11px] pt-8 leading-relaxed resize-y scrollbar-thin"
+                            className="min-h-[250px] max-h-[500px] font-mono text-[11px] pt-8 leading-relaxed resize-y scrollbar-thin hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                             value={settings.offer_letter_template} 
                             onChange={(e) => setSettings({...settings, offer_letter_template: e.target.value})}
                             placeholder="<html>\n  <head>\n    <style>...</style>\n  </head>\n  <body>\n    <h1>Welcome {{candidate_name}}!</h1>\n  </body>\n</html>"

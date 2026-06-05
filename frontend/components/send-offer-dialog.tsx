@@ -50,37 +50,37 @@ export function SendOfferDialog({ applicationId, candidateName, onSuccess, trigg
             <DialogTrigger asChild>
                 {trigger}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] border border-border bg-background/95 backdrop-blur-md shadow-2xl rounded-2xl">
                 <DialogHeader>
-                    <DialogTitle className="text-xl font-black">Issue Offer Letter</DialogTitle>
-                    <DialogDescription>
-                        Set the joining date and release the offer letter to <strong>{candidateName}</strong> immediately.
+                    <DialogTitle className="text-xl font-bold tracking-tight">Issue Offer Letter</DialogTitle>
+                    <DialogDescription className="text-sm text-muted-foreground">
+                        Set the joining date and release the offer letter to <strong className="font-semibold text-foreground">{candidateName}</strong> immediately.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="joining_date" className="font-bold">Joining Date</Label>
+                        <Label htmlFor="joining_date" className="text-sm font-semibold text-foreground">Joining Date</Label>
                         <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                            <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
                             <Input 
                                 id="joining_date" 
                                 type="date" 
                                 min={new Date().toISOString().split('T')[0]}
-                                className="pl-10 h-10 border-primary/20 focus-visible:ring-primary"
+                                className="pl-10 h-10 rounded-xl border-border/80 focus:ring-primary/20 focus-visible:ring-primary/20"
                                 value={joiningDate}
                                 onChange={(e) => setJoiningDate(e.target.value)}
                             />
                         </div>
                     </div>
                 </div>
-                <DialogFooter>
-                    <Button variant="ghost" onClick={() => setOpen(false)} disabled={loading}>
+                <DialogFooter className="gap-2 sm:gap-0 mt-2">
+                    <Button variant="ghost" onClick={() => setOpen(false)} disabled={loading} className="rounded-xl active:scale-95 transition-all">
                         Cancel
                     </Button>
                     <Button 
                         onClick={handleSend} 
                         disabled={loading} 
-                        className="font-black bg-primary hover:bg-primary/90 px-8"
+                        className="rounded-xl bg-primary hover:bg-primary/90 active:scale-[0.98] transition-all font-bold px-8 shadow-md shadow-primary/10"
                     >
                         {loading ? "Releasing..." : "Release Offer"}
                     </Button>

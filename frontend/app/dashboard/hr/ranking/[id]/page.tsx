@@ -83,19 +83,19 @@ export default function LeaderboardPage() {
                         icon={Award}
                     />
 
-                    <div className="inline-flex items-center rounded-xl border border-border/60 bg-muted/30 p-1">
+                    <div className="inline-flex items-center rounded-xl border border-border/80 bg-muted/20 backdrop-blur-md p-1 shadow-sm">
                         <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => router.push(`/dashboard/hr/pipelines/${jobId}`)}
-                            className="rounded-lg h-8 px-3 text-muted-foreground"
+                            className="rounded-lg h-8 px-3 text-muted-foreground active:scale-[0.98] hover:text-foreground transition-all duration-200"
                         >
                             <GitBranch className="h-4 w-4 mr-1.5" />
                             Pipeline View
                         </Button>
                         <Button
                             size="sm"
-                            className="rounded-lg h-8 px-3"
+                            className="rounded-lg h-8 px-3 active:scale-[0.98] transition-all duration-200"
                         >
                             <Trophy className="h-4 w-4 mr-1.5" />
                             Candidate Ranking
@@ -104,8 +104,8 @@ export default function LeaderboardPage() {
                 </div>
             </div>
 
-            <Card className="flex-1 min-h-0 flex flex-col border-border/60 shadow-lg bg-card overflow-hidden mx-4">
-                <CardHeader className="bg-muted/30 pb-4 shrink-0">
+            <Card className="flex-1 min-h-0 flex flex-col bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden mx-4">
+                <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 shrink-0">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <Users className="h-5 w-5 text-primary" />
                         Job Leaderboard
@@ -113,8 +113,8 @@ export default function LeaderboardPage() {
                 </CardHeader>
                 <CardContent className="flex-1 overflow-auto p-0">
                     <Table>
-                        <TableHeader>
-                            <TableRow className="hover:bg-transparent bg-muted/10 border-border/60">
+                        <TableHeader className="bg-muted/30 border-b border-border/40">
+                            <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="w-[100px] font-bold text-foreground">Rank</TableHead>
                                 <TableHead className="font-bold text-foreground">Candidate Name</TableHead>
                                 <TableHead className="font-bold text-foreground">Status</TableHead>
@@ -126,7 +126,7 @@ export default function LeaderboardPage() {
                             {paginatedRanked.map((cand, index) => {
                                 const actualRank = (rankingPage - 1) * pageSize + index + 1
                                 return (
-                                    <TableRow key={cand.id} className="hover:bg-muted/20 transition-colors border-border/40 py-4 h-16">
+                                    <TableRow key={cand.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 py-4 h-16">
                                         <TableCell className="font-medium align-middle">
                                             <div className="flex items-center gap-3 pl-2">
                                                 {getRankIcon(actualRank)}

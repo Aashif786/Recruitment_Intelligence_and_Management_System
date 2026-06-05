@@ -151,10 +151,10 @@ export default function HRJobsPage() {
                 icon={Briefcase}
             >
                 <div className="flex items-center gap-4">
-                    <div className="bg-primary/10 dark:bg-white/5 border border-primary/20 dark:border-white/10 rounded-2xl gap-2 px-6 py-4 flex items-center shadow-sm">
+                    <div className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl gap-2 px-6 py-4 flex items-center shadow-[0_4px_12px_-2px_rgba(0,0,0,0.06)]">
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-primary/60 dark:text-slate-400 uppercase tracking-widest leading-tight">Active</span>
-                            <span className="text-[18px] font-black text-primary dark:text-white tabular-nums leading-none">
+                            <span className="text-[10px] font-black text-primary uppercase tracking-widest leading-tight">Active</span>
+                            <span className="text-[18px] font-black text-primary tabular-nums leading-none">
                                 {isLoading ? "..." : openJobsCount}
                             </span>
                         </div>
@@ -167,7 +167,7 @@ export default function HRJobsPage() {
                         </div>
                     </div>
                     <Link href="/dashboard/hr/jobs/create">
-                        <Button className="h-14 px-6 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
+                        <Button className="h-14 px-6 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center gap-2">
                             <Plus className="w-5 h-5" />
                             Create New Job
                         </Button>
@@ -176,7 +176,7 @@ export default function HRJobsPage() {
             </PageHeader>
 
             {/* Filter Toolbar */}
-            <div className="bg-card p-2 rounded-2xl border border-border/50 shadow-sm mb-8 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
+            <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] mb-8 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
                 <div className="flex flex-wrap gap-4 items-end">
                     {/* Search Bar */}
                     <div className="flex-1 min-w-0">
@@ -265,7 +265,7 @@ export default function HRJobsPage() {
                     <Button variant="outline" onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}>Clear Filters</Button>
                 </div>
             ) : (
-                <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700">
                     {/* List Header */}
                     <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-muted/50 border-b border-border text-xs uppercase tracking-widest font-black text-muted-foreground">
                         <div className="col-span-4">Job Title & Identification</div>
@@ -280,7 +280,7 @@ export default function HRJobsPage() {
                         {paginatedJobs.map((job, index) => (
                             <div
                                 key={job.id}
-                                className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-muted/30 transition-all cursor-pointer group"
+                                className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 cursor-pointer group"
                                 onClick={() => router.push(`/dashboard/hr/jobs/${job.id}/edit`)}
                             >
                                 {/* Job Title & ID */}
