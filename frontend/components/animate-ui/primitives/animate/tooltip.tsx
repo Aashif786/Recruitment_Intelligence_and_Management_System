@@ -199,33 +199,37 @@ type TooltipArrowProps = Omit<
   withTransition?: boolean;
 };
 
-function TooltipArrow({
-  ref,
-  withTransition = true,
-  ...props
-}: TooltipArrowProps) {
-  const { side, align, open } = useRenderedTooltip();
-  const { context, arrowRef } = useFloatingContext();
-  const { transition, globalId } = useGlobalTooltip();
-  React.useImperativeHandle(ref as React.Ref<SVGSVGElement | null>, () => arrowRef.current as SVGSVGElement);
+const TooltipArrow = React.forwardRef<SVGSVGElement, TooltipArrowProps>(
+  function TooltipArrow(
+    {
+      withTransition = true,
+      ...props
+    },
+    ref
+  ) {
+    const { side, align, open } = useRenderedTooltip();
+    const { context, arrowRef } = useFloatingContext();
+    const { transition, globalId } = useGlobalTooltip();
+    React.useImperativeHandle(ref, () => arrowRef.current as SVGSVGElement);
 
-  const deg = { top: 0, right: 90, bottom: 180, left: -90 }[side];
+    const deg = { top: 0, right: 90, bottom: 180, left: -90 }[side];
 
-  return (
-    <MotionTooltipArrow
-      ref={arrowRef}
-      context={context}
-      data-state={open ? 'open' : 'closed'}
-      data-side={side}
-      data-align={align}
-      data-slot="tooltip-arrow"
-      style={{ rotate: deg }}
-      layoutId={withTransition ? `tooltip-arrow-${globalId}` : undefined}
-      transition={withTransition ? transition : undefined}
-      {...props}
-    />
-  );
-}
+    return (
+      <MotionTooltipArrow
+        ref={arrowRef}
+        context={context}
+        data-state={open ? 'open' : 'closed'}
+        data-side={side}
+        data-align={align}
+        data-slot="tooltip-arrow"
+        style={{ rotate: deg }}
+        layoutId={withTransition ? `tooltip-arrow-${globalId}` : undefined}
+        transition={withTransition ? transition : undefined}
+        {...props}
+      />
+    );
+  }
+);
 
 type TooltipPortalProps = React.ComponentProps<typeof FloatingPortal>;
 
@@ -446,36 +450,39 @@ type TooltipTriggerProps = WithAsChild<HTMLMotionProps<'div'>> & {
   disableFocus?: boolean;
 };
 
-function TooltipTrigger({
-  ref,
-  onMouseEnter,
-  onMouseLeave,
-  onFocus,
-  onBlur,
-  onPointerDown,
-  asChild = false,
-  disableFocus = false,
-  ...props
-}: TooltipTriggerProps) {
-  const {
-    props: contentProps,
-    asChild: contentAsChild,
-    side,
-    sideOffset,
-    align,
-    alignOffset,
-    id,
-  } = useTooltip();
-  const {
-    showTooltip,
-    hideTooltip,
-    hideImmediate,
-    currentTooltip,
-    setReferenceEl,
-  } = useGlobalTooltip();
+const TooltipTrigger = React.forwardRef<HTMLDivElement, TooltipTriggerProps>(
+  function TooltipTrigger(
+    {
+      onMouseEnter,
+      onMouseLeave,
+      onFocus,
+      onBlur,
+      onPointerDown,
+      asChild = false,
+      disableFocus = false,
+      ...props
+    },
+    ref
+  ) {
+    const {
+      props: contentProps,
+      asChild: contentAsChild,
+      side,
+      sideOffset,
+      align,
+      alignOffset,
+      id,
+    } = useTooltip();
+    const {
+      showTooltip,
+      hideTooltip,
+      hideImmediate,
+      currentTooltip,
+      setReferenceEl,
+    } = useGlobalTooltip();
 
-  const triggerRef = React.useRef<HTMLDivElement | null>(null);
-  React.useImperativeHandle(ref as React.Ref<HTMLDivElement | null>, () => triggerRef.current as HTMLDivElement);
+    const triggerRef = React.useRef<HTMLDivElement | null>(null);
+    React.useImperativeHandle(ref, () => triggerRef.current as HTMLDivElement);
 
   const suppressNextFocusRef = React.useRef(false);
 
@@ -569,7 +576,7 @@ function TooltipTrigger({
       {...props}
     />
   );
-}
+});
 
 export {
   TooltipProvider,

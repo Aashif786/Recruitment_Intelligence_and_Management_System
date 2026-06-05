@@ -145,7 +145,7 @@ export default function PipelineIndexPage() {
                                         </div>
                                     </div>
                                 </TableCell>
-                                <TableCell className="text-right pr-6">
+                                <TableCell className="text-center pr-6">
                                     <Button 
                                         variant="ghost" 
                                         className="h-9 gap-2 font-bold text-primary group-hover:translate-x-1 transition-transform"

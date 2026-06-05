@@ -206,7 +206,6 @@ export default function HRJobsPage() {
                             <option value="all">All Statuses</option>
                             <option value="open">Open</option>
                             <option value="closed">Closed</option>
-                            <option value="on_hold">On Hold</option>
                         </select>
                     </div>
 

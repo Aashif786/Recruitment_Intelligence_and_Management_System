@@ -21,6 +21,7 @@ import {
     BarChart,
     UserCheck,
     PanelLeft,
+    PanelRight,
     LogOut,
     LifeBuoy,
     CheckCircle2,
@@ -111,45 +112,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     return (
-        <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border bg-sidebar/45 backdrop-blur-xl text-sidebar-foreground shadow-[2px_0_20px_-4px_rgba(0,0,0,0.02)] transition-colors duration-300">
-            <SidebarHeader className="border-b border-sidebar-border/60 px-4 py-5">
+        <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border bg-sidebar/90 backdrop-blur-2xl text-sidebar-foreground shadow-[2px_0_20px_-4px_rgba(0,0,0,0.12)] transition-colors duration-300">
+            <SidebarHeader className="border-b border-sidebar-border/60 px-4 py-5 group-data-[collapsible=icon]:px-2">
                 <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center gap-2">
                     {/* Brand Identity */}
-                    <div className="flex items-center gap-2.5 overflow-hidden group-data-[collapsible=icon]:hidden">
-                        <div className="bg-sidebar-primary/10 p-1.5 rounded-lg border border-sidebar-primary/20 shrink-0">
+                    <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:hidden">
+                        <div className="relative group shrink-0">
+                            {/* Ambient soft glow on logo hover */}
+                            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary/30 to-blue-600/30 opacity-0 group-hover:opacity-100 blur-sm transition-all duration-500" />
                             <img
                                 src={companyLogo || '/calrims/logo.png'}
                                 alt="Company logo"
-                                className="h-6 w-auto object-contain max-w-[80px]"
+                                className="relative h-8 w-auto object-contain transition-all duration-300 group-hover:scale-110 group-hover:rotate-[-2deg]"
                             />
                         </div>
-                        <span className="font-extrabold text-xs tracking-tight text-sidebar-foreground truncate uppercase border-l border-sidebar-border/60 pl-2 leading-none">
-                            {branding.companyName || 'RIMS'}
-                        </span>
+                        <div className="flex flex-col min-w-0 leading-tight">
+                            <span className="font-black text-sm tracking-wide bg-gradient-to-r from-primary via-blue-500 to-indigo-600 bg-clip-text text-transparent truncate uppercase">
+                                {branding.productName || 'CAL-RIMS'}
+                            </span>
+                            <span className="text-[9px] font-extrabold text-muted-foreground/60 tracking-widest truncate uppercase mt-0.5">
+                                BY {branding.companyName ? branding.companyName.replace(/ Engineering/i, '') : 'CALDIM'}
+                            </span>
+                        </div>
                     </div>
 
-                    {/* Collapsed Brand Icon */}
-                    <div className="hidden group-data-[collapsible=icon]:flex bg-sidebar-primary/10 p-1.5 rounded-lg border border-sidebar-primary/20 hover:scale-105 transition-transform" onClick={toggleSidebar}>
-                        <img
-                            src={companyLogo || '/calrims/logo.png'}
-                            alt="Logo"
-                            className="h-5 w-5 object-contain"
-                        />
-                    </div>
-
-                    {/* Collapse Button - hidden in mobile, shown in desktop */}
+                    {/* Collapse Button - shown in both states */}
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={toggleSidebar}
-                        className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl transition-all duration-200 group-data-[collapsible=icon]:rotate-180 group-data-[collapsible=icon]:hidden"
+                        className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl transition-all duration-200"
                     >
-                        <PanelLeft className="h-4 w-4" />
+                        <PanelLeft className="h-4 w-4 group-data-[collapsible=icon]:hidden" />
+                        <PanelRight className="h-4 w-4 hidden group-data-[collapsible=icon]:block" />
                     </Button>
                 </div>
             </SidebarHeader>
 
-            <SidebarContent className="px-3 py-4">
+            <SidebarContent className="px-3 py-4 group-data-[collapsible=icon]:px-2">
                 <SidebarMenu className="gap-1">
                     {links.map((link) => {
                         const Icon = link.icon
@@ -210,7 +210,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenu>
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-sidebar-border/60 p-3 bg-gradient-to-t from-sidebar-accent/10 to-transparent">
+            <SidebarFooter className="border-t border-sidebar-border/60 p-3 group-data-[collapsible=icon]:p-1.5 bg-gradient-to-t from-sidebar-accent/10 to-transparent">
                 <div className="flex items-center justify-between gap-3 overflow-hidden group-data-[collapsible=icon]:justify-center w-full">
                     {/* User Info (Visible when expanded) */}
                     <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:hidden flex-1">

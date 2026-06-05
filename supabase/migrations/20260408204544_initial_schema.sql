@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     closed_at TIMESTAMP,
-    CONSTRAINT check_jobs_status CHECK (status IN ('open', 'closed', 'on_hold'))
+    CONSTRAINT check_jobs_status CHECK (status IN ('open', 'closed'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_jobs_hr_id ON jobs(hr_id);

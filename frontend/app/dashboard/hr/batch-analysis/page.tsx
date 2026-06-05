@@ -236,8 +236,8 @@ export default function BatchAnalysisPage() {
 
       <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ─── Bulk Upload Card ──────────────────────────── */}
-        <Card className="flex flex-col h-full bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
+        <Card className="flex flex-col h-full bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden pt-0">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
             <CardTitle className="flex items-center gap-2.5 text-base font-bold">
               <div className="p-1.5 bg-primary/10 rounded-lg">
                 <UploadCloud className="h-4 w-4 text-primary" />
@@ -270,8 +270,8 @@ export default function BatchAnalysisPage() {
         </Card>
 
         {/* ─── Filtered Export Card ──────────────────────── */}
-        <Card className="flex flex-col h-full bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
+        <Card className="flex flex-col h-full bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden pt-0">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
             <CardTitle className="flex items-center gap-2.5 text-base font-bold">
               <div className="p-1.5 bg-primary/10 rounded-lg">
                 <Filter className="h-4 w-4 text-primary" />
