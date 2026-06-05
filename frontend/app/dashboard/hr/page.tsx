@@ -243,8 +243,8 @@ export default function HRDashboard() {
 
 
       {isSuperAdmin && pendingApprovals.length > 0 && (
-        <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 p-6 animate-in fade-in duration-300">
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
+        <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 pt-0 overflow-hidden animate-in fade-in duration-300">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-foreground/80">Pending HR Approvals</CardTitle>
@@ -309,11 +309,11 @@ export default function HRDashboard() {
 
         {/* Chart Section */}
         <div className="lg:col-span-2 animate-in fade-in duration-500 delay-300">
-          <Card className="h-full bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
-            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
+          <Card className="h-full bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 pt-0 overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-foreground/80">Application Pipeline</CardTitle>
+                  <CardTitle >Application Pipeline</CardTitle>
                   <CardDescription className="text-muted-foreground">Distribution of candidates by status</CardDescription>
                 </div>
                 <div className="p-2 bg-muted/20 text-blue-600 rounded-lg">
@@ -332,9 +332,9 @@ export default function HRDashboard() {
 
         {/* Recent Activity / Quick Actions */}
         <div className="space-y-6 animate-in fade-in duration-500 delay-500">
-          <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
-            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
-              <CardTitle className="text-foreground/80">Quick Actions</CardTitle>
+          <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 pt-0 overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
+              <CardTitle >Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 pt-6">
               <ActionButton href="/dashboard/hr/applications" label="Review Applications" />
@@ -348,11 +348,11 @@ export default function HRDashboard() {
         </div>
       </div>
       {/* Recent Interviews Table */}
-      <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 animate-in fade-in duration-500 delay-700">
-        <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
+      <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden pt-0 animate-in fade-in duration-500 delay-700">
+        <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-foreground/80">Recent Interviews</CardTitle>
+              <CardTitle >Recent Interviews</CardTitle>
               <CardDescription>Upcoming and recently completed sessions</CardDescription>
             </div>
             <Clock className="h-5 w-5 text-muted-foreground" />
@@ -458,7 +458,7 @@ export default function HRDashboard() {
                     <TableHead>Job Role</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -261,7 +261,7 @@ class JobUpdate(BaseModel):
     mode_of_work: Optional[str] = None
     job_type: Optional[str] = None
     domain: Optional[str] = None
-    status: Optional[str] = None  # 'open', 'closed', 'on_hold'
+    status: Optional[str] = None  # 'open', 'closed'
     primary_evaluated_skills: Optional[List[str]] = None
     # Interview pipeline config
     aptitude_enabled: Optional[bool] = None

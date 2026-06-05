@@ -168,7 +168,6 @@ export default function ApprovalsPage() {
     }
     return <Badge variant="outline">{user.approval_status}</Badge>
   }
-
   return (
     <div className="space-y-8">
       <PageHeader
@@ -176,19 +175,16 @@ export default function ApprovalsPage() {
         description="Manage HR access, approve requests, and deactivate accounts."
         icon={UserCheck}
       >
-
+        <Tabs value={status} onValueChange={setStatus}>
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="approved">Approved</TabsTrigger>
+            <TabsTrigger value="rejected">Rejected</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </PageHeader>
-
-      <Tabs value={status} onValueChange={setStatus} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="approved">Approved</TabsTrigger>
-          <TabsTrigger value="rejected">Rejected</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
       <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
-        <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
+            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
           <div>
             <CardTitle>{status.charAt(0).toUpperCase() + status.slice(1)} HR Users</CardTitle>
             <CardDescription>
@@ -218,7 +214,7 @@ export default function ApprovalsPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Full Name</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="text-right transform translate-x-[-70px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

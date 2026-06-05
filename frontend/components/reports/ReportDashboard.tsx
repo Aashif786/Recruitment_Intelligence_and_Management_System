@@ -78,7 +78,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
   const isAnyFilterActive = useMemo(() => {
     return (
       appliedFilters.search !== '' ||
-      appliedFilters.status !== 'Default' ||
+      appliedFilters.status !== 'All' ||
       appliedFilters.job !== 'All' ||
       appliedFilters.skill !== 'All' ||
       appliedFilters.experience !== 'All' ||
@@ -127,57 +127,57 @@ export const ReportDashboard = React.memo(function ReportDashboard({
       {isAnyFilterActive && (
         <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-4 duration-500">
           {appliedFilters.search && (
-            <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+            <Badge onClick={() => onRemoveAppliedFilter('search')} variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
               Search: {appliedFilters.search}
-              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => onRemoveAppliedFilter('search')} />
+              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" />
             </Badge>
           )}
-          {appliedFilters.status !== 'Default' && (
-            <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+          {appliedFilters.status !== 'All' && (
+            <Badge onClick={() => onRemoveAppliedFilter('status')} variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
               Status: {appliedFilters.status === 'Select' ? 'High Score' : appliedFilters.status === 'Consider' ? 'Avg Score' : appliedFilters.status === 'Reject' ? 'Low Score' : getStatusLabel(appliedFilters.status)}
-              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => onRemoveAppliedFilter('status')} />
+              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" />
             </Badge>
           )}
           {appliedFilters.job !== 'All' && (
-            <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+            <Badge onClick={() => onRemoveAppliedFilter('job')} variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
               Job: {allJobsData?.find((j: any) => String(j.id) === String(appliedFilters.job))?.title || 'Selected Job'}
-              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => onRemoveAppliedFilter('job')} />
+              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" />
             </Badge>
           )}
           {appliedFilters.skill !== 'All' && (
-            <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+            <Badge onClick={() => onRemoveAppliedFilter('skill')} variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
               Skill: {appliedFilters.skill.split(/[_-]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
-              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => onRemoveAppliedFilter('skill')} />
+              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" />
             </Badge>
           )}
           {appliedFilters.experience !== 'All' && (
-            <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+            <Badge onClick={() => onRemoveAppliedFilter('experience')} variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
               Exp: {appliedFilters.experience}
-              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => onRemoveAppliedFilter('experience')} />
+              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" />
             </Badge>
           )}
           {(appliedFilters.score[0] !== 0 || appliedFilters.score[1] !== 10) && (
-            <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+            <Badge onClick={() => onRemoveAppliedFilter('score')} variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
               Score: {appliedFilters.score[0]} - {appliedFilters.score[1]}
-              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => onRemoveAppliedFilter('score')} />
+              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" />
             </Badge>
           )}
           {appliedFilters.from && (
-            <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+            <Badge onClick={() => onRemoveAppliedFilter('from')} variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
               From: {dayjs(appliedFilters.from).format('MMM D, YYYY')}
-              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => onRemoveAppliedFilter('from')} />
+              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" />
             </Badge>
           )}
           {appliedFilters.to && (
-            <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+            <Badge onClick={() => onRemoveAppliedFilter('to')} variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
               To: {dayjs(appliedFilters.to).format('MMM D, YYYY')}
               <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => onRemoveAppliedFilter('to')} />
             </Badge>
           )}
           {appliedFilters.date && (
-            <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
+            <Badge onClick={() => onRemoveAppliedFilter('date')} variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
               On: {dayjs(appliedFilters.date).format('MMM D, YYYY')}
-              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => onRemoveAppliedFilter('date')} />
+              <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive"  />
             </Badge>
           )}
           <Button 

@@ -193,7 +193,7 @@ export default function ReportsPage() {
   // Applied state for manual triggering
   const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
     search: urlSearch || '',
-    status: 'Default',
+    status: 'All',
     job: 'All',
     skill: 'All',
     experience: 'All',
@@ -207,7 +207,7 @@ export default function ReportsPage() {
 
   const reportsFilterQueryString = useMemo(() => {
     const q = new URLSearchParams();
-    if (appliedFilters.status !== "Default") q.set("status", appliedFilters.status);
+    if (appliedFilters.status !== "All") q.set("status", appliedFilters.status);
     if (appliedFilters.job !== "All") q.set("job_id", appliedFilters.job);
     if (appliedFilters.skill !== "All") q.set("skill", appliedFilters.skill);
     if (appliedFilters.experience !== "All") q.set("experience", appliedFilters.experience);
@@ -420,7 +420,7 @@ export default function ReportsPage() {
     setAppliedFilters(prev => {
       const updated = { ...prev }
       if (key === 'search') updated.search = ''
-      else if (key === 'status') updated.status = 'Default'
+      else if (key === 'status') updated.status = 'All'
       else if (key === 'job') updated.job = 'All'
       else if (key === 'skill') updated.skill = 'All'
       else if (key === 'experience') updated.experience = 'All'
@@ -540,7 +540,7 @@ export default function ReportsPage() {
   const clearAllFilters = () => {
     setAppliedFilters({
       search: '',
-      status: 'Default',
+      status: 'All',
       job: 'All',
       skill: 'All',
       experience: 'All',
@@ -593,14 +593,6 @@ export default function ReportsPage() {
       - 'min-h-0' is crucial for allowing flex children to scroll.
     */
     <div className="w-full flex flex-col gap-4 lg:h-[calc(100vh-7.5rem)]">
-
-      
-      {/* Header - Fixed at the top of the component */}
-      {/* <PageHeader
-        title="Interview Reports"
-        description={`Analytics and detailed reports for ${totalCount} candidates`}
-        icon={BarChart}
-      /> */}
 
       {/* Question Detail Modal */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && setSelectedQuestion(null)}>

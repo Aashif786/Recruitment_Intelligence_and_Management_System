@@ -117,10 +117,10 @@ type HighlightProps<T extends React.ElementType = 'div'> =
   | UncontrolledParentModeHighlightProps<T>
   | UncontrolledChildrenModeHighlightProps<T>;
 
-function Highlight<T extends React.ElementType = 'div'>({
-  ref,
-  ...props
-}: HighlightProps<T>) {
+const Highlight = React.forwardRef(function Highlight(
+  props: HighlightProps<any>,
+  ref: React.Ref<any>
+) {
   const {
     as: Component = 'div',
     children,
@@ -140,7 +140,7 @@ function Highlight<T extends React.ElementType = 'div'>({
   } = props;
 
   const localRef = React.useRef<HTMLDivElement | null>(null);
-  React.useImperativeHandle(ref as React.Ref<HTMLDivElement>, () => localRef.current as HTMLDivElement);
+  React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
 
   const propsBoundsOffset = (props as ParentModeHighlightProps)?.boundsOffset;
   const boundsOffset = propsBoundsOffset ?? DEFAULT_BOUNDS_OFFSET;
@@ -336,7 +336,7 @@ function Highlight<T extends React.ElementType = 'div'>({
         : children}
     </HighlightContext.Provider>
   );
-}
+});
 
 function getNonOverridingDataAttributes(
   element: React.ReactElement,
@@ -379,22 +379,24 @@ type HighlightItemProps<T extends React.ElementType = 'div'> =
     forceUpdateBounds?: boolean;
   };
 
-function HighlightItem<T extends React.ElementType>({
-  ref,
-  as,
-  children,
-  id,
-  value,
-  className,
-  style,
-  transition,
-  disabled = false,
-  activeClassName,
-  exitDelay,
-  asChild = false,
-  forceUpdateBounds,
-  ...props
-}: HighlightItemProps<T>) {
+const HighlightItem = React.forwardRef(function HighlightItem(
+  {
+    as,
+    children,
+    id,
+    value,
+    className,
+    style,
+    transition,
+    disabled = false,
+    activeClassName,
+    exitDelay,
+    asChild = false,
+    forceUpdateBounds,
+    ...props
+  }: HighlightItemProps<any>,
+  ref: React.Ref<any>
+) {
   const itemId = React.useId();
   const {
     activeValue,
@@ -424,7 +426,7 @@ function HighlightItem<T extends React.ElementType>({
   const itemTransition = transition ?? contextTransition;
 
   const localRef = React.useRef<HTMLDivElement | null>(null);
-  React.useImperativeHandle(ref as React.Ref<HTMLDivElement>, () => localRef.current as HTMLDivElement);
+  React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
 
   const refCallback = (node: HTMLElement | null) => {
     (localRef as React.MutableRefObject<HTMLElement | null>).current = node;
@@ -663,7 +665,7 @@ function HighlightItem<T extends React.ElementType>({
   ) : (
     children
   );
-}
+});
 
 export {
   Highlight,

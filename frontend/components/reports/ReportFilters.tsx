@@ -61,7 +61,7 @@ export const ReportFilters = React.memo(function ReportFilters({
 }: ReportFiltersProps) {
   const [searchQuery, setSearchQuery] = useState(appliedFilters.search)
   const [jobFilter, setJobFilter] = useState(appliedFilters.job)
-  const [statusFilter, setStatusFilter] = useState(appliedFilters.status)
+  const [statusFilter, setStatusFilter] = useState("All")
   const [experienceFilter, setExperienceFilter] = useState(appliedFilters.experience)
   const [skillFilter, setSkillFilter] = useState(appliedFilters.skill)
   const [scoreRange, setScoreRange] = useState(appliedFilters.score)
@@ -95,7 +95,7 @@ export const ReportFilters = React.memo(function ReportFilters({
   const isAnyFilterActive = useMemo(() => {
     return (
       searchQuery !== '' ||
-      statusFilter !== 'Default' ||
+      statusFilter !== 'All' ||
       jobFilter !== 'All' ||
       skillFilter !== 'All' ||
       experienceFilter !== 'All' ||
@@ -144,7 +144,7 @@ export const ReportFilters = React.memo(function ReportFilters({
         {...props}
         sx={{
           ...(count > 0 && {
-            boxShadow: `inset 0 -3px 0 0 hsl(var(--primary) / ${intensity})`,
+            boxShadow: `inset 0 -3px 0 0 color-mix(in oklab, var(--primary) ${intensity * 100}%, transparent)`,
             fontWeight: 600,
           }),
         }}
@@ -154,13 +154,10 @@ export const ReportFilters = React.memo(function ReportFilters({
 
   return (
     <div className="lg:sticky lg:top-4 lg:col-span-1 md:col-span-1 lg:h-[calc(100vh-8.5rem)] lg:max-h-[calc(100vh-8.5rem)] flex flex-col animate-in fade-in slide-in-from-left-8 duration-700 ease-out fill-mode-both">
-      <Card className="h-full flex flex-col shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08)] border-border/80 !py-0 !gap-0 bg-card/80 backdrop-blur-md rounded-2xl overflow-hidden">
+      <Card className="-mt-4 h-full flex flex-col shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08)] border-border/80 !py-0 !gap-0 bg-card/80 backdrop-blur-md rounded-2xl overflow-hidden">
         <CardHeader className="p-4 !pb-3 shrink-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-foreground">Interview Reports</h2>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Filter className="h-4 w-4 text-primary" /> Filters
-            </CardTitle>
+            <h1 className="text-2xl font-extrabold text-foreground">Interview Reports</h1>
             <div className="flex items-center gap-1.5 min-w-[40px] justify-end">
               <TooltipProvider delayDuration={100}>
                 {isAnyFilterActive && (
@@ -245,14 +242,14 @@ export const ReportFilters = React.memo(function ReportFilters({
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-muted/30 space-y-2">
-            <Label htmlFor="job-filter" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Filter by Job</Label>
+          <div className="rounded-xl border border-border/60 bg-muted/30 space-y-1">
+            <Label htmlFor="job-filter" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Filters</Label>
             <Select value={jobFilter} onValueChange={setJobFilter}>
               <SelectTrigger id="job-filter" className="w-full h-9 text-sm rounded-lg bg-background/50 border-border/40">
-                <SelectValue placeholder="All Jobs" />
+                <SelectValue placeholder="JOBS" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                <SelectItem value="All">All Jobs</SelectItem>
+                <SelectItem value="All">JOBS</SelectItem>
                 {allJobsData?.map((job: any) => (
                   <SelectItem key={job.id} value={String(job.id)}>{job.title}</SelectItem>
                 ))}
@@ -261,34 +258,17 @@ export const ReportFilters = React.memo(function ReportFilters({
           </div>
 
           {/* Grouped Status/Exp/Skill Filters */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 ">
-            {/* Status Filter */}
-            <div className="space-y-1  rounded-xl border border-border/50 bg-muted/25">
-              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full h-5 text-xs rounded-lg bg-background/40 border-border/30">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent className="rounded-lg">
-                  <SelectItem value="Default">All Reports</SelectItem>
-                  <SelectItem value="Select">High Score (&gt;6)</SelectItem>
-                  <SelectItem value="Consider">Average Score (4-6)</SelectItem>
-                  <SelectItem value="Reject">Low Score (&lt;4)</SelectItem>
-                  <SelectItem value="Terminated">Terminated</SelectItem>
-                  <SelectItem value="Not Completed">Incomplete</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-3 ">
 
             {/* Experience Filter */}
             <div className="space-y-1 rounded-xl border border-border/50 bg-muted/25">
-              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Exp.</Label>
+              {/* <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Experience</Label> */}
               <Select value={experienceFilter} onValueChange={setExperienceFilter}>
                 <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
                   <SelectValue placeholder="Exp." />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
-                  <SelectItem value="All">All Levels</SelectItem>
+                  <SelectItem value="All">EXP</SelectItem>
                   {UNIQUE_EXPERIENCES.map((exp, idx) => (
                     <SelectItem key={idx} value={exp}>{exp}</SelectItem>
                   ))}
@@ -296,15 +276,34 @@ export const ReportFilters = React.memo(function ReportFilters({
               </Select>
             </div>
 
+            {/* Status Filter */}
+            <div className="space-y-1  rounded-xl border border-border/50 bg-muted/25">
+              {/* <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</Label> */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full h-5 text-xs rounded-lg bg-background/40 border-border/30">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="rounded-lg">
+                  <SelectItem value="All">STATUS</SelectItem>
+                  <SelectItem value="Select">Selected (&gt;6)</SelectItem>
+                  <SelectItem value="Consider">On Hold (4-6)</SelectItem>
+                  <SelectItem value="Reject">Rejected (&lt;4)</SelectItem>
+                  <SelectItem value="Terminated">Terminated</SelectItem>
+                  <SelectItem value="Not Completed">Incomplete</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+
             {/* Skill Filter */}
             <div className="space-y-1  rounded-xl border border-border/50 bg-muted/25">
-              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Skills</Label>
+              {/* <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Skills</Label> */}
               <Select value={skillFilter} onValueChange={setSkillFilter}>
                 <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
-                  <SelectValue placeholder="Skills" />
+                  <SelectValue placeholder="DOMAIN" />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg max-h-[300px]">
-                  <SelectItem value="All">All Skills</SelectItem>
+                  <SelectItem value="All">DOMAIN</SelectItem>
                   {SKILL_CATEGORIES.map((skill, idx) => (
                     <SelectItem key={idx} value={skill}>
                       {skill.split(/[_-]/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')}
@@ -313,6 +312,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                 </SelectContent>
               </Select>
             </div>
+
           </div>
 
           {/* Score Range */}
@@ -363,17 +363,17 @@ export const ReportFilters = React.memo(function ReportFilters({
                             fontFamily: 'var(--font-sans) !important',
                           },
                           '& .MuiInputBase-input': {
-                            color: 'hsl(var(--foreground)) !important',
-                            WebkitTextFillColor: 'hsl(var(--foreground)) !important',
+                            color: 'var(--foreground) !important',
+                            WebkitTextFillColor: 'var(--foreground) !important',
                           },
                           '& .MuiInputLabel-root': { 
-                            color: 'hsl(var(--muted-foreground))' 
+                            color: 'var(--muted-foreground)' 
                           },
                           '& .MuiOutlinedInput-notchedOutline': { 
-                            borderColor: 'hsl(var(--border) / 0.5)' 
+                            borderColor: 'color-mix(in oklab, var(--border) 50%, transparent)' 
                           },
                           '& .MuiSvgIcon-root': {
-                            color: 'hsl(var(--muted-foreground))'
+                            color: 'var(--muted-foreground)'
                           }
                         }
                       },
@@ -384,10 +384,11 @@ export const ReportFilters = React.memo(function ReportFilters({
                       },
                       desktopPaper: {
                         sx: {
-                          backgroundColor: 'hsl(var(--card)) !important',
+                          backgroundColor: 'color-mix(in oklab, var(--card) 75%, transparent) !important',
+                          backdropFilter: 'blur(16px) !important',
+                          WebkitBackdropFilter: 'blur(16px) !important',
                           backgroundImage: 'none !important',
-                          opacity: '1 !important',
-                          border: '1px solid hsl(var(--border))',
+                          border: '1px solid var(--border)',
                           boxShadow: 'var(--shadow-xl)',
                           borderRadius: '12px',
                         }
@@ -413,17 +414,17 @@ export const ReportFilters = React.memo(function ReportFilters({
                             fontSize: '0.875rem',
                           },
                           '& .MuiInputBase-input': {
-                            color: 'hsl(var(--foreground)) !important',
-                            WebkitTextFillColor: 'hsl(var(--foreground)) !important',
+                            color: 'var(--foreground) !important',
+                            WebkitTextFillColor: 'var(--foreground) !important',
                           },
                           '& .MuiInputLabel-root': { 
-                            color: 'hsl(var(--muted-foreground))' 
+                            color: 'var(--muted-foreground)' 
                           },
                           '& .MuiOutlinedInput-notchedOutline': { 
-                            borderColor: 'hsl(var(--border) / 0.5)' 
+                            borderColor: 'color-mix(in oklab, var(--border) 50%, transparent)' 
                           },
                           '& .MuiSvgIcon-root': {
-                            color: 'hsl(var(--muted-foreground))'
+                            color: 'var(--muted-foreground)'
                           }
                         }
                       },
@@ -434,10 +435,11 @@ export const ReportFilters = React.memo(function ReportFilters({
                       },
                       desktopPaper: {
                         sx: {
-                          backgroundColor: 'hsl(var(--card)) !important',
+                          backgroundColor: 'color-mix(in oklab, var(--card) 75%, transparent) !important',
+                          backdropFilter: 'blur(16px) !important',
+                          WebkitBackdropFilter: 'blur(16px) !important',
                           backgroundImage: 'none !important',
-                          opacity: '1 !important',
-                          border: '1px solid hsl(var(--border))',
+                          border: '1px solid var(--border)',
                           boxShadow: 'var(--shadow-xl)',
                           borderRadius: '12px',
                         }
@@ -467,9 +469,9 @@ export const ReportFilters = React.memo(function ReportFilters({
                 <Box sx={{
                   position: 'relative',
                   zIndex: 1,
-                  bgcolor: 'hsl(var(--muted) / 0.3)',
+                  bgcolor: 'color-mix(in oklab, var(--muted) 30%, transparent)',
                   borderRadius: '12px',
-                  border: '1px solid hsl(var(--border))',
+                  border: '1px solid var(--border)',
                   overflow: 'hidden',
                   display: 'flex',
                   justifyContent: 'center',
@@ -485,21 +487,21 @@ export const ReportFilters = React.memo(function ReportFilters({
                     width: '32px',
                     height: '32px',
                     fontSize: '0.8rem',
-                    color: 'hsl(var(--foreground))',
+                    color: 'var(--foreground)',
                   },
                   '& .MuiTypography-root': {
                     fontSize: '0.8rem',
-                    color: 'hsl(var(--foreground))',
+                    color: 'var(--foreground)',
                   },
                   '& .MuiSvgIcon-root': {
-                    color: 'hsl(var(--foreground))',
+                    color: 'var(--foreground)',
                   },
                   '& .MuiPickersDay-root.Mui-selected': {
-                    bgcolor: 'hsl(var(--primary)) !important',
-                    color: 'hsl(var(--primary-foreground)) !important',
+                    bgcolor: 'var(--primary) !important',
+                    color: 'var(--primary-foreground) !important',
                   },
                   '& .MuiDayCalendar-weekDayLabel': {
-                    color: 'hsl(var(--muted-foreground))',
+                    color: 'var(--muted-foreground)',
                   }
                 }}>
                   <DateCalendar
@@ -516,13 +518,13 @@ export const ReportFilters = React.memo(function ReportFilters({
                     sx={{
                       backgroundColor: 'transparent',
                       '& .MuiPickersDay-root': {
-                        color: 'hsl(var(--foreground))',
+                        color: 'var(--foreground)',
                       },
                       '& .MuiTypography-root': {
-                        color: 'hsl(var(--foreground))'
+                        color: 'var(--foreground)'
                       },
                       '& .MuiSvgIcon-root': {
-                        color: 'hsl(var(--foreground))'
+                        color: 'var(--foreground)'
                       }
                     }}
                     slots={{ day: ReportDensityDay }}

@@ -53,7 +53,7 @@ class User(Base):
 class Job(Base):
     __tablename__ = "jobs"
     __table_args__ = (
-        CheckConstraint("status IN ('open', 'closed', 'on_hold')", name='check_jobs_status'),
+        CheckConstraint("status IN ('open', 'closed')", name='check_jobs_status'),
         # Job search performance (used by /api/jobs/public search=...).
         Index('ix_jobs_title', 'title'),
         Index('ix_jobs_description', 'description'),
