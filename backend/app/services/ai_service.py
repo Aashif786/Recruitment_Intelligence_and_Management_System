@@ -32,7 +32,7 @@ async def run_sync(func, *args, **kwargs):
 
 import re
 import logging
-from app.core.observability import log_json, filter_pii, log_ai_score_deviation
+from app.core.observability import filter_pii, log_ai_score_deviation
 
 logger = logging.getLogger(__name__)
 

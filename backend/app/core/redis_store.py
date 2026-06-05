@@ -7,7 +7,7 @@ Use ``redis://...`` in production so all workers share the same key space.
 On each access we ``PING`` the existing client; if the connection dropped, we discard
 the client and reconnect so a transient Redis blip does not permanently disable Redis.
 """
-from __future__ import annotations
+
 
 import logging
 import threading

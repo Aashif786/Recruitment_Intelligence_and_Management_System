@@ -8,13 +8,13 @@ import hashlib
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from datetime import datetime, timezone
 from app.domain.models import AttachmentResume, Application, Job
 from app.core.config import get_settings
 import logging
 import re
-import requests
+
 
 logger = logging.getLogger(__name__)
 

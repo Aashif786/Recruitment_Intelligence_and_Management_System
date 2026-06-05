@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks, Form, Request, Query
+from fastapi.responses import ORJSONResponse
 from app.core.timezone import get_ist_now
 from sqlalchemy import or_, func, text, extract, inspect as sa_inspect
 from sqlalchemy.orm import Session, joinedload, selectinload, load_only
@@ -9,7 +10,7 @@ import logging
 import time
 from datetime import datetime, timezone, timedelta
 from app.infrastructure.database import get_db, SessionLocal
-from app.domain.models import User, Application, Job, ResumeExtraction, Interview
+from app.domain.models import User, Application, Job, ResumeExtraction, Interview, ResumeExtractionVersion
 from app.domain.schemas import (
     ApplicationCreate,
     ApplicationStatusUpdate,

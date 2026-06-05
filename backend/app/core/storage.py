@@ -1,15 +1,14 @@
 import logging
-import os
-from pathlib import Path
+
 from typing import Optional, Any, List
 from app.core.config import get_settings
-from app.core.observability import log_json
+
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 try:
-    from supabase import create_client, Client
+    from supabase import create_client
     SUPABASE_AVAILABLE = True
 except ImportError:
     SUPABASE_AVAILABLE = False

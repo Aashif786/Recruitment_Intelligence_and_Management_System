@@ -286,10 +286,6 @@ export default function ReportsPage() {
       };
     });
 
-    // Developer Contract Validation Log
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[REPORTS] Pipeline: API(${rawReports.length}) -> Processed(${processed.length})`);
-    }
 
     return processed;
   }, [rawReports])

@@ -1,8 +1,8 @@
-from typing import List, Optional
+
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone
+from datetime import datetime
 import json
 import os
 import random

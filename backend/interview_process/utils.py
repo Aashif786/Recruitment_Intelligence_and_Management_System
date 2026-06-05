@@ -2,7 +2,6 @@ import re
 from typing import Dict, List
 from datetime import datetime
 from dateutil import parser
-from dateutil.relativedelta import relativedelta
 
 def format_response(text: str, color: str = None) -> str:
     """Format text (color argument is ignored for compatibility)"""

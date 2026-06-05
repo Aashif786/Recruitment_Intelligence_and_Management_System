@@ -1,5 +1,5 @@
 import logging
-import re
+
 import time
 from collections import deque
 from typing import Optional

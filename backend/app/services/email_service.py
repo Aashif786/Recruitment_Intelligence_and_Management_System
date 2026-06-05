@@ -11,7 +11,7 @@ from app.core.config import get_settings
 import logging
 from urllib.parse import urlparse, urlencode
 import httpx
-import traceback
+
 import uuid
 from datetime import datetime
 from typing import Any, Optional

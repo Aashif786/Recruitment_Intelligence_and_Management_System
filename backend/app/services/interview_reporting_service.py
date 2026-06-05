@@ -47,8 +47,7 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
     """
     from app.services.ai_service import generate_interview_report
     from app.core.config import get_settings
-    from app.core.storage import get_public_url
-    from app.domain.models import InterviewReport, InterviewQuestion, InterviewAnswer, Notification
+    from app.domain.models import InterviewReport, InterviewQuestion, Notification
     from app.services.email_service import send_interview_completed_email, send_interview_terminated_email
     
     # 1. Fetch live interview state with row-level lock to prevent double reporting

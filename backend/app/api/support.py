@@ -39,7 +39,6 @@ def _check_support_rate_limit(key: str) -> Optional[int]:
     
     if redis_client:
         try:
-            import redis
             redis_key = f"rate_limit:support:{key}"
             current_count = redis_client.get(redis_key)
             if current_count is None:

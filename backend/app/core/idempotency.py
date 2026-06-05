@@ -11,7 +11,7 @@ TTL is clamped between ``idempotency_ttl_min_seconds`` and ``idempotency_ttl_max
 (env: ``IDEMPOTENCY_TTL_MIN_SECONDS``, ``IDEMPOTENCY_TTL_MAX_SECONDS``; defaults 60–120).
 Without Redis, falls back to the prior in-process dict (single-worker only).
 """
-from __future__ import annotations
+
 
 import logging
 import threading
