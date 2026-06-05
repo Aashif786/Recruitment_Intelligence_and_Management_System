@@ -593,11 +593,10 @@ export default function Home() {
         </div>
 
         {/* ── Hero text — z-10 ── */}
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="max-w-2xl" style={{ marginTop: "-120px" }}>
+        <div className="max-w-7xl mx-auto px-6 relative z-10 w-full">
+          <div className="max-w-4xl lg:text-left text-center flex flex-col items-center lg:items-start" style={{ marginTop: "-120px" }}>
             <div
-              className="hero-text-block mb-8 space-y-4 text-center"
-              style={{ marginLeft: "-280px", maxWidth: "56rem" }}
+              className="hero-text-block mb-8 space-y-4 flex flex-col items-center lg:items-start"
             >
               {/* Badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-[0.18em] mb-2">
@@ -607,7 +606,7 @@ export default function Home() {
 
               <h1 className="text-5xl md:text-7xl font-semibold tracking-tight leading-tight">
                 <span
-                  className="hero-title-stroke whitespace-nowrap text-slate-950"
+                  className="hero-title-stroke text-slate-950"
                 >
                   Hire with the same precision{" "}
                 </span>
@@ -615,7 +614,7 @@ export default function Home() {
                   you use to build products.
                 </span>
               </h1>
-              <p className="text-xl md:text-2xl text-slate-600 max-w-xl mx-auto">
+              <p className="text-xl md:text-2xl text-slate-800 max-w-2xl">
                 Our Product runs structured, bias-free interviews, scores
                 skills, and turns every conversation into decision-ready
                 analytics.
@@ -625,28 +624,26 @@ export default function Home() {
             {/* ── Buttons — original inline position ── */}
             {isLoading ? (
               <div
-                className="flex flex-col sm:flex-row gap-4 items-center justify-center mt-6"
-                style={{ marginLeft: "-280px" }}
+                className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start mt-6 w-full"
               >
                 <div className="h-12 w-[220px] bg-slate-800/50 rounded-md animate-pulse border border-slate-700/50"></div>
                 <div className="h-12 w-[160px] bg-slate-800/50 rounded-md animate-pulse border border-slate-700/50"></div>
               </div>
             ) : (
               <div
-                className="flex flex-col sm:flex-row gap-4 items-center justify-center mt-6"
-                style={{ marginLeft: "-280px" }}
+                className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start mt-6 w-full"
               >
                 <Link href="/auth/login?role=hr">
-                  <Button size="lg" className="h-12 px-7 cursor-pointer">
+                  <Button size="lg" className="h-12 px-7 cursor-pointer active:scale-95 transition-all duration-300 group hover:shadow-lg hover:shadow-primary/25">
                     Start hiring in minutes
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
                   </Button>
                 </Link>
                 <Link href="/jobs">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="h-12 px-7 border-border/70 bg-background/70 cursor-pointer"
+                    className="h-12 px-7 border-border/70 bg-background/70 cursor-pointer active:scale-95 transition-all duration-300 hover:bg-background/95 hover:border-border"
                   >
                     Browse open roles
                   </Button>
@@ -829,7 +826,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row items-center gap-8 lg:gap-12 w-full relative">
               <div className="w-full md:w-3/4 lg:w-2/3">
                 <FeatureCard
-                  icon={<Zap className="h-7 w-7 text-accent" />}
+                  icon={<Zap className="h-7 w-7 text-amber-500 fill-amber-500/10" />}
                   title="Live AI interviews"
                   desc={
                     <ul className="space-y-2 list-none p-0 m-0">
@@ -859,7 +856,7 @@ export default function Home() {
                   }
                 />
               </div>
-              <div className="w-full md:w-1/4 lg:w-1/3 flex justify-center items-center opacity-50 pointer-events-none transition-opacity duration-500 hover:opacity-80">
+              <div className="w-full md:w-1/4 lg:w-1/3 flex justify-center items-center opacity-60 hover:opacity-100 scale-100 hover:scale-105 transition-all duration-500">
                 <img
                   src="/calrims/interview.png"
                   alt="Live AI Interview Dashboard"
@@ -900,7 +897,7 @@ export default function Home() {
                   }
                 />
               </div>
-              <div className="w-full md:w-1/4 lg:w-1/3 flex justify-center items-center opacity-50 pointer-events-none transition-opacity duration-500 hover:opacity-80">
+              <div className="w-full md:w-1/4 lg:w-1/3 flex justify-center items-center opacity-60 hover:opacity-100 scale-100 hover:scale-105 transition-all duration-500">
                 <img
                   src="/calrims/portfolio.png"
                   alt="Signal-rich screening"
@@ -940,7 +937,7 @@ export default function Home() {
                   }
                 />
               </div>
-              <div className="w-full md:w-1/4 lg:w-1/3 flex justify-center items-center opacity-50 pointer-events-none transition-opacity duration-500 hover:opacity-80">
+              <div className="w-full md:w-1/4 lg:w-1/3 flex justify-center items-center opacity-60 hover:opacity-100 scale-100 hover:scale-105 transition-all duration-500">
                 <img
                   src="/calrims/aim.png"
                   alt="Unbiased decisions"
@@ -957,7 +954,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-stretch">
             {/* Candidate Card */}
-            <div className="group relative">
+            <div className="group relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5 rounded-3xl">
               <div
                 className="absolute inset-0 rounded-3xl border border-white/50"
                 style={{
@@ -983,16 +980,16 @@ export default function Home() {
                 <Link href="/jobs">
                   <Button
                     variant="link"
-                    className="p-0 text-base text-primary hover:text-primary/80"
+                    className="p-0 text-base text-primary hover:text-primary/80 group/link"
                   >
-                    Browse openings &rarr;
+                    Browse openings <span className="inline-block translate-x-0 group-hover/link:translate-x-1 transition-transform duration-200">&rarr;</span>
                   </Button>
                 </Link>
               </div>
             </div>
 
             {/* HR Card */}
-            <div className="group relative">
+            <div className="group relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5 rounded-3xl">
               <div
                 className="absolute inset-0 rounded-3xl border border-primary/30"
                 style={{
@@ -1024,7 +1021,7 @@ export default function Home() {
                 <Link href="/auth/login?role=hr">
                   <Button
                     size="lg"
-                    className="bg-slate-950 text-white hover:bg-slate-900 rounded-full px-7"
+                    className="bg-slate-950 text-white hover:bg-slate-900 rounded-full px-7 active:scale-95 transition-all duration-300 hover:shadow-lg hover:shadow-black/25"
                   >
                     Open the HR dashboard
                   </Button>

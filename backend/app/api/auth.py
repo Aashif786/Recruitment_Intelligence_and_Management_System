@@ -3,12 +3,11 @@ from typing import List
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from app.infrastructure.database import get_db
-from app.domain.models import User
+from app.domain.models import User, Job, Application
 from app.domain.schemas import UserRegister, UserLogin, TokenResponse, UserResponse, UserVerifyOTP, ForgotPasswordRequest, ResetPasswordRequest, UserProfileUpdate, UserListResponse
 from app.core.auth import hash_password, verify_password, create_access_token, get_current_user, get_current_admin, pwd_context
 from app.services.email_service import send_otp_email, send_password_reset_email
 from app.core.config import get_settings
-from app.domain.models import Application, Job, User
 import secrets
 import string
 import logging

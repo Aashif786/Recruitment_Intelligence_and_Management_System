@@ -53,7 +53,6 @@ settings = get_settings()
 
 if os.environ.get("RIMS_LOGGING_DONE", "0") != "1":
     # Enable file logging in the 'logs' directory
-    from pathlib import Path
     logs_dir = Path(__file__).parent.parent / "logs"
     setup_logging(logs_dir, settings.debug)
     os.environ["RIMS_LOGGING_DONE"] = "1"
@@ -280,6 +279,9 @@ async def _imap_polling_loop():
                 lock_acquired = True
             else:
                 db.rollback()
+                db.close()
+                await asyncio.sleep(sleep_seconds)
+                continue
 
             # Run stuck applications sweep
             try:
@@ -291,6 +293,10 @@ async def _imap_polling_loop():
             settings_records = db.query(GlobalSettings).all()
             settings_dict = {s.key: s.value for s in settings_records}
 
+            # Close the primary DB session to release its connection back to the pool
+            db.close()
+            db = None
+
             auto_sync_enabled = settings_dict.get("auto_sync_enabled", "false").lower() == "true"
 
             if auto_sync_enabled:
@@ -299,12 +305,12 @@ async def _imap_polling_loop():
                 imap_password = decrypt_field(raw_pass).strip()
 
                 if imap_email and imap_password:
-                    fetch_resume_attachments(db, imap_email, imap_password)
+                    fetch_resume_attachments(None, imap_email, imap_password)
                 else:
                     logger.info("IMAP auto-sync skipped: IMAP credentials are not configured.")
 
                 from app.services.email_ingestion_service import run_batch_resume_processing
-                await run_batch_resume_processing(db)
+                await run_batch_resume_processing(None)
             
             # Record success timestamp and reset circuit breaker
             app.state.imap_last_success = time.time()
@@ -328,21 +334,26 @@ async def _imap_polling_loop():
                     f"Backing off for {sleep_seconds}s before next attempt."
                 )
         finally:
-            if lock_acquired and db is not None:
+            if lock_acquired:
+                # Open a new short-lived session to release the lock safely
+                release_db = SessionLocal()
                 try:
                     # Release lock: verify token matches before clearing to prevent overwrites
-                    lock_record = db.query(GlobalSettings).filter(GlobalSettings.key == "imap_polling_lock").with_for_update().first()
+                    lock_record = release_db.query(GlobalSettings).filter(GlobalSettings.key == "imap_polling_lock").with_for_update().first()
                     if lock_record and lock_record.value == lock_token:
                         lock_record.value = ""
-                        db.commit()
+                        release_db.commit()
                     else:
-                        db.rollback()
+                        release_db.rollback()
                 except Exception as rel_err:
                     logger.error(f"Failed to release IMAP polling lock: {rel_err}")
                     try:
-                        db.rollback()
+                        release_db.rollback()
                     except Exception:
                         pass
+                finally:
+                    release_db.close()
+            
             if db is not None:
                 try:
                     db.close()

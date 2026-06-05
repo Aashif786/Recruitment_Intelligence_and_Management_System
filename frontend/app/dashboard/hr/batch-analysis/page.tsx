@@ -236,8 +236,8 @@ export default function BatchAnalysisPage() {
 
       <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ─── Bulk Upload Card ──────────────────────────── */}
-        <Card className="flex flex-col h-full border-border/40 rounded-2xl shadow-[0_2px_12px_-2px_rgba(0,0,0,0.07)] hover:shadow-[0_6px_24px_-4px_rgba(0,0,0,0.12)] transition-shadow duration-300 overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+        <Card className="flex flex-col h-full bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
             <CardTitle className="flex items-center gap-2.5 text-base font-bold">
               <div className="p-1.5 bg-primary/10 rounded-lg">
                 <UploadCloud className="h-4 w-4 text-primary" />
@@ -249,7 +249,7 @@ export default function BatchAnalysisPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-5">
-            <div className="flex-1 min-h-[300px] bg-gradient-to-br from-muted/40 to-muted/20 border-2 border-dashed border-primary/20 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-1 transition-colors hover:border-primary/40 hover:bg-muted/30 group">
+            <div className="flex-1 min-h-[300px] bg-gradient-to-br from-primary/5 via-muted/10 to-primary/5 border-2 border-dashed border-primary/25 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-1 transition-all duration-300 hover:border-primary/50 hover:bg-primary/5 group shadow-inner">
               <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 shadow-inner group-hover:scale-105 transition-transform duration-300">
                 <UploadCloud className="h-8 w-8 text-primary" />
               </div>
@@ -260,7 +260,7 @@ export default function BatchAnalysisPage() {
               <Button
                 onClick={() => setIsBatchModalOpen(true)}
                 size="lg"
-                className="gap-2 rounded-xl px-8 shadow-md"
+                className="gap-2 rounded-xl px-8 shadow-md active:scale-[0.98] transition-all duration-200"
               >
                 <UploadCloud className="h-4 w-4" />
                 Run Batch Analysis
@@ -270,8 +270,8 @@ export default function BatchAnalysisPage() {
         </Card>
 
         {/* ─── Filtered Export Card ──────────────────────── */}
-        <Card className="flex flex-col h-full border-border/40 rounded-2xl shadow-[0_2px_12px_-2px_rgba(0,0,0,0.07)] hover:shadow-[0_6px_24px_-4px_rgba(0,0,0,0.12)] transition-shadow duration-300 overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/30">
+        <Card className="flex flex-col h-full bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
             <CardTitle className="flex items-center gap-2.5 text-base font-bold">
               <div className="p-1.5 bg-primary/10 rounded-lg">
                 <Filter className="h-4 w-4 text-primary" />
@@ -285,7 +285,7 @@ export default function BatchAnalysisPage() {
               </Badge>
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
+          <CardContent className="flex-1 flex flex-col pt-6">
             <div className="space-y-5 max-w-2xl w-full">
               {/* Date Range */}
               <div className="space-y-2">
@@ -300,7 +300,7 @@ export default function BatchAnalysisPage() {
                       type="date"
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
-                      className="text-sm"
+                      className="text-sm bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
                     />
                   </div>
                   <div>
@@ -309,7 +309,7 @@ export default function BatchAnalysisPage() {
                       type="date"
                       value={toDate}
                       onChange={(e) => setToDate(e.target.value)}
-                      className="text-sm"
+                      className="text-sm bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
                     />
                   </div>
                 </div>
@@ -326,7 +326,7 @@ export default function BatchAnalysisPage() {
                       Job Role
                     </Label>
                     <Select value={filterJobId} onValueChange={setFilterJobId} disabled={jobsLoading}>
-                      <SelectTrigger className="text-sm">
+                      <SelectTrigger className="text-sm bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200">
                         <SelectValue placeholder={jobsLoading ? 'Loading...' : 'All Roles'} />
                       </SelectTrigger>
                       <SelectContent>
@@ -347,7 +347,7 @@ export default function BatchAnalysisPage() {
                       Applied Time
                     </Label>
                     <Select value={timeRange} onValueChange={setTimeRange}>
-                      <SelectTrigger className="text-sm">
+                      <SelectTrigger className="text-sm bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -405,7 +405,7 @@ export default function BatchAnalysisPage() {
                 <Button
                   onClick={handleFilteredExport}
                   disabled={isExporting || !!dateError || liveCount === 0}
-                  className="flex-1 gap-2"
+                  className="flex-1 gap-2 active:scale-[0.98] transition-all duration-200"
                 >
                   {isExporting ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Exporting...</>
@@ -414,7 +414,7 @@ export default function BatchAnalysisPage() {
                   )}
                 </Button>
                 {hasFilters && (
-                  <Button variant="outline" onClick={clearFilters} className="shrink-0">
+                  <Button variant="outline" onClick={clearFilters} className="shrink-0 active:scale-[0.98] transition-all duration-200">
                     Clear Filters
                   </Button>
                 )}

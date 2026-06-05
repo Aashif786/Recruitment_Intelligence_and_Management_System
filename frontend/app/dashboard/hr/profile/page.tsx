@@ -166,8 +166,8 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Stats & Info */}
                 <div className="space-y-6">
-                    <Card className="border-border/50 shadow-lg overflow-hidden">
-                        <CardHeader className="bg-muted/30 pb-4">
+                <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden rounded-2xl">
+                        <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground">Account Information</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-6 space-y-6">
@@ -180,8 +180,8 @@ export default function ProfilePage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-border/50 shadow-lg bg-gradient-to-br from-primary/5 to-transparent">
-                        <CardHeader className="pb-2">
+                    <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden rounded-2xl">
+                        <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-primary">Your Impact</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-6">
@@ -195,8 +195,8 @@ export default function ProfilePage() {
 
                 {/* Right Column: Narrative & Governance */}
                 <div className="lg:col-span-2 space-y-6">
-                    <Card className="border-border/50 shadow-lg h-full">
-                        <CardHeader className="bg-muted/30 border-b border-border/50">
+                    <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden rounded-2xl h-full">
+                        <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <CardTitle className="text-xl font-black">Role & Governance</CardTitle>
@@ -264,13 +264,13 @@ function InfoRow({ icon: Icon, label, value, valueClass }: any) {
 
 function ImpactMetric({ icon: Icon, label, value, color }: any) {
     return (
-        <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-border/50 ${color}`}>
+        <div className="flex items-center gap-4 group">
+            <div className={`p-3 rounded-2xl bg-white dark:bg-slate-900/60 shadow-sm border border-border/50 ${color} group-hover:shadow-md group-hover:scale-105 transition-all duration-200`}>
                 <Icon className="h-5 w-5" />
             </div>
             <div>
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
-                <p className="text-xl font-black">{value}</p>
+                <p className="text-xl font-black tabular-nums">{value}</p>
             </div>
         </div>
     )
@@ -278,7 +278,7 @@ function ImpactMetric({ icon: Icon, label, value, color }: any) {
 
 function FeatureBox({ title, description }: any) {
     return (
-        <div className="p-5 rounded-2xl bg-muted/30 border border-border/50 hover:border-primary/30 hover:bg-muted/50 transition-all group">
+        <div className="p-5 rounded-2xl bg-muted/30 border border-border/50 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md transition-all duration-200 group cursor-default">
             <h4 className="font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{title}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
         </div>

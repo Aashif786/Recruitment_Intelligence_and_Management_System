@@ -95,7 +95,7 @@ export default function PipelineIndexPage() {
                 <input
                     type="text"
                     placeholder="Search by job title or ID..."
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-muted/30 border border-border/50 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all font-medium"
+                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-background/50 border border-border hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all font-medium shadow-sm"
                     value={searchTerm}
                     onChange={(e) => {
                         setSearchTerm(e.target.value)
@@ -104,10 +104,10 @@ export default function PipelineIndexPage() {
                 />
             </div>
 
-            <Card className="border-border/50 shadow-sm overflow-hidden">
+            <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
                 <Table>
-                    <TableHeader>
-                        <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableHeader className="bg-muted/30 border-b border-border/40">
+                        <TableRow className="hover:bg-transparent border-none">
                             <TableHead className="font-bold py-4">Job Title & ID</TableHead>
                             <TableHead className="font-bold text-center">Status</TableHead>
                             <TableHead className="font-bold text-center">Pipeline</TableHead>
@@ -118,7 +118,7 @@ export default function PipelineIndexPage() {
                         {paginatedJobs.map((job) => (
                             <TableRow 
                                 key={job.id} 
-                                className="hover:bg-primary/5 transition-colors group cursor-pointer"
+                                className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 cursor-pointer group"
                                 onClick={() => router.push(`/dashboard/hr/pipelines/${job.id}`)}
                             >
                                 <TableCell className="py-4">

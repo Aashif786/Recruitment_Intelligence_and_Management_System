@@ -243,8 +243,8 @@ export default function HRDashboard() {
 
 
       {isSuperAdmin && pendingApprovals.length > 0 && (
-        <Card className="shadow-none border border-border bg-card rounded-xl p-6 animate-in fade-in duration-300">
-          <CardHeader>
+        <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 p-6 animate-in fade-in duration-300">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-foreground/80">Pending HR Approvals</CardTitle>
@@ -255,14 +255,14 @@ export default function HRDashboard() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground mb-4">
               {pendingApprovals.length > 0
                 ? `There ${pendingApprovals.length === 1 ? 'is' : 'are'} ${pendingApprovals.length} account${pendingApprovals.length === 1 ? '' : 's'} waiting for approval.`
                 : 'No pending HR approvals at the moment.'}
             </p>
             <Link href="/dashboard/hr/approvals">
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 rounded-xl">
                 Review Pending HR Approvals
               </Button>
             </Link>
@@ -309,8 +309,8 @@ export default function HRDashboard() {
 
         {/* Chart Section */}
         <div className="lg:col-span-2 animate-in fade-in duration-500 delay-300">
-          <Card className="h-full shadow-none border border-border bg-card rounded-xl hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300">
-            <CardHeader>
+          <Card className="h-full bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-foreground/80">Application Pipeline</CardTitle>
@@ -321,7 +321,7 @@ export default function HRDashboard() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="h-[300px] w-full">
                 <DashboardChart data={chartData} />
               </div>
@@ -332,11 +332,11 @@ export default function HRDashboard() {
 
         {/* Recent Activity / Quick Actions */}
         <div className="space-y-6 animate-in fade-in duration-500 delay-500">
-          <Card className="shadow-none border border-border bg-card rounded-xl hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.10)] transition-shadow duration-300">
-            <CardHeader>
+          <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
               <CardTitle className="text-foreground/80">Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 pt-6">
               <ActionButton href="/dashboard/hr/applications" label="Review Applications" />
               <ActionButton href="/dashboard/hr/pipeline" label="Hiring Pipeline" />
               <ActionButton href="/dashboard/hr/reports" label="View Reports" />
@@ -348,8 +348,8 @@ export default function HRDashboard() {
         </div>
       </div>
       {/* Recent Interviews Table */}
-      <Card className="shadow-none border border-border bg-card rounded-xl animate-in fade-in duration-500 delay-700">
-        <CardHeader>
+      <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 animate-in fade-in duration-500 delay-700">
+        <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-foreground/80">Recent Interviews</CardTitle>
@@ -358,16 +358,16 @@ export default function HRDashboard() {
             <Clock className="h-5 w-5 text-muted-foreground" />
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           {/* Filter Bar */}
-          <div className="flex flex-col md:flex-row gap-4 p-4 bg-muted/40 rounded-xl border border-border items-center">
+          <div className="flex flex-col md:flex-row gap-4 p-4 bg-muted/30 backdrop-blur-lg rounded-xl border border-border/60 items-center shadow-inner">
             <div className="flex-1 w-full relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search candidates, roles, or IDs..."
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="bg-card h-10 pl-10 pr-10 border-border focus:ring-primary shadow-sm"
+                className="bg-card h-10 pl-10 pr-10 border-border focus:ring-primary shadow-sm hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all rounded-xl"
               />
               {isFiltering && (
                 <RotateCw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary animate-spin" />
@@ -380,7 +380,7 @@ export default function HRDashboard() {
                 value={jobFilter}
                 onValueChange={setJobFilter}
               >
-                <SelectTrigger className="bg-card h-10 border-border shadow-sm">
+                <SelectTrigger className="bg-card h-10 border-border shadow-sm rounded-xl">
                    <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
                    <SelectValue placeholder="All Jobs" />
                 </SelectTrigger>
@@ -400,7 +400,7 @@ export default function HRDashboard() {
                 value={filters.status}
                 onValueChange={(value) => setFilters({ ...filters, status: value })}
               >
-                <SelectTrigger className="bg-card h-10 border-border shadow-sm">
+                <SelectTrigger className="bg-card h-10 border-border shadow-sm rounded-xl">
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
@@ -419,7 +419,7 @@ export default function HRDashboard() {
                 value={String(pageSize)}
                 onValueChange={(value) => setPageSize(Number(value))}
               >
-                <SelectTrigger className="bg-card h-10 border-border shadow-sm">
+                <SelectTrigger className="bg-card h-10 border-border shadow-sm rounded-xl">
                   <span className="text-xs text-muted-foreground mr-2">Show:</span>
                   <SelectValue placeholder="10" />
                 </SelectTrigger>
@@ -436,7 +436,7 @@ export default function HRDashboard() {
               variant="outline"
               size="icon"
               onClick={handleReset}
-              className="h-10 w-10 shrink-0 border-border hover:bg-muted transition-all shadow-sm"
+              className="h-10 w-10 shrink-0 border-border hover:bg-muted active:scale-[0.98] transition-all shadow-sm rounded-xl"
               title="Reset all filters"
             >
               <RotateCcw className="h-4 w-4 text-muted-foreground" />
@@ -463,7 +463,7 @@ export default function HRDashboard() {
                 </TableHeader>
                 <TableBody>
                   {recentInterviews.map((interview: any) => (
-                    <TableRow key={interview.id} className="group hover:bg-muted/50 transition-colors">
+                    <TableRow key={interview.id} className="group hover:bg-muted/40 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-300">
                       <TableCell className="font-mono text-sm text-muted-foreground">
                         {interview.test_id || 'N/A'}
                       </TableCell>
@@ -543,7 +543,7 @@ export default function HRDashboard() {
 
 const StatsCard = React.memo(({ title, subtitle, value, icon: Icon, color, bg }: any) => {
   return (
-    <Card className="shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 border-border bg-card group hover:-translate-y-1 rounded-2xl overflow-hidden">
+    <Card className="bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 border border-border/80 group hover:-translate-y-1 rounded-2xl overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <CardTitle className="text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wide">
@@ -570,7 +570,7 @@ const ActionButton = React.memo(({ href, label }: { href: string, label: string 
     <Link href={href} className="block group">
       <Button 
         variant="outline" 
-        className="w-full justify-between text-foreground hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary active:bg-primary/10 active:text-primary border-border hover:border-primary/40 transition-all"
+        className="w-full justify-between text-foreground hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary active:bg-primary/10 active:text-primary border-border hover:border-primary/40 active:scale-[0.98] transition-all duration-200 rounded-xl"
       >
         {label}
         <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />

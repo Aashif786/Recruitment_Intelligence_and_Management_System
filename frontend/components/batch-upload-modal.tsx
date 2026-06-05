@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { UploadCloud, CheckCircle2, XCircle, Loader2, AlertCircle, FileText, FolderUp, Trash2 } from 'lucide-react'
+import { UploadCloud, CheckCircle2, XCircle, Loader2, AlertCircle, FileText, FolderUp, Trash2, ArrowRight, Download, FileSpreadsheet } from 'lucide-react'
 import useSWR, { mutate as globalMutate } from 'swr'
 import { APIClient } from '@/app/dashboard/lib/api-client'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
@@ -87,6 +87,36 @@ const toTitleCase = (str: string): string => {
     .join(' ')
 }
 
+const traverseFileTree = async (entry: any): Promise<File[]> => {
+  if (entry.isFile) {
+    return new Promise((resolve) => {
+      entry.file((file: File) => resolve([file]), () => resolve([]))
+    })
+  } else if (entry.isDirectory) {
+    const dirReader = entry.createReader()
+    const readEntries = (): Promise<any[]> => {
+      return new Promise((resolve) => {
+        dirReader.readEntries(
+          (results: any[]) => resolve(results),
+          () => resolve([])
+        )
+      })
+    }
+
+    let allEntries: any[] = []
+    let entries = await readEntries()
+    while (entries.length > 0) {
+      allEntries = [...allEntries, ...entries]
+      entries = await readEntries()
+    }
+
+    const promises = allEntries.map((e) => traverseFileTree(e))
+    const filesArrays = await Promise.all(promises)
+    return filesArrays.flat()
+  }
+  return []
+}
+
 export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModalProps) {
   const [selectedJobId, setSelectedJobId] = useState<string>('')
   const [files, setFiles] = useState<ProcessedFile[]>([])
@@ -103,6 +133,70 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
   const isCancelling = useRef(false)
+
+  const [isDragging, setIsDragging] = useState(false)
+  const dragCounter = useRef(0)
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current++
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current--
+    if (dragCounter.current === 0) {
+      setIsDragging(false)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    dragCounter.current = 0
+
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      const droppedFiles: File[] = []
+      const promises: Promise<File[]>[] = []
+
+      for (let i = 0; i < e.dataTransfer.items.length; i++) {
+        const item = e.dataTransfer.items[i]
+        if (item.kind === 'file') {
+          if (typeof item.webkitGetAsEntry === 'function') {
+            const entry = item.webkitGetAsEntry()
+            if (entry) {
+              promises.push(traverseFileTree(entry))
+              continue
+            }
+          }
+          const file = item.getAsFile()
+          if (file) {
+            droppedFiles.push(file)
+          }
+        }
+      }
+
+      if (promises.length > 0) {
+        const traversed = await Promise.all(promises)
+        droppedFiles.push(...traversed.flat())
+      }
+
+      if (droppedFiles.length > 0) {
+        await processIncomingFiles(droppedFiles)
+      }
+    }
+  }
 
   const { data: jobs, isLoading: jobsLoading } = useSWR<Job[]>('/api/jobs', (url: string) => fetcher<Job[]>(url))
 
@@ -130,6 +224,8 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
       setFinalBatchData([])
       setPollingStatus('')
       isCancelling.current = false
+      setIsDragging(false)
+      dragCounter.current = 0
     }
   }, [isOpen])
 
@@ -467,92 +563,140 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent 
+        className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden relative border border-border/80 bg-background/95 backdrop-blur-md shadow-2xl transition-all duration-300"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <DialogHeader>
-          <DialogTitle>Batch Resume Analysis</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-xl font-bold tracking-tight">Batch Resume Analysis</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             Upload multiple resumes or a folder. They will be actively filtered and processed securely.
           </DialogDescription>
         </DialogHeader>
 
+        {isDragging && !isProcessing && !showSummary && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center transition-all duration-300 animate-in fade-in">
+            <div className="border-2 border-dashed border-primary/50 rounded-2xl p-12 max-w-lg w-[90%] text-center flex flex-col items-center justify-center space-y-4 bg-primary/5 shadow-2xl shadow-primary/5 animate-in zoom-in-95 duration-200">
+              <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center animate-bounce shadow-inner">
+                <UploadCloud className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground">Drop Resumes Here</h3>
+              <p className="text-sm text-muted-foreground">
+                Release to add candidate resumes (.pdf, .doc, .docx or .zip)
+              </p>
+            </div>
+          </div>
+        )}
+
         {isProcessing ? (
-          <div className="py-8 flex flex-col items-center justify-center space-y-6 flex-1">
-            <Loader2 className="h-12 w-12 text-primary animate-spin" />
-            <div className="text-center space-y-2 w-full max-w-sm">
-              <h3 className="text-lg font-semibold">Processing resumes... ⏳</h3>
-              <p className="text-muted-foreground">
+          <div className="py-12 flex flex-col items-center justify-center space-y-6 flex-1 animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative flex items-center justify-center w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+              <UploadCloud className="h-6 w-6 text-primary animate-pulse" />
+            </div>
+            <div className="text-center space-y-3 w-full max-w-sm">
+              <h3 className="text-lg font-bold tracking-tight text-foreground">Processing resumes... ⏳</h3>
+              <p className="text-sm text-muted-foreground font-medium">
                 Processing {Math.min(progressCount + 1, processingQueueTotal)} of {processingQueueTotal} resumes
               </p>
-              <div className="w-full bg-secondary rounded-full h-2 mt-4 mx-auto overflow-hidden">
+              
+              <div className="relative w-full bg-secondary/80 rounded-full h-2.5 mt-4 overflow-hidden border border-border/20">
                 <div 
-                  className="bg-primary h-full transition-all duration-300"
+                  className="bg-gradient-to-r from-primary to-primary/80 h-full rounded-full transition-all duration-300"
                   style={{ width: `${(progressCount / processingQueueTotal) * 100}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                <span className="text-emerald-500">{stats.success} Success</span>
-                <span className="text-destructive">{stats.failed} Failed</span>
+              
+              <div className="flex justify-between text-xs font-semibold text-muted-foreground mt-3">
+                <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 rounded-md">{stats.success} Success</span>
+                <span className="text-destructive bg-destructive/10 px-2 py-0.5 rounded-md">{stats.failed} Failed</span>
               </div>
             </div>
-            <Button variant="destructive" onClick={handleCancel} className="mt-4">
+            <Button variant="destructive" onClick={handleCancel} className="mt-4 active:scale-95 transition-all shadow-md rounded-xl">
                Cancel Remaining
             </Button>
           </div>
         ) : showSummary ? (
-          <div className="py-6 flex flex-col items-center justify-center space-y-4 flex-1">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+          <div className="py-6 flex flex-col items-center justify-center space-y-5 flex-1 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center shadow-inner animate-in zoom-in duration-300">
               <CheckCircle2 className="h-8 w-8 text-primary" />
             </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-bold">Processing Finalized</h3>
-              <div className="flex items-center justify-center gap-4 text-sm mt-2 flex-wrap">
-                <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                  <CheckCircle2 className="w-4 h-4" /> {stats.success} Successful
-                </span>
-                {stats.failed > 0 && (
-                  <span className="flex items-center gap-1 text-destructive font-medium">
-                    <XCircle className="w-4 h-4" /> {stats.failed} Failed
-                  </span>
-                )}
-                {stats.skipped > 0 && (
-                  <span className="flex items-center gap-1 text-muted-foreground font-medium">
-                    <AlertCircle className="w-4 h-4" /> {stats.skipped} Skipped
-                  </span>
-                )}
+            <div className="text-center space-y-2 w-full flex flex-col items-center">
+              <h3 className="text-xl font-bold tracking-tight text-foreground">Processing Finalized</h3>
+              
+              <div className="grid grid-cols-3 gap-4 w-full max-w-md mt-4">
+                {/* Success Card */}
+                <div className="bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center shadow-sm">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mb-1" />
+                  <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{stats.success}</span>
+                  <span className="text-[10px] font-bold text-emerald-600/80 dark:text-emerald-400/80 uppercase tracking-wide">Success</span>
+                </div>
+                
+                {/* Failed Card */}
+                <div className={`border rounded-2xl p-4 flex flex-col items-center justify-center text-center shadow-sm transition-all ${stats.failed > 0 ? 'bg-destructive/5 dark:bg-destructive/10 border-destructive/20 text-destructive' : 'bg-muted/30 border-border/40 opacity-40'}`}>
+                  <XCircle className={`h-5 w-5 mb-1 ${stats.failed > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+                  <span className="text-2xl font-extrabold">{stats.failed}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide">Failed</span>
+                </div>
+
+                {/* Skipped Card */}
+                <div className={`border rounded-2xl p-4 flex flex-col items-center justify-center text-center shadow-sm transition-all ${stats.skipped > 0 ? 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-muted/30 border-border/40 opacity-40'}`}>
+                  <AlertCircle className={`h-5 w-5 mb-1 ${stats.skipped > 0 ? 'text-amber-500 animate-pulse' : 'text-muted-foreground'}`} />
+                  <span className="text-2xl font-extrabold">{stats.skipped}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide">Skipped</span>
+                </div>
               </div>
               
               {!isExportReady && stats.success > 0 && (
-                <p className="text-xs text-muted-foreground flex items-center justify-center gap-2 mt-4">
-                  <Loader2 className="h-3 w-3 animate-spin"/>
+                <p className="text-xs text-muted-foreground flex items-center justify-center gap-2 mt-4 font-medium">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary"/>
                   {pollingStatus || 'Preparing final export data...'}
                 </p>
               )}
             </div>
             
-            <div className="w-full max-w-lg mt-6 bg-muted/30 p-4 rounded-xl max-h-48 overflow-y-auto">
-                <h4 className="text-sm font-semibold mb-2">Detailed Results</h4>
-                {files.filter(f => f.status !== 'pending').map(file => (
-                    <div key={file.id} className="flex justify-between items-center py-1.5 text-xs border-b last:border-0 border-border/50 gap-4">
-                        <span className="truncate max-w-[200px] sm:max-w-xs">{file.file.name}</span>
-                        {file.status === 'success' && <span className="text-emerald-500 whitespace-nowrap shrink-0">Success</span>}
-                        {file.status === 'failed' && <span className="text-destructive whitespace-nowrap shrink-0">Failed ({file.errorMessage})</span>}
-                        {file.status === 'skipped' && <span className="text-muted-foreground whitespace-nowrap shrink-0">Skipped ({file.skippedReason})</span>}
-                    </div>
-                ))}
+            <div className="w-full max-w-lg mt-4 bg-muted/20 border border-border/40 p-4 rounded-2xl max-h-48 overflow-y-auto shadow-inner">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3 text-left">Detailed Results</h4>
+                <div className="space-y-2">
+                  {files.filter(f => f.status !== 'pending').map(file => (
+                      <div key={file.id} className="flex justify-between items-center p-2.5 rounded-xl text-xs border border-border/30 bg-background/50 gap-4">
+                          <span className="truncate max-w-[200px] sm:max-w-xs font-medium text-foreground">{file.file.name}</span>
+                          {file.status === 'success' && (
+                            <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Success
+                            </span>
+                          )}
+                          {file.status === 'failed' && (
+                            <span className="text-destructive bg-destructive/10 px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0 flex items-center gap-1">
+                              <XCircle className="w-3.5 h-3.5" /> Failed
+                            </span>
+                          )}
+                          {file.status === 'skipped' && (
+                            <span className="text-muted-foreground bg-muted border px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0 flex items-center gap-1">
+                              <AlertCircle className="w-3.5 h-3.5" /> Skipped
+                            </span>
+                          )}
+                      </div>
+                  ))}
+                </div>
             </div>
 
-            <div className="flex flex-col w-full sm:flex-row gap-3 mt-4 pt-4">
-              <Button onClick={handleClose} className="flex-1">
-                View Applications
+            <div className="flex flex-col w-full sm:flex-row gap-3 mt-4 pt-4 border-t border-border/40">
+              <Button onClick={handleClose} className="flex-1 rounded-xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                View Applications <ArrowRight className="w-4 h-4" />
               </Button>
               {stats.success > 0 && (
                 <Button 
                   variant="outline" 
                   onClick={handleExport} 
                   disabled={!isExportReady}
-                  className="flex-1 border-primary text-primary hover:bg-primary/5"
+                  className="flex-1 rounded-xl border-primary text-primary hover:bg-primary/5 hover:border-primary shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {isExportReady ? 'Download Candidate Data (Excel)' : 'Preparing Data...'}
+                  <FileSpreadsheet className="w-4 h-4" />
+                  {isExportReady ? 'Download Excel' : 'Preparing Data...'}
                 </Button>
               )}
             </div>
@@ -560,12 +704,12 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
         ) : (
           <div className="space-y-6 py-4 flex-1 overflow-y-auto pr-2">
             <div className="space-y-2">
-              <Label htmlFor="job-select">Target Job Role</Label>
+              <Label htmlFor="job-select" className="text-sm font-semibold text-foreground">Target Job Role</Label>
               <Select value={selectedJobId} onValueChange={setSelectedJobId} disabled={jobsLoading}>
-                <SelectTrigger id="job-select">
+                <SelectTrigger id="job-select" className="rounded-xl border-border/80 focus:ring-primary/20">
                   <SelectValue placeholder={jobsLoading ? "Loading jobs..." : "Select a job for these resumes"} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl">
                   {jobs?.filter(j => j.status === 'open').map((job) => (
                     <SelectItem key={job.id} value={job.id.toString()}>
                       {job.title}
@@ -575,11 +719,11 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Upload Resumes</Label>
+            <div className="space-y-2.5">
+              <Label className="text-sm font-semibold text-foreground">Upload Resumes</Label>
               <div className="grid grid-cols-2 gap-4">
                   <div 
-                    className="border-2 border-dashed border-border rounded-xl p-6 hover:bg-muted/50 transition-colors cursor-pointer text-center flex flex-col items-center justify-center"
+                    className="group relative border-2 border-dashed border-border/80 hover:border-primary/50 rounded-2xl p-6 hover:bg-primary/[0.02] dark:hover:bg-primary/[0.04] transition-all duration-300 cursor-pointer text-center flex flex-col items-center justify-center active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-primary/[0.03]"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <input
@@ -590,14 +734,15 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
                       ref={fileInputRef}
                       onChange={handleFileChange}
                     />
-                    <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-2 mx-auto">
-                      <UploadCloud className="h-5 w-5" />
+                    <div className="w-12 h-12 bg-primary/5 border border-primary/10 text-primary rounded-xl flex items-center justify-center mb-3 mx-auto transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_10%,transparent)]">
+                      <UploadCloud className="h-6 w-6 transition-transform duration-300 group-hover:-translate-y-0.5" />
                     </div>
-                    <h4 className="font-medium text-sm text-foreground">Select Files / ZIP</h4>
+                    <h4 className="font-semibold text-sm text-foreground mb-1">Select Files / ZIP</h4>
+                    <p className="text-[11px] text-muted-foreground max-w-[180px]">PDF, DOCX, or ZIP (max 5MB each)</p>
                   </div>
 
                   <div 
-                    className="border-2 border-dashed border-border rounded-xl p-6 hover:bg-muted/50 transition-colors cursor-pointer text-center flex flex-col items-center justify-center"
+                    className="group relative border-2 border-dashed border-border/80 hover:border-primary/50 rounded-2xl p-6 hover:bg-primary/[0.02] dark:hover:bg-primary/[0.04] transition-all duration-300 cursor-pointer text-center flex flex-col items-center justify-center active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-primary/[0.03]"
                     onClick={() => folderInputRef.current?.click()}
                   >
                     <input
@@ -610,27 +755,28 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
                       ref={folderInputRef}
                       onChange={handleFileChange}
                     />
-                    <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-2 mx-auto">
-                      <FolderUp className="h-5 w-5" />
+                    <div className="w-12 h-12 bg-primary/5 border border-primary/10 text-primary rounded-xl flex items-center justify-center mb-3 mx-auto transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_10%,transparent)]">
+                      <FolderUp className="h-6 w-6 transition-transform duration-300 group-hover:translate-y-[-2px]" />
                     </div>
-                    <h4 className="font-medium text-sm text-foreground">Select Folder</h4>
+                    <h4 className="font-semibold text-sm text-foreground mb-1">Select Folder</h4>
+                    <p className="text-[11px] text-muted-foreground max-w-[180px]">Upload complete directory folders</p>
                   </div>
               </div>
             </div>
 
             {files.length > 0 && (
-              <div className="space-y-2 border-t pt-4">
+              <div className="space-y-2 border-t pt-4 border-border/40">
                 <div className="flex items-center justify-between">
-                  <Label>
+                  <Label className="text-sm font-semibold text-foreground">
                     Selected Files ({files.filter(f => f.status === 'pending').length} ready, {files.filter(f => f.status === 'skipped').length} skipped)
                   </Label>
-                  <Button variant="ghost" size="sm" onClick={() => setFiles([])} className="h-auto p-0 text-muted-foreground hover:text-destructive text-xs">
+                  <Button variant="ghost" size="sm" onClick={() => setFiles([])} className="h-auto p-0 text-muted-foreground hover:text-destructive text-xs hover:bg-transparent transition-colors">
                     Clear all
                   </Button>
                 </div>
                 
                 {files.filter(f => f.status === 'pending').length === 0 && (
-                   <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-lg flex items-center gap-2">
+                   <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-xl flex items-center gap-2 border border-destructive/20 animate-in fade-in">
                        <AlertCircle className="h-4 w-4 shrink-0" />
                        No valid resumes ready. Try clearing and selecting valid files.
                    </div>
@@ -638,17 +784,22 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
                 
                 <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
                   {files.map((fileObj) => (
-                    <div key={fileObj.id} className={`flex items-center justify-between p-2 rounded-lg text-sm border ${fileObj.status === 'skipped' ? 'bg-muted/30 opacity-60' : 'bg-background'}`}>
-                      <div className="flex items-center gap-2 overflow-hidden flex-1">
-                        <FileText className={`h-4 w-4 shrink-0 ${fileObj.status === 'skipped' ? 'text-muted-foreground' : 'text-primary'}`} />
+                    <div key={fileObj.id} className={`flex items-center justify-between p-2.5 rounded-xl text-sm border hover:border-primary/20 hover:bg-primary/[0.01] transition-all duration-200 ${fileObj.status === 'skipped' ? 'bg-muted/30 opacity-60 border-border/40' : 'bg-background border-border/60'}`}>
+                      <div className="flex items-center gap-2.5 overflow-hidden flex-1">
+                        <FileText className={`h-4.5 w-4.5 shrink-0 ${fileObj.status === 'skipped' ? 'text-muted-foreground' : 'text-primary'}`} />
                         <div className="flex flex-col truncate flex-1">
-                             <span className="truncate">{fileObj.file.name}</span>
+                             <span className="truncate font-medium text-foreground">{fileObj.file.name}</span>
                              {fileObj.status === 'skipped' && (
-                                 <span className="text-[10px] text-destructive">Skipped: {fileObj.skippedReason}</span>
+                                 <span className="text-[10px] text-destructive/90 font-medium">Skipped: {fileObj.skippedReason}</span>
                              )}
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => removeFile(fileObj.id)} className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => removeFile(fileObj.id)} 
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0 transition-all active:scale-90"
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -660,14 +811,14 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
         )}
 
         {!isProcessing && !showSummary && (
-          <DialogFooter className="mt-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <DialogFooter className="mt-2 pt-4 border-t border-border/40">
+            <Button variant="outline" onClick={handleClose} className="rounded-xl active:scale-95 transition-all">Cancel</Button>
             <Button 
               onClick={handleProcess} 
               disabled={!selectedJobId || files.filter(f => f.status === 'pending').length === 0}
-              className="gap-2"
+              className="gap-2 rounded-xl shadow-md shadow-primary/10 active:scale-[0.98] transition-all"
             >
-              Start Analysis ({files.filter(f => f.status === 'pending').length})
+              Start Analysis ({files.filter(f => f.status === 'pending').length}) <ArrowRight className="w-4 h-4" />
             </Button>
           </DialogFooter>
         )}

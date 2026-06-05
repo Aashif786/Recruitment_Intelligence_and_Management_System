@@ -260,7 +260,7 @@ export default function OnboardingPage() {
 
             {showStats && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-4 duration-500 ease-out">
-                    <Card className="border-border/50 bg-gradient-to-br from-blue-500/5 to-primary/5">
+                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-blue-500/5 to-primary/5">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <FileText className="h-4 w-4 text-blue-500" />
@@ -276,7 +276,7 @@ export default function OnboardingPage() {
                             <p className="text-xs text-muted-foreground">Action required: send letters</p>
                         </CardContent>
                     </Card>
-                    <Card className="border-border/50 bg-gradient-to-br from-amber-500/5 to-amber-600/5">
+                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-amber-500/5 to-amber-600/5">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <Calendar className="h-4 w-4 text-amber-500" />
@@ -308,7 +308,7 @@ export default function OnboardingPage() {
                             <p className="text-xs text-muted-foreground">Upcoming in next 7 days</p>
                         </CardContent>
                     </Card>
-                    <Card className="border-border/50 bg-gradient-to-br from-emerald-500/5 to-emerald-600/5">
+                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-emerald-500/5 to-emerald-600/5">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -332,14 +332,14 @@ export default function OnboardingPage() {
             )}
 
 
-            <Card className="border-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/30 border-b">
+            <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+                <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
                     <div className="flex items-center gap-4">
                         <div className="relative flex-1 max-w-sm">
                             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
                                 placeholder="Search candidates..." 
-                                className="pl-10 h-9"
+                                className="pl-10 h-9 bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
                                 value={search}
                                 onChange={(e) => {
                                     setSearch(e.target.value)
@@ -352,8 +352,8 @@ export default function OnboardingPage() {
                 <CardContent className="p-0 overflow-x-auto">
                     <div className="min-w-[800px]">
                     <Table>
-                        <TableHeader>
-                            <TableRow className="bg-muted/20 hover:bg-muted/20">
+                        <TableHeader className="bg-muted/30 border-b border-border/40">
+                            <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="font-bold py-4">Candidate</TableHead>
                                 <TableHead className="font-bold">Job & Joining</TableHead>
                                 <TableHead className="font-bold text-center">Status</TableHead>
@@ -378,7 +378,7 @@ export default function OnboardingPage() {
                                 </TableRow>
                             ) : (
                                 paginatedCandidates?.map((candidate) => (
-                                    <TableRow key={candidate.id} className="hover:bg-primary/5 transition-colors group">
+                                    <TableRow key={candidate.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 group">
                                         <TableCell className="py-4">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-9 w-9 shrink-0 border border-border">

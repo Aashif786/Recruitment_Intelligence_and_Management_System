@@ -18,11 +18,11 @@ else:
     # PgBouncer detection: standard port is 6543 or we can check port/key in URL
     is_pgbouncer = "6543" in settings.database_url or "pgbouncer" in settings.database_url.lower()
     if is_pgbouncer:
-        p_size = settings.db_pool_size if settings.db_pool_size is not None else 1
-        m_overflow = settings.db_max_overflow if settings.db_max_overflow is not None else 1
+        p_size = settings.db_pool_size if settings.db_pool_size is not None else 5
+        m_overflow = settings.db_max_overflow if settings.db_max_overflow is not None else 10
     else:
-        p_size = settings.db_pool_size if settings.db_pool_size is not None else 2
-        m_overflow = settings.db_max_overflow if settings.db_max_overflow is not None else 3
+        p_size = settings.db_pool_size if settings.db_pool_size is not None else 10
+        m_overflow = settings.db_max_overflow if settings.db_max_overflow is not None else 20
 
     engine = create_engine(
         settings.database_url,

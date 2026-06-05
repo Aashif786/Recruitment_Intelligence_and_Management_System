@@ -130,7 +130,7 @@ export default function CandidateScorecardPage() {
                             {application.recommendation || 'PENDING'}
                         </Badge>
                     </div>
-                    <div className="flex items-center gap-2 bg-muted/40 px-4 py-2 rounded-xl border border-border">
+                    <div className="flex items-center gap-2 bg-muted/20 backdrop-blur-md px-4 py-2 rounded-xl border border-border/80 shadow-sm">
                         <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
                         <span className="text-2xl font-black">{application.composite_score?.toFixed(1) || '0.0'}</span>
                         <span className="text-muted-foreground text-xs font-bold uppercase">Points</span>
@@ -141,8 +141,8 @@ export default function CandidateScorecardPage() {
             <div className="grid md:grid-cols-3 gap-8">
                 {/* Column 1: Core Evaluation Scores */}
                 <div className="md:col-span-2 space-y-6">
-                    <Card className="border-border shadow-xl hover:shadow-2xl transition-shadow duration-500">
-                        <CardHeader>
+                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+                        <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
                             <CardTitle className="text-xl flex items-center gap-2">
                                 <Award className="w-6 h-6 text-primary" />
                                 Recruitment Performance
@@ -176,8 +176,8 @@ export default function CandidateScorecardPage() {
                     </Card>
 
                     {/* AI Insights & Feedback */}
-                    <Card className="border-border shadow-md">
-                        <CardHeader className="flex flex-row items-center justify-between">
+                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+                        <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 pb-4">
                             <CardTitle className="text-xl flex items-center gap-2">
                                 <Info className="w-5 h-5 text-primary" />
                                 AI Evaluation Feedback
@@ -225,8 +225,8 @@ export default function CandidateScorecardPage() {
 
                 {/* Column 2: Metadata & Pipeline */}
                 <div className="space-y-6">
-                    <Card className="border-border shadow-md">
-                        <CardHeader>
+                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+                        <CardHeader className="border-b border-border/40 pb-4">
                             <CardTitle className="text-lg">Pipeline Status</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -249,8 +249,8 @@ export default function CandidateScorecardPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-primary/20 bg-primary/[0.02] shadow-sm">
-                        <CardHeader>
+                    <Card className="bg-primary/[0.02] backdrop-blur-md border border-primary/20 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
+                        <CardHeader className="border-b border-primary/10 pb-4">
                             <CardTitle className="text-lg">Recruiter Remarks</CardTitle>
                         </CardHeader>
                         <CardContent>

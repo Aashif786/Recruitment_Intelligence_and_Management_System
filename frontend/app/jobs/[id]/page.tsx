@@ -494,30 +494,30 @@ export default function PublicJobDetailPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background font-sans relative">
+        <div className="min-h-screen bg-background/50 font-sans relative">
             <div className="pointer-events-none absolute inset-0 z-0 flex justify-center">
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080801a_1px,transparent_1px),linear-gradient(to_bottom,#8080801a_1px,transparent_1px)] bg-[size:40px_40px] dark:bg-[linear-gradient(to_right,#ffffff15_1px,transparent_1px),linear-gradient(to_bottom,#ffffff15_1px,transparent_1px)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] dark:bg-[linear-gradient(to_right,#ffffff0c_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0c_1px,transparent_1px)]" />
             </div>
 
-            <main className="max-w-7xl mx-auto px-6 py-12 lg:flex lg:gap-12 relative">
+            <main className="max-w-7xl mx-auto px-6 py-12 lg:flex lg:gap-12 relative z-10">
                 {/* Back Button */}
-                <div className="absolute top-4 left-6 z-10">
-                    <Link href="/jobs" className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-indigo-600 transition-colors group">
+                <div className="absolute top-4 left-6 z-20">
+                    <Link href="/jobs" className="flex items-center gap-2 text-sm font-bold text-foreground hover:text-primary transition-colors group">
                         <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                        <span className="hidden sm:inline">Back</span>
+                        <span className="hidden sm:inline">Back to Openings</span>
                     </Link>
                 </div>
 
                 {/* Job Details Column */}
-                <div className="lg:w-2/3 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                <div className="lg:w-2/3 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 bg-card/65 backdrop-blur-xl border border-border/80 rounded-[2rem] p-8 md:p-10 shadow-lg mt-8 lg:mt-0">
                     <div>
                         <div className="flex flex-wrap items-center gap-3 mb-4">
                             {job.status === 'closed' && (
-                                <Badge className="capsule-badge bg-red-100 text-red-600 border border-red-200 capitalize px-3 py-1 font-semibold tracking-wide shadow-sm">
+                                <Badge className="capsule-badge bg-red-100/80 text-red-600 border border-red-200 capitalize px-3 py-1 font-bold tracking-wide shadow-sm">
                                     CLOSED
                                 </Badge>
                             )}
-                            <Badge className="capsule-badge capsule-badge-primary capitalize px-3 py-1 font-semibold tracking-wide">
+                            <Badge className="capsule-badge capsule-badge-primary capitalize px-3 py-1 font-bold tracking-wide">
                                 {job.experience_level || 'Open Level'}
                             </Badge>
                             <Badge className="capsule-badge capsule-badge-neutral font-medium px-3 py-1">
@@ -537,16 +537,16 @@ export default function PublicJobDetailPage() {
 
                             {/* HR Actions Panel */}
                             {user?.role === 'hr' && (
-                                <div className="flex items-center gap-2 p-2 bg-muted/30 border border-border rounded-lg shrink-0">
+                                <div className="flex items-center gap-2 p-2 bg-muted/40 border border-border/60 rounded-xl shrink-0">
                                     <Link href={`/dashboard/hr/jobs/${job.id}/edit`}>
-                                        <Button variant="ghost" size="sm" className="h-8 text-primary hover:bg-primary/10">
+                                        <Button variant="ghost" size="sm" className="h-8 text-primary hover:bg-primary/10 active:scale-95 transition-all">
                                             <Edit2 className="w-4 h-4 mr-2" /> Edit
                                         </Button>
                                     </Link>
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 text-muted-foreground hover:bg-muted"
+                                        className="h-8 text-muted-foreground hover:bg-muted active:scale-95 transition-all"
                                         onClick={handleCloseJob}
                                     >
                                         <XCircle className="w-4 h-4 mr-2" /> Close
@@ -555,7 +555,7 @@ export default function PublicJobDetailPage() {
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 text-destructive hover:bg-destructive/10"
+                                        className="h-8 text-destructive hover:bg-destructive/10 active:scale-95 transition-all"
                                         onClick={handleDeleteJob}
                                     >
                                         <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -564,19 +564,19 @@ export default function PublicJobDetailPage() {
                             )}
                         </div>
                         <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-12">
-                            <span className="flex items-center gap-2">
-                                <MapPin className="h-5 w-5 opacity-70" /> {job.mode_of_work || 'Remote'}
+                            <span className="flex items-center gap-2 font-medium">
+                                <MapPin className="h-5 w-5 text-primary opacity-85" /> {job.mode_of_work || 'Remote'}
                             </span>
                             {(job.mode_of_work !== 'Remote' && job.location) && (
-                                <span className="flex items-center gap-2 text-muted-foreground/80">
+                                <span className="flex items-center gap-2 text-muted-foreground/80 font-medium">
                                     {job.location}
                                 </span>
                             )}
-                            <span className="flex items-center gap-2">
-                                <Clock className="h-5 w-5 opacity-70" /> {job.job_type || 'Full-Time'}
+                            <span className="flex items-center gap-2 font-medium">
+                                <Clock className="h-5 w-5 text-accent opacity-85" /> {job.job_type || 'Full-Time'}
                             </span>
-                            <span className="flex items-center gap-2">
-                                <Briefcase className="h-5 w-5 opacity-70" /> {job.domain || 'Engineering'}
+                            <span className="flex items-center gap-2 font-medium">
+                                <Briefcase className="h-5 w-5 text-primary opacity-85" /> {job.domain || 'Engineering'}
                             </span>
                         </div>
                     </div>
@@ -587,12 +587,12 @@ export default function PublicJobDetailPage() {
 
                     {/* Interview Pipeline Info */}
                     {(job.aptitude_enabled || job.first_level_enabled || job.behavioral_role) && (
-                        <div className="mt-10 p-6 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl space-y-4 animate-in fade-in duration-500">
+                        <div className="mt-10 p-6 bg-primary/5 border border-primary/20 rounded-2xl space-y-4 animate-in fade-in duration-500">
                             <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                                <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                                <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                                 Interview Pipeline
                             </h3>
-                            <p className="text-sm text-muted-foreground">Here's what to expect during the interview process for this role:</p>
+                            <p className="text-sm text-muted-foreground font-medium">Here's what to expect during the interview process for this role:</p>
                             <div className="flex flex-col gap-3">
                                 {job.aptitude_enabled && (
                                     <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
@@ -605,9 +605,9 @@ export default function PublicJobDetailPage() {
                                     </div>
                                 )}
                                 {job.first_level_enabled && (
-                                    <div className="flex items-start gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                                        <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                            <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">
+                                    <div className="flex items-start gap-3 p-3 bg-primary/10 border border-primary/20 rounded-xl">
+                                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <span className="text-primary font-bold text-sm">
                                                 {job.aptitude_enabled ? '2' : '1'}
                                             </span>
                                         </div>
@@ -641,22 +641,22 @@ export default function PublicJobDetailPage() {
 
                 {/* Application Form Column (Sticky Sidebar) */}
                 <div className="lg:w-1/3 w-full mt-16 lg:mt-0">
-                    <div className="lg:sticky lg:top-28 z-10 w-full pb-12">
+                    <div className="lg:sticky lg:top-12 z-10 w-full pb-12">
                         {user?.role === 'hr' ? (
-                            <Card className="bg-muted/10 border-dashed border-2 border-border/60 shadow-none">
+                            <Card className="bg-card/40 backdrop-blur-md border-dashed border-2 border-border/60 shadow-none rounded-[2rem]">
                                 <CardContent className="pt-10 pb-10 text-center space-y-4">
-                                    <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-2">
-                                        <Briefcase className="h-8 w-8 text-muted-foreground/60" />
+                                    <div className="w-16 h-16 bg-muted/60 rounded-full flex items-center justify-center mx-auto mb-2">
+                                        <Briefcase className="h-8 w-8 text-primary" />
                                     </div>
-                                    <h3 className="text-lg font-semibold text-foreground/80">HR Preview Mode</h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed px-2">
+                                    <h3 className="text-lg font-bold text-foreground/80">HR Preview Mode</h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed px-2 font-medium">
                                         You are viewing this job posting as an administrator. Standard users and candidates will see the application form here.
                                     </p>
 
                                     {job.interview_token && (
                                         <div className="mt-6 pt-6 border-t border-border/50 text-left">
                                             <h4 className="text-sm font-semibold text-foreground mb-2">Job Link</h4>
-                                            <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                                            <p className="text-xs text-muted-foreground mb-3 leading-relaxed font-medium">
                                                 Share this job link online.
                                             </p>
                                             <div className="flex items-center gap-2">
@@ -664,11 +664,12 @@ export default function PublicJobDetailPage() {
                                                     type="text"
                                                     readOnly
                                                     value={`${typeof window !== 'undefined' ? window.location.origin : ''}/jobs/${job.id}`}
-                                                    className="flex-1 text-xs px-3 py-2 bg-background border border-border rounded-md text-muted-foreground font-mono focus:outline-none"
+                                                    className="flex-1 text-xs px-3 py-2 bg-background border border-border/80 rounded-lg text-muted-foreground font-mono focus:outline-none"
                                                 />
                                                 <Button
                                                     variant="secondary"
                                                     size="sm"
+                                                    className="active:scale-95 transition-all font-bold"
                                                     onClick={() => {
                                                         const link = `${window.location.origin}/jobs/${job.id}`;
                                                         navigator.clipboard.writeText(link);
@@ -687,45 +688,45 @@ export default function PublicJobDetailPage() {
                                 </CardContent>
                             </Card>
                         ) : isSuccess ? (
-                            <Card className="bg-primary/5 border-primary/20 text-center p-8 animate-in zoom-in-95 duration-500 shadow-xl">
+                            <Card className="bg-primary/5 border-primary/20 text-center p-8 animate-in zoom-in-95 duration-500 shadow-xl rounded-[2rem]">
                                 <CardContent className="pt-6 space-y-6">
                                     <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto ring-8 ring-primary/5">
                                         <CheckCircle2 className="h-10 w-10 text-primary" />
                                     </div>
                                     <h2 className="text-2xl font-bold text-foreground">Application Received!</h2>
-                                    <p className="text-muted-foreground leading-relaxed">
-                                        Thank you, {candidateName.split(' ')[0]}. We've sent a confirmation email to <span className="text-foreground font-medium">{candidateEmail}</span>. Our AI system will begin reviewing your resume shortly.
+                                    <p className="text-muted-foreground leading-relaxed font-medium">
+                                        Thank you, {candidateName.split(' ')[0]}. We've sent a confirmation email to <span className="text-foreground font-semibold">{candidateEmail}</span>. Our AI system will begin reviewing your resume shortly.
                                     </p>
                                     <Link href="/jobs" className="block w-full">
-                                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-12 text-lg font-semibold transition-all">
+                                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-12 text-lg font-bold transition-all active:scale-98">
                                             Return to Openings
                                         </Button>
                                     </Link>
                                 </CardContent>
                             </Card>
                         ) : job.status === 'closed' ? (
-                            <Card className="bg-red-500/5 border-red-500/20 text-center p-8 shadow-xl">
+                            <Card className="bg-red-500/5 border-red-500/20 text-center p-8 shadow-xl rounded-[2rem]">
                                 <CardContent className="pt-6 space-y-6">
                                     <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto ring-8 ring-red-500/5">
                                         <XCircle className="h-8 w-8 text-red-500" />
                                     </div>
                                     <h2 className="text-2xl font-bold text-foreground">Position Closed</h2>
-                                    <p className="text-muted-foreground leading-relaxed">
+                                    <p className="text-muted-foreground leading-relaxed font-medium">
                                         We are no longer accepting applications for this listing. Please check out our other open positions.
                                     </p>
                                     <Link href="/jobs" className="block w-full">
-                                        <Button className="w-full bg-slate-900 border border-slate-700 hover:bg-slate-800 text-white rounded-xl h-12 text-lg font-semibold transition-all">
+                                        <Button className="w-full bg-slate-900 border border-slate-700 hover:bg-slate-800 text-white rounded-xl h-12 text-lg font-bold transition-all active:scale-98">
                                             View Other Openings
                                         </Button>
                                     </Link>
                                 </CardContent>
                             </Card>
                         ) : (
-                            <Card className="relative shadow-xl border border-white dark:border-slate-800 bg-white dark:bg-slate-900/80 rounded-2xl overflow-hidden backdrop-blur-xl">
-                                <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500" style={{ borderTopLeftRadius: "1.5rem", borderTopRightRadius: "1.5rem" }}></div>
+                            <Card className="relative shadow-2xl border border-border/80 bg-card/75 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-accent"></div>
                                 <CardHeader className="pt-8 pb-4">
                                     <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">Apply Now</CardTitle>
-                                    <p className="text-sm text-slate-600 dark:text-slate-400">Submit your resume and we'll process your application immediately.</p>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Submit your resume and we'll process your application immediately.</p>
                                 </CardHeader>
                                 <CardContent>
                                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -737,19 +738,19 @@ export default function PublicJobDetailPage() {
 
                                         <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="name" className="text-sm font-semibold">Full Name *</Label>
+                                                <Label htmlFor="name" className="text-sm font-bold">Full Name *</Label>
                                                 <Input
                                                     id="name"
                                                     required
                                                     value={candidateName}
                                                     onChange={(e) => setCandidateName(e.target.value)}
-                                                    className="h-12 bg-muted/50 focus:bg-background transition-colors border-input"
+                                                    className="h-12 bg-muted/40 focus:bg-background/80 transition-all border-border/80 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary rounded-xl"
                                                     placeholder="Jane Doe"
                                                 />
                                             </div>
 
                                             <div className="space-y-1">
-                                                <Label htmlFor="email" className="text-sm font-semibold">Email *</Label>
+                                                <Label htmlFor="email" className="text-sm font-bold">Email *</Label>
                                                 <Input
                                                     id="email"
                                                     type="email"
@@ -765,7 +766,7 @@ export default function PublicJobDetailPage() {
                                                         debouncedValidateEmail(v)
                                                     }}
                                                     onBlur={() => validateEmail(candidateEmail)}
-                                                    className={`h-12 bg-muted/50 focus:bg-background transition-colors ${emailError ? 'border-red-500 focus:ring-red-500' : 'border-input'}`}
+                                                    className={`h-12 bg-muted/40 focus:bg-background/80 transition-all border-border/80 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary rounded-xl ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                                                     placeholder="jane@example.com"
                                                 />
                                                 {emailError && (
@@ -776,10 +777,10 @@ export default function PublicJobDetailPage() {
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="phone" className="text-sm font-semibold">Phone*</Label>
+                                                <Label htmlFor="phone" className="text-sm font-bold">Phone*</Label>
                                                 <div className="flex gap-2">
                                                     <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-                                                        <SelectTrigger className="w-[125px] h-12 bg-muted/50 border-input shrink-0 px-3">
+                                                        <SelectTrigger className="w-[125px] h-12 bg-muted/40 border-border/80 focus:ring-2 focus:ring-primary/30 rounded-xl shrink-0 px-3">
                                                             <SelectValue placeholder="Country" />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -800,8 +801,8 @@ export default function PublicJobDetailPage() {
                                                         onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); setCandidatePhone(v); debouncedValidatePhone(v); }}
                                                         onBlur={() => validatePhone(candidatePhone)}
                                                         maxLength={COUNTRY_CODES.find(c => c.name === selectedCountry)?.placeholder.length || 15}
-                                                        className={`flex-1 h-12 bg-muted/50 focus:bg-background transition-colors ${phoneError ? 'border-red-500 focus:ring-red-500' : 'border-input'}`}
-                                                    placeholder={COUNTRY_CODES.find(c => c.name === selectedCountry)?.placeholder}
+                                                        className={`flex-1 h-12 bg-muted/40 focus:bg-background/80 transition-all border-border/80 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                                                        placeholder={COUNTRY_CODES.find(c => c.name === selectedCountry)?.placeholder}
                                                     />
                                                 </div>
                                                 {phoneWarning && (
@@ -817,36 +818,36 @@ export default function PublicJobDetailPage() {
                                             </div>
 
                                             <div className="space-y-2 pt-2">
-                                                <Label htmlFor="resume" className="text-sm font-semibold">Resume/CV *</Label>
+                                                <Label htmlFor="resume" className="text-sm font-bold">Resume/CV *</Label>
                                                 <div
-                                                    className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300 ${resumeFile
+                                                    className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 ${resumeFile
                                                         ? 'border-primary bg-primary/5'
-                                                        : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                                                        : 'border-border/80 hover:border-primary/50 hover:bg-primary/5 bg-muted/20'
                                                         }`}
                                                 >
-                                                        <input
+                                                    <input
                                                         id="resume"
                                                         type="file"
                                                         required
-                                                            accept=".pdf,.docx,.doc"
+                                                        accept=".pdf,.docx,.doc"
                                                         className="hidden"
                                                         ref={fileInputRef}
                                                         onChange={handleFileChange}
                                                     />
 
                                                     {resumeFile ? (
-                                                        <div className="space-y-2">
+                                                        <div className="space-y-2 animate-in fade-in duration-300">
                                                             <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-1">
                                                                 {isExtracting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
                                                             </div>
-                                                            <p className="text-xs font-medium text-primary break-words line-clamp-1">
+                                                            <p className="text-xs font-semibold text-primary break-words line-clamp-1">
                                                                 {isExtracting ? "Extracting info..." : resumeFile.name}
                                                             </p>
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="text-muted-foreground hover:text-destructive h-7 text-[10px]"
+                                                                className="text-muted-foreground hover:text-destructive h-7 text-[10px] active:scale-95 transition-all"
                                                                 onClick={(e) => {
                                                                     e.preventDefault();
                                                                     setResumeFile(null);
@@ -865,8 +866,8 @@ export default function PublicJobDetailPage() {
                                                                 <UploadCloud className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                                                             </div>
                                                             <div className="space-y-0.5">
-                                                                <p className="text-xs font-semibold text-foreground">Click to upload resume</p>
-                                                                <p className="text-[10px] text-muted-foreground">PDF, DOCX or DOC</p>
+                                                                <p className="text-xs font-bold text-foreground">Click to upload resume</p>
+                                                                <p className="text-[10px] text-muted-foreground font-semibold">PDF, DOCX or DOC</p>
                                                             </div>
                                                         </div>
                                                     )}
@@ -874,11 +875,11 @@ export default function PublicJobDetailPage() {
                                             </div>
 
                                             <div className="space-y-2 pt-2">
-                                                <Label htmlFor="photo" className="text-sm font-semibold">Candidate Photo*</Label>
+                                                <Label htmlFor="photo" className="text-sm font-bold">Candidate Photo *</Label>
                                                 <div
-                                                    className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300 ${photoFile
+                                                    className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 ${photoFile
                                                         ? 'border-primary bg-primary/5'
-                                                        : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                                                        : 'border-border/80 hover:border-primary/50 hover:bg-primary/5 bg-muted/20'
                                                         }`}
                                                 >
                                                     <input
@@ -891,18 +892,18 @@ export default function PublicJobDetailPage() {
                                                     />
 
                                                     {photoFile ? (
-                                                        <div className="space-y-2">
+                                                        <div className="space-y-2 animate-in fade-in duration-300">
                                                             <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-1">
                                                                 <CheckCircle2 className="h-5 w-5" />
                                                             </div>
-                                                            <p className="text-xs font-medium text-primary break-words line-clamp-1">
+                                                            <p className="text-xs font-semibold text-primary break-words line-clamp-1">
                                                                 {photoFile.name}
                                                             </p>
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="text-muted-foreground hover:text-destructive h-7 text-[10px]"
+                                                                className="text-muted-foreground hover:text-destructive h-7 text-[10px] active:scale-95 transition-all"
                                                                 onClick={(e) => {
                                                                     e.preventDefault();
                                                                     setPhotoFile(null);
@@ -921,8 +922,8 @@ export default function PublicJobDetailPage() {
                                                                 <UploadCloud className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                                                             </div>
                                                             <div className="space-y-0.5">
-                                                                <p className="text-xs font-semibold text-foreground">Click to upload photo</p>
-                                                                <p className="text-[10px] text-muted-foreground">JPG/PNG (Max 5MB)</p>
+                                                                <p className="text-xs font-bold text-foreground">Click to upload photo</p>
+                                                                <p className="text-[10px] text-muted-foreground font-semibold">JPG/PNG (Max 5MB)</p>
                                                             </div>
                                                         </div>
                                                     )}
@@ -931,13 +932,13 @@ export default function PublicJobDetailPage() {
                                         </div>
 
                                         {hasApplied && (
-                                            <div className="mb-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
-                                                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                                            <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                                                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
                                                 <div>
-                                                    <p className="text-sm font-bold text-amber-900">
+                                                    <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
                                                         You have already applied for this job using this email or phone number.
                                                     </p>
-                                                    <p className="text-xs text-amber-700 leading-relaxed font-medium">
+                                                    <p className="text-xs text-amber-700/90 dark:text-amber-400/90 leading-relaxed font-semibold">
                                                         To ensure fair opportunities for everyone, we only allow one application per candidate for each role. Please check your inbox for details on your existing application.
                                                     </p>
                                                 </div>
@@ -946,7 +947,7 @@ export default function PublicJobDetailPage() {
 
                                         <Button
                                             type="submit"
-                                            className="w-full h-14 text-base font-bold bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground rounded-xl shadow-lg hover:shadow-primary/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                                            className="w-full h-14 text-base font-bold bg-gradient-to-r from-primary to-accent hover:from-primary/95 hover:to-accent/95 text-primary-foreground rounded-xl shadow-lg hover:shadow-primary/25 transition-all transform hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 cursor-pointer"
                                             disabled={isSubmitting || hasApplied || Boolean(emailError) || Boolean(phoneError) || !resumeFile}
                                         >
                                             {isSubmitting ? (
@@ -973,18 +974,18 @@ export default function PublicJobDetailPage() {
             </main>
 
             <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
-                <DialogContent>
+                <DialogContent className="rounded-[2rem]">
                     <DialogHeader>
-                        <DialogTitle>Confirm Action</DialogTitle>
-                        <DialogDescription>
+                        <DialogTitle className="font-extrabold text-xl">Confirm Action</DialogTitle>
+                        <DialogDescription className="font-medium text-muted-foreground">
                             {confirmAction === 'close'
                                 ? 'Are you sure you want to close this job? Applications will be retained.'
                                 : 'Are you sure you want to DELETE this job? All applications will be permanently removed.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
-                        <Button variant="destructive" onClick={handleConfirmAction}>Confirm</Button>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" className="rounded-xl font-bold" onClick={() => setConfirmAction(null)}>Cancel</Button>
+                        <Button variant="destructive" className="rounded-xl font-bold active:scale-95 transition-all" onClick={handleConfirmAction}>Confirm</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -307,7 +307,7 @@ export default function HRApplicationsPage() {
       </PageHeader>
 
       {/* Filters Toolbar */}
-      <div className="bg-card p-2 rounded-2xl border border-border/50 shadow-sm mb-8 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
+      <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] mb-8 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
         <div className="flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-end">
           {/* Combined Search Bar */}
           <div className="w-full md:flex-1 min-w-0">
@@ -441,7 +441,7 @@ export default function HRApplicationsPage() {
           <p className="text-sm text-muted-foreground/70">Try adjusting or clearing your filters.</p>
         </div>
       ) : (
-        <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700">
           {/* List Header */}
           <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-3 bg-muted/50 border-b border-border text-xs uppercase tracking-widest font-black text-muted-foreground">
             <div className="col-span-3 xl:col-span-2">Candidate</div>
@@ -456,7 +456,7 @@ export default function HRApplicationsPage() {
             {applications.map((app, index) => (
               <div
                 key={app.id}
-                className="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 px-4 sm:px-6 lg:px-6 py-4 lg:py-5 lg:items-center hover:bg-muted/50 transition-all cursor-pointer group shadow-sm dark:shadow-none"
+                className="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 px-4 sm:px-6 lg:px-6 py-4 lg:py-5 lg:items-center hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] transition-all duration-300 cursor-pointer group shadow-sm dark:shadow-none"
                 onClick={() => router.push(`/dashboard/hr/applications/${app.id}`)}
               >
                 {/* Candidate Info */}
@@ -525,10 +525,15 @@ export default function HRApplicationsPage() {
                 <div className="col-span-2 mt-3 lg:mt-0">
                   <div className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Scores</div>
                   {(app.composite_score! > 0 || app.resume_extraction) && (
-                    <div className="inline-flex items-center gap-2 bg-primary/5 px-2.5 py-1 rounded border border-primary/10 mb-2">
+                    <div className="inline-flex items-center gap-2 bg-primary/10 px-2.5 py-1 rounded-xl border border-primary/20 hover:bg-primary/15 transition-colors mb-2 shadow-sm">
                       <span className="text-[11px] font-black text-primary uppercase tracking-tight">Score</span>
                       <span className="text-base font-black text-primary tabular-nums">
-                        {((app.composite_score ?? 0) > 0 ? (app.composite_score ?? 0) : (app.resume_extraction?.resume_score ?? 0)).toFixed(1)}
+                        {((app.composite_score ?? 0) > 0 
+                          ? (app.composite_score ?? 0) 
+                          : ((app.resume_extraction?.resume_score ?? 0) <= 10 
+                            ? (app.resume_extraction?.resume_score ?? 0) * 10 
+                            : (app.resume_extraction?.resume_score ?? 0))
+                        ).toFixed(1)}
                       </span>
                     </div>
                   )}

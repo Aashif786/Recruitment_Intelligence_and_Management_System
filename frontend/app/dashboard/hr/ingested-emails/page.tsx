@@ -364,7 +364,7 @@ export default function IngestedEmailsPage() {
                             <Button
                                 variant="outline"
                                 onClick={() => setShowCredentials(!showCredentials)}
-                                className={`gap-2 border-border shadow-sm rounded-xl h-11 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
+                                className={`gap-2 border-border shadow-sm rounded-xl h-11 active:scale-[0.98] transition-all duration-200 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
                             >
                                 <Settings className="h-4 w-4" />
                                 Configure Mailbox
@@ -373,7 +373,7 @@ export default function IngestedEmailsPage() {
                         <Button
                             onClick={handleSync}
                             disabled={isSyncing}
-                            className="gap-2 bg-primary text-primary-foreground shadow-sm rounded-xl h-11 font-semibold active:scale-95 transition-all"
+                            className="gap-2 bg-primary text-primary-foreground shadow-sm rounded-xl h-11 font-semibold active:scale-[0.98] hover:shadow-md transition-all duration-200"
                         >
                             {isSyncing ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -388,8 +388,8 @@ export default function IngestedEmailsPage() {
 
             {/* Credentials Card */}
             {showCredentials && user?.role === 'super_admin' && (
-                <Card className="border-2 border-primary/10 bg-card shadow-xl rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
-                    <CardHeader className="border-b border-border/50 pb-6">
+                <Card className="bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
+                    <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-6">
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
                                 <CardTitle className="text-lg font-black flex items-center gap-2">
@@ -430,7 +430,7 @@ export default function IngestedEmailsPage() {
                                     id="imap_user"
                                     value={imapUser}
                                     onChange={e => { setImapUser(e.target.value); setEmailError(''); setConfigError(''); }}
-                                    className={`h-12 bg-background border-2 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium ${emailError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10' : 'border-input'}`}
+                                    className={`h-12 bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 font-medium ${emailError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10' : ''}`}
                                     placeholder="example@gmail.com"
                                 />
                                 {emailError && <p className="text-xs font-bold text-red-500 ml-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{emailError}</p>}
@@ -444,7 +444,7 @@ export default function IngestedEmailsPage() {
                                     type="password"
                                     value={imapPass}
                                     onChange={e => { setImapPass(e.target.value); setPasswordError(''); setConfigError(''); }}
-                                    className={`h-12 bg-background border-2 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary font-medium ${passwordError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10' : 'border-input'}`}
+                                    className={`h-12 bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 font-medium ${passwordError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10' : ''}`}
                                     placeholder={imapConfigured ? '••••••••••••••••' : 'xxxx xxxx xxxx xxxx'}
                                     autoComplete="new-password"
                                 />
@@ -456,14 +456,14 @@ export default function IngestedEmailsPage() {
                              <Button
                                 variant="ghost"
                                 onClick={() => setShowCredentials(false)}
-                                className="h-12 px-6 rounded-xl font-bold text-slate-500"
+                                className="h-12 px-6 rounded-xl font-bold text-slate-500 active:scale-[0.98] transition-all duration-200"
                             >
                                 Cancel
                             </Button>
                             <Button
                                 onClick={handleSaveSettings}
                                 disabled={isSavingSettings}
-                                className="h-12 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 gap-2"
+                                className="h-12 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 gap-2 active:scale-[0.98] transition-all duration-200"
                             >
                                 {isSavingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                 Save Configuration
@@ -475,7 +475,7 @@ export default function IngestedEmailsPage() {
 
             {/* Quick Metrics — always show real counts from global_stats regardless of active filter */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="border border-border/60 shadow-sm rounded-2xl bg-card">
+                <Card className="bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 border border-border/80 group hover:-translate-y-1 rounded-2xl overflow-hidden">
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
                             <Inbox className="h-6 w-6 text-primary" />
@@ -489,7 +489,7 @@ export default function IngestedEmailsPage() {
                     </CardContent>
                 </Card>
                 
-                <Card className="border border-border/60 shadow-sm rounded-2xl bg-card">
+                <Card className="bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 border border-border/80 group hover:-translate-y-1 rounded-2xl overflow-hidden">
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
                             <CheckCircle2 className="h-6 w-6 text-emerald-600" />
@@ -503,7 +503,7 @@ export default function IngestedEmailsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border border-border/60 shadow-sm rounded-2xl bg-card">
+                <Card className="bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 border border-border/80 group hover:-translate-y-1 rounded-2xl overflow-hidden">
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
                             <AlertTriangle className="h-6 w-6 text-amber-500" />
@@ -519,7 +519,7 @@ export default function IngestedEmailsPage() {
             </div>
 
             {/* Filters and Toolbar */}
-            <div className="bg-card p-4 rounded-2xl border border-border shadow-sm">
+            <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)]">
                 <div className="flex flex-col md:flex-row gap-4 items-center">
                     {/* Search */}
                     <div className="relative flex-1 w-full">
@@ -529,13 +529,13 @@ export default function IngestedEmailsPage() {
                             placeholder="Search sender email, subject, or resume name..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="pl-12 h-11 bg-background border-2 border-input rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary text-base"
+                            className="pl-12 h-11 bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 text-base"
                         />
                     </div>
                     {/* Status Filter */}
                     <div className="w-full md:w-[220px]">
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="h-11 rounded-xl border-2 border-input bg-background font-medium focus:ring-0">
+                            <SelectTrigger className="h-11 rounded-xl border border-input bg-background/50 font-medium hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 shadow-none">
                                 <SelectValue placeholder="Filter by Status" />
                             </SelectTrigger>
                             <SelectContent>
@@ -587,9 +587,9 @@ export default function IngestedEmailsPage() {
                     </div>
                 </div>
             ) : (
-                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300">
                     <Table>
-                        <TableHeader className="bg-muted/40">
+                        <TableHeader className="bg-muted/30 border-b border-border/40">
                             <TableRow>
                                 <TableHead className="w-[280px]">Sender / Candidate</TableHead>
                                 <TableHead>Email Subject</TableHead>
@@ -607,7 +607,7 @@ export default function IngestedEmailsPage() {
                                     : item.sender_email.trim()
 
                                 return (
-                                    <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
+                                    <TableRow key={item.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 cursor-pointer group">
                                         <TableCell className="font-semibold">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/25 flex items-center justify-center text-xs font-bold text-primary shrink-0 shadow-inner">
@@ -756,7 +756,7 @@ export default function IngestedEmailsPage() {
                     setTargetJobId('')
                 }
             }}>
-                <DialogContent className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+                <DialogContent className="max-w-md rounded-2xl border border-border bg-card/90 backdrop-blur-lg p-6 shadow-2xl">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-black text-foreground flex items-center gap-2">
                             <Mail className="h-5 w-5 text-amber-500" />
