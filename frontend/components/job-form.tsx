@@ -93,7 +93,7 @@ function RepoPicker({
             ) : (
                 <>
                     <select
-                        className="w-full h-10 px-3 border-2 border-input rounded-lg focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary bg-background text-foreground text-sm transition-all"
+                        className="w-full h-10 px-3 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground text-sm transition-all"
                         value={selectedId ?? ''}
                         onChange={handleChange}
                     >
@@ -488,7 +488,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
 
     return (
         <div className="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto overflow-x-hidden">
-            <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-xl animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both w-full">
+            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 rounded-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both w-full">
                 <CardHeader className="space-y-4">
                     <div className="mb-2">
                         <Button
@@ -559,7 +559,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                 id="title"
                                 type="text"
                                 required
-                                className="w-full h-11 px-4 border-2 border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary bg-background text-foreground text-base transition-all"
+                                className="w-full h-11 px-4 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground text-base transition-all"
                                 placeholder="e.g. Senior Frontend Engineer"
                                 value={formData.title}
                                 aria-invalid={Boolean(titleError)}
@@ -576,7 +576,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                 </label>
                                 <select
                                     id="experience"
-                                    className="w-full h-11 px-4 border-2 border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary bg-background text-foreground text-base transition-all"
+                                    className="w-full h-11 px-4 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground text-base transition-all"
                                     value={formData.experience_level}
                                     onChange={(e) => setFormData({ ...formData, experience_level: e.target.value })}
                                 >
@@ -596,7 +596,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                     type="text"
                                     autoComplete="off"
                                     required
-                                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
+                                    className="w-full px-4 py-2 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground shadow-sm transition-all"
                                     placeholder="Type or select a domain"
                                     value={formData.domain}
                                     onChange={(e) => {
@@ -651,7 +651,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                 </label>
                                 <select
                                     id="job_type"
-                                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
+                                    className="w-full px-4 py-2 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground shadow-sm transition-all"
                                     value={formData.job_type}
                                     onChange={(e) => setFormData({ ...formData, job_type: e.target.value })}
                                 >
@@ -668,7 +668,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                 </label>
                                 <select
                                     id="mode_of_work"
-                                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
+                                    className="w-full px-4 py-2 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground shadow-sm transition-all"
                                     value={formData.mode_of_work}
                                     onChange={(e) => {
                                         const newMode = e.target.value;
@@ -694,7 +694,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                         type="text"
                                         autoComplete="off"
                                         required={formData.mode_of_work !== 'Remote'}
-                                        className="w-full h-11 px-4 border-2 border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary bg-background text-foreground text-base transition-all"
+                                        className="w-full h-11 px-4 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground text-base transition-all"
                                         placeholder="e.g. TN, Bangalore, India"
                                         value={formData.location}
                                         onChange={(e) => {
@@ -729,7 +729,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                     </label>
                                     <select
                                         id="status"
-                                        className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
+                                        className="w-full px-4 py-2 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground shadow-sm transition-all"
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                     >
@@ -748,7 +748,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                 id="description"
                                 required
                                 rows={6}
-                                className="w-full px-4 py-3 border-2 border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary bg-background text-foreground text-base transition-all leading-relaxed"
+                                className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground text-base transition-all leading-relaxed"
                                 placeholder="Describe the role responsibilities, team culture, and key expectations..."
                                 value={formData.description}
                                 aria-invalid={Boolean(descError)}
@@ -780,7 +780,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                         min="10"
                                         max="300"
                                         required
-                                        className="w-32 h-10 px-3 border-2 border-input rounded-lg focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary bg-background text-foreground transition-all"
+                                        className="w-32 h-10 px-3 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground transition-all"
                                         value={formData.duration_minutes}
                                         aria-invalid={Boolean(durationError)}
                                         onChange={(e) => { const n = parseInt(e.target.value) || 60; setFormData({ ...formData, duration_minutes: n }); validateDuration(n) }}
@@ -1067,7 +1067,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                 </p>
                                 <select
                                     id="behavioral_role"
-                                    className="w-full md:w-1/2 h-11 px-4 text-base border-2 border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary bg-background text-foreground transition-all"
+                                    className="w-full md:w-1/2 h-11 px-4 text-base border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground transition-all"
                                     value={formData.behavioral_role}
                                     onChange={(e) => setFormData({ ...formData, behavioral_role: e.target.value })}
                                 >

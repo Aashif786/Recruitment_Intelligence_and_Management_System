@@ -78,7 +78,7 @@ export function RejectDialog({ candidateName, onConfirm, trigger }: RejectDialog
             <DialogTrigger asChild>
                 {trigger}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] border border-border bg-background/95 backdrop-blur-md shadow-2xl rounded-2xl">
+            <DialogContent className="sm:max-w-[425px] border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-destructive font-bold text-xl">
                         <AlertTriangle className="h-5 w-5 animate-pulse" />

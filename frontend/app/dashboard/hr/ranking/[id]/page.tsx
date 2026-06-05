@@ -104,7 +104,7 @@ export default function LeaderboardPage() {
                 </div>
             </div>
 
-            <Card className="flex-1 min-h-0 flex flex-col bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden mx-4">
+            <Card className="flex-1 min-h-0 flex flex-col bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden mx-4">
                 <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 shrink-0">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <Users className="h-5 w-5 text-primary" />

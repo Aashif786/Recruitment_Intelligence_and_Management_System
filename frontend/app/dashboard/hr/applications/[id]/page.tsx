@@ -317,7 +317,7 @@ export default function HRApplicationDetailPage() {
     return (
         <div className=" space-y-5 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* ─── Candidate Info Card ───────────────────────────────── */}
-            <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] bg-gradient-to-br from-card to-muted/20 relative overflow-hidden transition-all duration-300">
+            <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] bg-gradient-to-br from-card/30 to-muted/10 relative overflow-hidden active:scale-[0.995] transition-all duration-300">
                 <div className="absolute top-4 right-4 z-10 md:top-6 md:right-6">
                     <Badge className={`px-4 py-1.5 text-xs font-bold uppercase border shadow-sm whitespace-nowrap ${statusInfo.color}`}>
                         {statusInfo.label}
@@ -375,7 +375,7 @@ export default function HRApplicationDetailPage() {
                 <div className="xl:col-span-2 space-y-6">
                     <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6">
                         {/* ─── AI Resume Analysis ─── */}
-                        <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 h-full flex flex-col">
+                        <Card className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 h-full flex flex-col">
                             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
                                 <CardTitle className="text-lg flex flex-wrap items-center gap-2 font-bold text-foreground">
                                     <FileText className="h-5 w-5 text-primary" />
@@ -498,7 +498,7 @@ export default function HRApplicationDetailPage() {
                                                                 View More <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                                                             </Button>
                                                         </DialogTrigger>
-                                                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] bg-card/90 backdrop-blur-lg border border-border/80 shadow-2xl rounded-2xl">
+                                                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] bg-background/90 backdrop-blur-xl border border-border/80 shadow-2xl rounded-3xl">
                                                             <DialogHeader>
                                                                 <DialogTitle className="flex items-center gap-2 text-xl font-bold">
                                                                     <FileText className="h-5 w-5 text-primary" />
@@ -589,7 +589,7 @@ export default function HRApplicationDetailPage() {
                         </Card>
 
                         {/* ─── Interview Report ─── */}
-                        <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 h-full flex flex-col">
+                        <Card className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 h-full flex flex-col">
                             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
                                 <CardTitle className="text-lg flex items-center gap-2 font-bold text-foreground">
                                     <Star className="h-5 w-5 text-amber-500" />

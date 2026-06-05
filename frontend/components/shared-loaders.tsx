@@ -79,7 +79,7 @@ export function StatsGridSkeleton({ count = 4 }: { count?: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div 
           key={i} 
-          className="bg-card/50 backdrop-blur-sm border rounded-3xl p-6 space-y-4 animate-in fade-in zoom-in duration-500"
+          className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-3xl p-6 space-y-4 animate-in fade-in zoom-in duration-500"
           style={{ animationDelay: `${i * 100}ms` }}
         >
           <div className="flex justify-between items-start">
@@ -111,7 +111,7 @@ export function DataTableSkeleton({ rows = 5 }: { rows?: number }) {
         {Array.from({ length: rows }).map((_, i) => (
           <div 
             key={i} 
-            className="flex items-center gap-4 px-4 py-4 border rounded-2xl bg-card/40 border-border"
+            className="flex items-center gap-4 px-4 py-4 border border-border/80 rounded-2xl bg-card/45 backdrop-blur-xl"
             style={{ opacity: 1 - (i * 0.15) }}
           >
             <div className="flex items-center gap-3 w-40">
