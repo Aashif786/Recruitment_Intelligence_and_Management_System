@@ -186,7 +186,7 @@ function SetCard({
     onDelete: (s: QuestionSet) => void
 }) {
     return (
-        <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-md shadow-primary/5 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300 group">
+        <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300 group">
             <CardContent className="p-5 space-y-3">
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-3">
@@ -414,7 +414,7 @@ function SetFormModal({ open, onClose, onSaved, initial, sets }: SetFormProps) {
 
     return (
         <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-            <DialogContent className="w-[95vw] sm:max-w-[80vw] max-h-[90vh] overflow-y-auto bg-card/90 backdrop-blur-xl border border-border/80 shadow-2xl rounded-3xl p-6 md:p-8">
+            <DialogContent className="w-[95vw] sm:max-w-[80vw] max-h-[90vh] overflow-y-auto bg-card/45 backdrop-blur-xl border border-border/80 shadow-2xl rounded-3xl p-6 md:p-8">
                 <DialogHeader>
                     <DialogTitle className="text-lg font-bold">
                         {isEdit ? 'Edit Question Set' : 'Create New Question Set'}
@@ -860,7 +860,7 @@ export default function RepositoryPage() {
                                             size="sm"
                                             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                             disabled={currentPage === 1}
-                                            className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                            className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
                                         >
                                             Previous
                                         </Button>
@@ -869,7 +869,7 @@ export default function RepositoryPage() {
                                             size="sm"
                                             onClick={() => setCurrentPage(prev => prev + 1)}
                                             disabled={currentPage >= totalPages}
-                                            className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                            className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
                                         >
                                             Next
                                         </Button>
@@ -913,7 +913,7 @@ export default function RepositoryPage() {
 
             {/* Delete confirm */}
             <AlertDialog open={Boolean(deleteTarget)} onOpenChange={v => { if (!v) setDeleteTarget(null) }}>
-                <AlertDialogContent>
+                <AlertDialogContent className="rounded-3xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-2xl p-6">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete question set?</AlertDialogTitle>
                         <AlertDialogDescription>

@@ -1109,7 +1109,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   if (isTerminated) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-        <Card className="max-w-md w-full bg-card/70 backdrop-blur-xl border-destructive/50 border shadow-2xl text-center p-8 rounded-[2rem] animate-in zoom-in-95 duration-500">
+        <Card className="max-w-md w-full bg-card/45 backdrop-blur-xl border border-destructive/50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] text-center p-8 rounded-2xl animate-in zoom-in-95 duration-500">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-destructive"></div>
           <ShieldAlert className="mx-auto w-16 h-16 text-destructive mb-6 mt-4" />
           <CardTitle className="text-3xl font-black text-destructive mb-4">Session Terminated</CardTitle>
@@ -1117,7 +1117,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             {terminationReason || "This interview has been deactivated due to security protocol violations."}
           </p>
           <p className="text-xs text-destructive/70 font-mono font-bold mb-8 uppercase tracking-widest bg-destructive/10 py-2 rounded-lg">Access Key Invalidated</p>
-          <Button variant="outline" className="w-full h-14 rounded-xl font-bold shadow-lg active:scale-95 transition-all" onClick={() => window.location.href = '/calrims/'}>Return to Home</Button>
+          <Button variant="outline" className="w-full h-14 rounded-xl font-bold shadow-lg active:scale-[0.99] transition-all" onClick={() => window.location.href = '/calrims/'}>Return to Home</Button>
         </Card>
       </div>
     );
@@ -1126,7 +1126,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   if (pollingError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-6 animate-in zoom-in duration-500">
-        <Card className="max-w-md w-full bg-card/65 backdrop-blur-xl shadow-2xl border border-border/80 rounded-3xl overflow-hidden">
+        <Card className="max-w-md w-full bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden">
           <div className="h-1.5 bg-destructive w-full" />
           <CardHeader className="text-center p-8 pb-4">
             <ShieldAlert className="mx-auto w-16 h-16 text-destructive mb-4 animate-bounce" />
@@ -1138,14 +1138,14 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             </p>
             <div className="flex flex-col gap-3 pt-2">
               <Button
-                className="w-full h-14 rounded-xl font-black text-base shadow-lg shadow-primary/20 active:scale-95 transition-all"
+                className="w-full h-14 rounded-xl font-black text-base shadow-lg shadow-primary/20 active:scale-[0.99] transition-all"
                 onClick={handleRetryPoll}
               >
                 Retry Initialization
               </Button>
               <Button
                 variant="outline"
-                className="w-full h-14 rounded-xl font-bold text-slate-500 hover:text-slate-700 active:scale-95 transition-all"
+                className="w-full h-14 rounded-xl font-bold text-slate-500 hover:text-slate-700 active:scale-[0.99] transition-all"
                 onClick={() => window.location.href = '/calrims/'}
               >
                 Go Back to Dashboard
@@ -1170,7 +1170,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   if (!isStarted) {
     return (
       <div className="min-h-screen w-full overflow-y-auto py-12 flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 px-6 relative">
-        <Card className="max-w-3xl w-full bg-card/65 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-border/80 rounded-[2.2rem] overflow-hidden animate-in zoom-in duration-500 my-auto relative">
+        <Card className="max-w-3xl w-full bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden animate-in zoom-in duration-500 my-auto relative">
           <div className="h-1.5 bg-gradient-to-r from-primary to-accent w-full" />
           <CardHeader className="text-center p-8 pb-4">
             <BrainCircuit className="w-16 h-16 text-primary mx-auto mb-4" />
@@ -1236,7 +1236,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
               <Button
                 disabled={!isDeviceTestSuccess}
-                className={`w-full h-16 rounded-2xl font-black text-xl shadow-xl transition-all duration-300 active:scale-[0.98] ${
+                className={`w-full h-16 rounded-2xl font-black text-xl shadow-xl transition-all duration-300 active:scale-[0.99] ${
                   !isDeviceTestSuccess 
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none hover:bg-slate-300' 
                     : 'shadow-primary/20 cursor-pointer'
@@ -1268,7 +1268,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   if (isFinished) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-6">
-        <Card className="max-w-3xl w-full bg-card/65 backdrop-blur-xl border border-border/80 shadow-2xl rounded-[2.2rem] overflow-hidden animate-in zoom-in duration-500">
+        <Card className="max-w-3xl w-full bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden animate-in zoom-in duration-500">
           <div className="h-1.5 bg-gradient-to-r from-primary via-green-500 to-emerald-400 w-full" />
           <CardHeader className="text-center p-12 space-y-6">
             <div className="relative flex items-center justify-center mx-auto w-24 h-24">
@@ -1338,7 +1338,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                 <Button
                   size="sm"
                   onClick={handleEndSession}
-                  className="text-xs font-black uppercase tracking-widest bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 hover:border-red-500 rounded-xl px-4 py-2 transition-all duration-200 flex items-center gap-2 active:scale-95 cursor-pointer"
+                  className="text-xs font-black uppercase tracking-widest bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 hover:border-red-500 rounded-xl px-4 py-2 transition-all duration-200 flex items-center gap-2 active:scale-[0.99] cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   End Session
@@ -1411,7 +1411,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       </div>
 
       {/* Floating Video Feed — uses its own ref, separate from the pre-start preview */}
-      <div className="fixed bottom-8 right-8 w-64 aspect-video bg-slate-950 rounded-[2rem] border-4 border-border/90 shadow-2xl overflow-hidden group z-50 hover:border-primary/50 transition-colors">
+      <div className="fixed bottom-8 right-8 w-64 aspect-video bg-slate-950 rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden group z-50 hover:border-primary/50 transition-colors">
         <video
           ref={floatingVideoRef}
           autoPlay
@@ -1452,7 +1452,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       {/* ── FULLSCREEN GATE OVERLAY ──────────────────────────────────────────────── */}
       {showFullscreenGate && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 animate-in fade-in duration-200">
-          <div className="max-w-md w-full bg-card/75 border border-border/80 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 relative">
+          <div className="max-w-md w-full bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden animate-in zoom-in-95 duration-300 relative">
             <div className="h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 w-full" />
             <div className="p-10 text-center">
               <div className="w-20 h-20 rounded-full bg-amber-500/10 border-2 border-amber-500/20 flex items-center justify-center mx-auto mb-6">
@@ -1464,7 +1464,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                 You cannot proceed until fullscreen is active.
               </p>
               <Button
-                className="w-full h-14 rounded-xl font-black text-base shadow-xl shadow-amber-500/20 bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center gap-2 active:scale-95 transition-all duration-200 cursor-pointer"
+                className="w-full h-14 rounded-xl font-black text-base shadow-xl shadow-amber-500/20 bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center gap-2 active:scale-[0.99] transition-all duration-200 cursor-pointer"
                 onClick={enterFullscreen}
               >
                 Re-enter Fullscreen to Continue
@@ -1477,7 +1477,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       {/* ── ALL DONE MODAL ────────────────────────────────────────────────────── */}
       {showAllDoneModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-lg p-4 animate-in fade-in duration-300">
-          <div className="max-w-md w-full bg-card/75 border border-border/80 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 relative">
+          <div className="max-w-md w-full bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden animate-in zoom-in-95 duration-300 relative">
             <div className="h-1.5 bg-gradient-to-r from-primary via-green-500 to-emerald-400 w-full" />
             <div className="p-10 text-center space-y-5">
               {/* Icon */}
@@ -1491,7 +1491,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                 </p>
               </div>
               <Button
-                className="w-full h-14 rounded-xl font-black text-base shadow-xl shadow-red-500/20 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                className="w-full h-14 rounded-xl font-black text-base shadow-xl shadow-red-500/20 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.99] cursor-pointer"
                 onClick={handleFinalSubmit}
               >
                 <LogOut className="w-5 h-5" />

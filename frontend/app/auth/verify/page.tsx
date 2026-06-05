@@ -57,7 +57,7 @@ export default function VerifyPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen py-12 px-4">
-      <Card className="w-full max-w-md shadow-2xl relative z-10 bg-card rounded-[2rem] border-border/40">
+      <Card className="w-full max-w-md bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-3xl relative z-10">
         <CardContent className="p-8">
 
           <div className="text-center mb-8">
@@ -93,7 +93,7 @@ export default function VerifyPage() {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} // only allow numbers
                   required
-                  className="w-full text-center tracking-[0.5em] text-2xl font-bold pr-4 py-4 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-muted-foreground/30 text-foreground"
+                  className="w-full text-center tracking-[0.5em] text-2xl font-bold pr-4 py-4 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground/30 text-foreground"
                   placeholder="000000"
                   disabled={isSubmitting || success}
                 />
@@ -103,7 +103,7 @@ export default function VerifyPage() {
             <Button
               type="submit"
               disabled={isSubmitting || success}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 rounded-xl shadow-lg shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 rounded-xl shadow-lg shadow-primary/25 active:scale-[0.99] transition-all duration-200"
             >
               {isSubmitting ? (
                 <>

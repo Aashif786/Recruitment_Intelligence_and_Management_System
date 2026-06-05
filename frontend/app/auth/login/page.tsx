@@ -265,7 +265,7 @@ function LoginContent() {
                   disabled={isSubmitting}
                   required
                   className={cn(
-                    "w-full h-12 pl-12 pr-12 bg-muted/30 border border-border/50 rounded-xl outline-none transition-all duration-300",
+                    "w-full h-12 pl-12 pr-12 bg-muted/30 border border-border/80 rounded-xl outline-none transition-all duration-300",
                     "focus:border-primary focus:ring-4 focus:ring-primary/10 focus:bg-background",
                     "placeholder:text-muted-foreground/40 text-foreground font-medium shadow-sm",
                     isSubmitting && "opacity-50 cursor-not-allowed"
@@ -294,7 +294,7 @@ function LoginContent() {
               <Button
                 type="submit"
                 disabled={isSubmitting || isLoading}
-                className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/35 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
+                className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/35 transition-all active:scale-[0.99] flex items-center justify-center gap-2 group"
               >
                 {isSubmitting ? (
                   <>
@@ -361,7 +361,7 @@ function InputField({ id, label, type, placeholder, value, onChange, icon: Icon,
           autoComplete={autoComplete ?? id}
           required
           className={cn(
-            "w-full h-12 pl-12 pr-4 bg-muted/30 border border-border/50 rounded-xl outline-none transition-all duration-300",
+            "w-full h-12 pl-12 pr-4 bg-muted/30 border border-border/80 rounded-xl outline-none transition-all duration-300",
             "focus:border-primary focus:ring-4 focus:ring-primary/10 focus:bg-background",
             "placeholder:text-muted-foreground/40 text-foreground font-medium shadow-sm",
             disabled && "opacity-50 cursor-not-allowed"

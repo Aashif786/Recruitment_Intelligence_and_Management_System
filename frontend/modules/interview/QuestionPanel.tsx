@@ -21,23 +21,23 @@ export default function QuestionPanel({ question, isLoading, currentQuestionNumb
     };
 
     return (
-        <Card className="w-full border shadow-sm transition-all duration-300 min-h-[250px] relative overflow-hidden rounded-3xl bg-white">
+        <Card className="w-full bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 min-h-[250px] relative overflow-hidden rounded-2xl">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-purple-500"></div>
 
             <CardHeader className="pb-3 px-10 pt-10">
                 <div className="flex justify-between items-start">
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Current Question</span>
+                            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">Current Question</span>
                         </div>
-                        <CardTitle className="text-3xl font-black text-slate-900 tracking-tight flex items-baseline gap-3">
-                            <span className="text-blue-600">Question {currentQuestionNumber}</span>
+                        <CardTitle className="text-3xl font-black text-foreground tracking-tight flex items-baseline gap-3">
+                            <span className="text-primary">Question {currentQuestionNumber}</span>
                         </CardTitle>
                     </div>
                     {question && (
-                        <div className="px-6 py-2 rounded-full bg-purple-50 border border-purple-100 shadow-sm">
-                            <span className="text-[10px] font-black text-purple-600 uppercase tracking-[0.2em]">
+                        <div className="px-6 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 shadow-sm">
+                            <span className="text-[10px] font-black text-purple-500 uppercase tracking-[0.2em]">
                                 {question.difficulty.toUpperCase()} ROUND
                             </span>
                         </div>
@@ -49,10 +49,10 @@ export default function QuestionPanel({ question, isLoading, currentQuestionNumb
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center space-y-4 opacity-60">
                         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                        <p className="text-sm font-black text-slate-400 uppercase tracking-widest animate-pulse">Analyzing context for next question...</p>
+                        <p className="text-sm font-black text-muted-foreground uppercase tracking-widest animate-pulse">Analyzing context for next question...</p>
                     </div>
                 ) : (
-                    <p className="text-2xl md:text-3xl font-extrabold text-slate-900 leading-relaxed tracking-tight">
+                    <p className="text-2xl md:text-3xl font-extrabold text-foreground leading-relaxed tracking-tight">
                         {question?.question || "Initializing Assessment..."}
                     </p>
                 )}

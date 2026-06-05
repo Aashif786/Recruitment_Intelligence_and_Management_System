@@ -55,7 +55,7 @@ export function IssueReportDialog({ open, onOpenChange, interviewId, onSubmitted
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px] bg-card border-border">
+            <DialogContent className="sm:max-w-[500px] border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-black flex items-center gap-2">
                         <AlertTriangle className="text-amber-500 h-6 w-6" />
@@ -96,7 +96,7 @@ export function IssueReportDialog({ open, onOpenChange, interviewId, onSubmitted
                         <Textarea
                             id="description"
                             placeholder="I switched tabs by mistake because of a notification..."
-                            className="min-h-[120px] rounded-xl border-2 focus:ring-primary/20"
+                            className="min-h-[120px] rounded-xl border border-border/80 focus-visible:ring-4 focus-visible:ring-primary/10 hover:border-primary/40 focus-visible:border-primary transition-all bg-muted/40 focus:bg-background/80"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                         />
@@ -104,9 +104,9 @@ export function IssueReportDialog({ open, onOpenChange, interviewId, onSubmitted
                 </div>
 
                 <DialogFooter>
-                    <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+                    <Button variant="ghost" className="active:scale-[0.99] transition-all" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
                     <Button
-                        className="bg-primary hover:bg-primary/90 font-bold px-8 shadow-lg shadow-primary/20"
+                        className="bg-primary hover:bg-primary/90 font-bold px-8 shadow-lg shadow-primary/20 active:scale-[0.99] transition-all"
                         onClick={handleSubmit}
                         disabled={isSubmitting}
                     >
@@ -168,7 +168,7 @@ export function FeedbackDialog({ open, onOpenChange, interviewId }: FeedbackDial
     if (isSubmitted) {
         return (
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-[400px] text-center py-12 bg-card border-border">
+                <DialogContent className="sm:max-w-[400px] text-center py-12 border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl">
                     <DialogTitle className="sr-only">Feedback Received</DialogTitle>
                     <div className="flex flex-col items-center gap-4">
                         <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-2">
@@ -184,7 +184,7 @@ export function FeedbackDialog({ open, onOpenChange, interviewId }: FeedbackDial
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[450px] bg-card border-border">
+            <DialogContent className="sm:max-w-[450px] border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-black">How was your experience?</DialogTitle>
                     <DialogDescription className="text-base">
@@ -199,7 +199,7 @@ export function FeedbackDialog({ open, onOpenChange, interviewId }: FeedbackDial
                             {[1, 2, 3, 4, 5].map((star) => (
                                 <button
                                     key={star}
-                                    className="p-1 transition-transform active:scale-90"
+                                    className="p-1 transition-transform active:scale-[0.99]"
                                     onMouseEnter={() => setHoverRating(star)}
                                     onMouseLeave={() => setHoverRating(0)}
                                     onClick={() => setRating(star)}
@@ -223,7 +223,7 @@ export function FeedbackDialog({ open, onOpenChange, interviewId }: FeedbackDial
                         <Textarea
                             id="feedback"
                             placeholder="The voice recognition worked great, but..."
-                            className="min-h-[100px] rounded-xl border-2 focus:ring-primary/20"
+                            className="min-h-[100px] rounded-xl border border-border/80 focus-visible:ring-4 focus-visible:ring-primary/10 hover:border-primary/40 focus-visible:border-primary transition-all bg-muted/40 focus:bg-background/80"
                             value={feedback}
                             onChange={(e) => setFeedback(e.target.value)}
                         />
@@ -231,9 +231,9 @@ export function FeedbackDialog({ open, onOpenChange, interviewId }: FeedbackDial
                 </div>
 
                 <DialogFooter>
-                    <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Skip</Button>
+                    <Button variant="ghost" className="active:scale-[0.99] transition-all" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Skip</Button>
                     <Button
-                        className="bg-primary hover:bg-primary/90 font-bold px-8 shadow-lg shadow-primary/20"
+                        className="bg-primary hover:bg-primary/90 font-bold px-8 shadow-lg shadow-primary/20 active:scale-[0.99] transition-all"
                         onClick={handleSubmit}
                         disabled={isSubmitting || rating === 0}
                     >

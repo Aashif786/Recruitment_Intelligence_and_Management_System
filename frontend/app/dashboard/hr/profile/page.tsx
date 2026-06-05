@@ -90,7 +90,7 @@ export default function ProfilePage() {
                         
                         <Dialog open={isPickerOpen} onOpenChange={setIsPickerOpen}>
                             <DialogTrigger asChild>
-                                <button className="relative block group">
+                                <button className="relative block group active:scale-[0.99] transition-all duration-200">
                                     <Avatar className="h-28 w-28 border-4 border-slate-900 shadow-2xl transition-transform group-hover:scale-105">
                                         <AvatarImage src={avatarUrl} alt={user.full_name} className="object-cover bg-slate-800" />
                                         <AvatarFallback className="text-3xl font-black bg-primary/10 text-primary">{initials}</AvatarFallback>
@@ -100,7 +100,7 @@ export default function ProfilePage() {
                                     </div>
                                 </button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-[500px]">
+                            <DialogContent className="sm:max-w-[500px] rounded-3xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-2xl p-6">
                                 <DialogHeader>
                                     <DialogTitle>Customize Profile Logo</DialogTitle>
                                     <DialogDescription>
@@ -116,7 +116,7 @@ export default function ProfilePage() {
                                                 <button
                                                     key={style}
                                                     onClick={() => handleUpdateAvatar(url)}
-                                                    className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-muted transition-colors border-2 border-transparent hover:border-primary/20"
+                                                    className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-muted active:scale-[0.99] transition-all duration-200 border-2 border-transparent hover:border-primary/20"
                                                 >
                                                     <Avatar className="h-16 w-16">
                                                         <AvatarImage src={url} className="bg-slate-100" />

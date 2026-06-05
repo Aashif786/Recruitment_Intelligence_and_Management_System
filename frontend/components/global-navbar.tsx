@@ -82,7 +82,7 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
     : '/'
 
   return (
-    <nav className="sticky top-0 w-full z-50 bg-sidebar/90 backdrop-blur-2xl border-b border-border/60 h-16 flex items-center shrink-0 shadow-[0_1px_0_0_color-mix(in_oklab,var(--border)_80%,transparent),0_4px_16px_-4px_rgba(0,0,0,0.06)]">
+    <nav className="sticky top-0 w-full z-50 bg-sidebar/45 backdrop-blur-xl border-b border-border/40 h-16 flex items-center shrink-0 shadow-[0_1px_0_0_color-mix(in_oklab,var(--border)_80%,transparent),0_4px_16px_-4px_rgba(0,0,0,0.02)] transition-colors duration-300">
       <div className="w-full px-4 flex items-center justify-between">
 
         {/* Left: Logo and Title */}

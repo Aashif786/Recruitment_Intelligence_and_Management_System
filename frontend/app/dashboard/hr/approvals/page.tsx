@@ -244,7 +244,7 @@ export default function ApprovalsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary font-bold rounded-lg active:scale-95 transition-all duration-200"
+                            className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary font-bold rounded-lg active:scale-[0.99] transition-all duration-200"
                             onClick={() => setOtpConfirmUser(hrUser)}
                           >
                             Send OTP
@@ -255,7 +255,7 @@ export default function ApprovalsPage() {
                             <Button
                               size="sm"
                               variant="destructive"
-                              className="h-8 text-xs font-bold rounded-lg active:scale-95 transition-all duration-200"
+                              className="h-8 text-xs font-bold rounded-lg active:scale-[0.99] transition-all duration-200"
                               disabled={processingId === hrUser.id}
                               onClick={() => handleReject(hrUser.id)}
                             >
@@ -263,7 +263,7 @@ export default function ApprovalsPage() {
                             </Button>
                             <Button
                               size="sm"
-                              className="h-8 text-xs font-bold shadow-sm shadow-primary/20 rounded-lg active:scale-[0.97] transition-all duration-200"
+                              className="h-8 text-xs font-bold shadow-sm shadow-primary/20 rounded-lg active:scale-[0.99] transition-all duration-200"
                               disabled={processingId === hrUser.id}
                               onClick={() => handleApprove(hrUser.id)}
                             >
@@ -276,7 +276,7 @@ export default function ApprovalsPage() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            className="h-8 text-xs font-bold rounded-lg active:scale-95 transition-all duration-200"
+                            className="h-8 text-xs font-bold rounded-lg active:scale-[0.99] transition-all duration-200"
                             disabled={processingId === hrUser.id}
                             onClick={() => handleRemove(hrUser.id)}
                           >
@@ -298,7 +298,7 @@ export default function ApprovalsPage() {
       </Card>
 
       <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
-        <DialogContent className="max-w-md rounded-2xl border border-border bg-card/90 backdrop-blur-lg shadow-2xl p-6">
+        <DialogContent className="max-w-md rounded-3xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-2xl p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Confirm Action</DialogTitle>
             <DialogDescription className="text-base">{confirmAction?.message}</DialogDescription>
@@ -312,7 +312,7 @@ export default function ApprovalsPage() {
 
       {/* Password Reset OTP Confirmation Dialog */}
       <Dialog open={!!otpConfirmUser} onOpenChange={() => setOtpConfirmUser(null)}>
-        <DialogContent className="max-w-md rounded-2xl border border-primary/20 bg-card/90 backdrop-blur-lg shadow-2xl p-6">
+        <DialogContent className="max-w-md rounded-3xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-2xl p-6">
           <DialogHeader className="space-y-3">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
               <UserCheck className="h-6 w-6 text-primary" />
@@ -334,7 +334,7 @@ export default function ApprovalsPage() {
               Cancel
             </Button>
             <Button 
-              className="flex-1 font-bold h-12 rounded-xl bg-primary shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all" 
+              className="flex-1 font-bold h-12 rounded-xl bg-primary shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.99] transition-all" 
               onClick={handleSendOTP}
               disabled={isSendingOtp}
             >

@@ -63,7 +63,7 @@ function InterviewAccessForm() {
            <div className="absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] bg-accent/8 rounded-full blur-[100px] animate-pulse duration-[8s] delay-1000" />
         </div>
 
-        <Card className="max-w-md w-full bg-card/65 backdrop-blur-xl border border-border/80 shadow-[0_8px_40px_rgba(0,0,0,0.08)] rounded-[2rem] overflow-hidden relative z-10">
+        <Card className="max-w-md w-full bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden relative z-10">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-accent" />
             <CardHeader className="text-center pt-8 pb-4">
                 <CardTitle className="text-3xl font-black text-foreground tracking-tight">Interview Access</CardTitle>
@@ -88,7 +88,7 @@ function InterviewAccessForm() {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                             disabled={loading}
-                            className="h-12 bg-muted/40 focus:bg-background/80 border-border/80 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary rounded-xl transition-all"
+                            className="h-12 bg-muted/40 focus:bg-background/80 border-border/80 focus-visible:ring-4 focus-visible:ring-primary/10 hover:border-primary/40 focus-visible:border-primary rounded-xl transition-all"
                         />
                     </div>
                     <div className="space-y-1">
@@ -101,10 +101,10 @@ function InterviewAccessForm() {
                             onChange={(e) => setAccessKey(e.target.value.trim())}
                             required
                             disabled={loading}
-                            className="h-12 bg-muted/40 focus:bg-background/80 border-border/80 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary rounded-xl transition-all"
+                            className="h-12 bg-muted/40 focus:bg-background/80 border-border/80 focus-visible:ring-4 focus-visible:ring-primary/10 hover:border-primary/40 focus-visible:border-primary rounded-xl transition-all"
                         />
                     </div>
-                    <Button type="submit" className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/95 text-primary-foreground active:scale-[0.98] hover:shadow-lg hover:shadow-primary/20 transition-all duration-200 cursor-pointer" disabled={loading || !email || !accessKey}>
+                    <Button type="submit" className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/95 text-primary-foreground active:scale-[0.99] hover:shadow-lg hover:shadow-primary/20 transition-all duration-200 cursor-pointer" disabled={loading || !email || !accessKey}>
                         {loading ? 'Verifying...' : 'Enter Interview'}
                     </Button>
                 </form>

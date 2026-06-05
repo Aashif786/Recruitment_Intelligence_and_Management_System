@@ -151,7 +151,7 @@ export default function HRJobsPage() {
                 icon={Briefcase}
             >
                 <div className="flex items-center gap-4">
-                    <div className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl gap-2 px-6 py-4 flex items-center shadow-md shadow-primary/5">
+                    <div className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl gap-2 px-6 py-4 flex items-center shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-primary uppercase tracking-widest leading-tight">Active</span>
                             <span className="text-[18px] font-black text-primary tabular-nums leading-none">
@@ -167,7 +167,7 @@ export default function HRJobsPage() {
                         </div>
                     </div>
                     <Link href="/dashboard/hr/jobs/create">
-                        <Button className="h-14 px-6 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center gap-2">
+                        <Button className="h-14 px-6 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 active:scale-[0.99] transition-all flex items-center gap-2">
                             <Plus className="w-5 h-5" />
                             Create New Job
                         </Button>
@@ -176,7 +176,7 @@ export default function HRJobsPage() {
             </PageHeader>
 
             {/* Filter Toolbar */}
-            <div className="bg-card/60 backdrop-blur-md p-4 rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] mb-8 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
+            <div className="bg-card/45 backdrop-blur-xl p-4 rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] mb-8 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
                 <div className="flex flex-wrap gap-4 items-end">
                     {/* Search Bar */}
                     <div className="flex-1 min-w-0">
@@ -412,7 +412,7 @@ export default function HRJobsPage() {
                                     size="sm"
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1 || isLoading}
-                                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
                                 >
                                     Previous
                                 </Button>
@@ -421,7 +421,7 @@ export default function HRJobsPage() {
                                     size="sm"
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages || isLoading}
-                                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
                                 >
                                     Next
                                 </Button>
@@ -454,7 +454,7 @@ export default function HRJobsPage() {
 
             {/* Confirm Dialog */}
             <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
-                <DialogContent className="max-w-md rounded-2xl">
+                <DialogContent className="max-w-md rounded-3xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-2xl p-6">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-bold">Confirm Action</DialogTitle>
                         <DialogDescription className="pt-2 text-base leading-relaxed text-muted-foreground">

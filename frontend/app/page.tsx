@@ -328,24 +328,24 @@ export default function Home() {
             box-shadow: 12px 12px 40px rgba(59,130,246,0.15);
           }
           .glass-feature-card {
-            background: rgba(255, 255, 255, 0.35);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border: 1px solid rgba(255, 255, 255, 0.55);
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.80);
             transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.45s ease, border-color 0.45s ease, background 0.45s ease;
             transform-origin: center center;
             transform-style: preserve-3d;
             perspective: 1000px;
             will-change: transform;
-            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.10), inset 0 1px 0 rgba(255,255,255,0.5);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255,255,255,0.5);
           }
           .dark .glass-feature-card {
-            background: rgba(15, 37, 71, 0.25);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(15, 37, 71, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.15);
           }
           .glass-feature-card:hover {
             transform: perspective(1000px) rotateY(6deg) rotateX(-5deg) translateY(-10px) scale(1.02);
-            background: rgba(255, 255, 255, 0.50);
+            background: rgba(255, 255, 255, 0.55);
             box-shadow: 20px 20px 50px rgba(59, 130, 246, 0.18), inset 0 1px 0 rgba(255,255,255,0.7);
             border-color: rgba(255, 255, 255, 0.85);
           }
@@ -634,7 +634,7 @@ export default function Home() {
                 className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start mt-6 w-full"
               >
                 <Link href="/auth/login?role=hr">
-                  <Button size="lg" className="h-12 px-7 cursor-pointer active:scale-95 transition-all duration-300 group hover:shadow-lg hover:shadow-primary/25">
+                  <Button size="lg" className="h-12 px-7 cursor-pointer active:scale-[0.99] transition-all duration-300 group hover:shadow-lg hover:shadow-primary/25">
                     Start hiring in minutes
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
                   </Button>
@@ -643,7 +643,7 @@ export default function Home() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="h-12 px-7 border-border/70 bg-background/70 cursor-pointer active:scale-95 transition-all duration-300 hover:bg-background/95 hover:border-border"
+                    className="h-12 px-7 border-border/70 bg-background/70 cursor-pointer active:scale-[0.99] transition-all duration-300 hover:bg-background/95 hover:border-border"
                   >
                     Browse open roles
                   </Button>
@@ -956,13 +956,7 @@ export default function Home() {
             {/* Candidate Card */}
             <div className="group relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5 rounded-3xl">
               <div
-                className="absolute inset-0 rounded-3xl border border-white/50"
-                style={{
-                  background: "rgba(255,255,255,0.35)",
-                  backdropFilter: "blur(18px)",
-                  WebkitBackdropFilter: "blur(18px)",
-                  boxShadow: "0 8px 32px rgba(59,130,246,0.10), inset 0 1px 0 rgba(255,255,255,0.5)",
-                }}
+                className="absolute inset-0 rounded-3xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.02)]"
               />
               <div className="relative rounded-3xl p-8 lg:p-10">
                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-25 transition-opacity">
@@ -980,7 +974,7 @@ export default function Home() {
                 <Link href="/jobs">
                   <Button
                     variant="link"
-                    className="p-0 text-base text-primary hover:text-primary/80 group/link"
+                    className="p-0 text-base text-primary hover:text-primary/80 group/link active:scale-[0.99] transition-all"
                   >
                     Browse openings <span className="inline-block translate-x-0 group-hover/link:translate-x-1 transition-transform duration-200">&rarr;</span>
                   </Button>
@@ -991,13 +985,7 @@ export default function Home() {
             {/* HR Card */}
             <div className="group relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5 rounded-3xl">
               <div
-                className="absolute inset-0 rounded-3xl border border-primary/30"
-                style={{
-                  background: "rgba(66, 99, 168, 0.40)",
-                  backdropFilter: "blur(18px)",
-                  WebkitBackdropFilter: "blur(18px)",
-                  boxShadow: "0 30px 90px rgba(15,23,42,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",
-                }}
+                className="absolute inset-0 rounded-3xl border border-primary/30 bg-primary/20 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.02)]"
               />
               <div className="relative rounded-3xl p-8 lg:p-10 text-primary-foreground">
                 <h3 className="text-2xl lg:text-3xl font-semibold mb-6">
@@ -1021,7 +1009,7 @@ export default function Home() {
                 <Link href="/auth/login?role=hr">
                   <Button
                     size="lg"
-                    className="bg-slate-950 text-white hover:bg-slate-900 rounded-full px-7 active:scale-95 transition-all duration-300 hover:shadow-lg hover:shadow-black/25"
+                    className="bg-slate-950 text-white hover:bg-slate-900 rounded-full px-7 active:scale-[0.99] transition-all duration-300 hover:shadow-lg hover:shadow-black/25"
                   >
                     Open the HR dashboard
                   </Button>

@@ -399,7 +399,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
 
         <TabsContent value="analytics" className="animate-in fade-in zoom-in-95 duration-300">
           {metrics.total > 0 ? (
-            <Card className="border-none shadow-xl bg-card">
+            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xl flex items-center gap-2">
                   <BarChart className="h-5 w-5 text-primary" />

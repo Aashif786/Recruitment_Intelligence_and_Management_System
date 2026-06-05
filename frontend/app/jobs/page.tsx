@@ -181,7 +181,7 @@ export default function PublicJobsPage() {
                                 <Link href={`/jobs/${job.id}`} key={job.id} className="group block outline-none">
                                     <div className="relative h-full transition-all duration-500 animate-in fade-in slide-in-from-bottom-8 fill-mode-both" style={{ animationDelay: `${idx * 50}ms` }}>
                                         <div className="absolute -inset-0.5 bg-gradient-to-br from-primary to-accent rounded-[2rem] blur opacity-0 group-hover:opacity-20 transition duration-500 group-hover:duration-200"></div>
-                                        <Card className="relative h-full flex flex-col bg-card/60 backdrop-blur-xl border-border/50 shadow-md group-hover:border-primary/30 group-hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 rounded-[1.8rem] overflow-hidden">
+                                        <Card className="relative h-full flex flex-col bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] group-hover:border-primary/30 group-hover:-translate-y-1 active:scale-[0.99] transition-all duration-300 rounded-2xl overflow-hidden">
                                             <div className={`absolute top-0 right-0 w-32 h-32 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-125 duration-500 ${job.status === 'closed' ? 'bg-red-500/10' : 'bg-primary/10'}`}></div>
 
                                             <CardHeader className="pb-4 relative z-10">
@@ -250,11 +250,11 @@ export default function PublicJobsPage() {
                                 <span className="text-sm text-foreground/70 font-medium">
                                     Displaying {((currentPage - 1) * JOBS_PER_PAGE) + 1} &mdash; {Math.min(currentPage * JOBS_PER_PAGE, filteredJobs.length)} of {filteredJobs.length} roles
                                 </span>
-                                <div className="flex bg-card/60 rounded-full shadow-sm border border-border/60 p-1 backdrop-blur-md">
+                                <div className="flex bg-card/45 backdrop-blur-xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-border/80 p-1">
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="rounded-full px-4 active:scale-90 transition-transform"
+                                        className="rounded-full px-4 active:scale-[0.99] transition-all"
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                         disabled={currentPage === 1}
                                     >
@@ -266,7 +266,7 @@ export default function PublicJobsPage() {
                                                 key={i}
                                                 variant={currentPage === i + 1 ? "secondary" : "ghost"}
                                                 size="sm"
-                                                className={`w-8 h-8 p-0 rounded-full active:scale-90 transition-transform ${currentPage === i + 1 ? 'font-bold bg-primary/15 text-primary hover:bg-primary/20' : ''}`}
+                                                className={`w-8 h-8 p-0 rounded-full active:scale-[0.99] transition-all ${currentPage === i + 1 ? 'font-bold bg-primary/15 text-primary hover:bg-primary/20' : ''}`}
                                                 onClick={() => setCurrentPage(i + 1)}
                                             >
                                                 {i + 1}
@@ -276,7 +276,7 @@ export default function PublicJobsPage() {
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="rounded-full px-4 active:scale-90 transition-transform"
+                                        className="rounded-full px-4 active:scale-[0.99] transition-all"
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                         disabled={currentPage === totalPages}
                                     >

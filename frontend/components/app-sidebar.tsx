@@ -111,7 +111,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     return (
-        <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border bg-sidebar/90 backdrop-blur-2xl text-sidebar-foreground shadow-[2px_0_20px_-4px_rgba(0,0,0,0.12)] transition-colors duration-300">
+        <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border bg-sidebar/45 backdrop-blur-xl text-sidebar-foreground shadow-[2px_0_20px_-4px_rgba(0,0,0,0.02)] transition-colors duration-300">
             <SidebarHeader className="border-b border-sidebar-border/60 px-4 py-5">
                 <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center gap-2">
                     {/* Brand Identity */}
