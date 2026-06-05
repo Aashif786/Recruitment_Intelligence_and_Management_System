@@ -134,12 +134,12 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
 
   const getEventColorStyle = (type: MonitoringEvent['event_type']) => {
     if (type === 'focus_lost') {
-      return 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/10 shadow-amber-500/10 hover:border-amber-600'
+      return 'border-amber-500/30 bg-amber-500/[0.02] dark:bg-amber-500/[0.04] hover:border-amber-500 transition-all duration-300'
     }
     if (['multiple_faces', 'no_face'].includes(type)) {
-      return 'border-red-500 bg-red-50/50 dark:bg-red-950/10 shadow-red-500/10 hover:border-red-600'
+      return 'border-red-500/30 bg-red-500/[0.02] dark:bg-red-500/[0.04] hover:border-red-500 transition-all duration-300'
     }
-    return 'border-green-500 bg-green-50/50 dark:bg-green-950/10 shadow-green-500/10 hover:border-green-600'
+    return 'border-emerald-500/30 bg-emerald-500/[0.02] dark:bg-emerald-500/[0.04] hover:border-emerald-500 transition-all duration-300'
   }
 
   const jumpSeconds = selectedEvent?.video_reference?.startsWith('offset_')
@@ -190,7 +190,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-card/70 backdrop-blur-md border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/20">
             <ShieldAlert className="w-6 h-6" />
@@ -266,7 +266,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
         </div>
       </div>
 
-      <ScrollArea className="h-[480px] rounded-2xl border border-border bg-muted/20 p-4 shadow-inner scrollbar-premium">
+      <ScrollArea className="h-[480px] rounded-2xl border border-border/80 bg-card/45 backdrop-blur-xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.02)] scrollbar-premium">
         {filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <Filter className="w-12 h-12 text-muted-foreground/30 mb-3" />
@@ -278,7 +278,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
               <div
                 key={ev.id}
                 onClick={() => setSelectedEvent(ev)}
-                className={`group relative flex flex-col rounded-2xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer overflow-hidden ${getEventColorStyle(
+                className={`group relative flex flex-col rounded-2xl border-2 transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] cursor-pointer overflow-hidden ${getEventColorStyle(
                   ev.event_type
                 )}`}
               >

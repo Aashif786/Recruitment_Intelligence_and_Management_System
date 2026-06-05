@@ -9,7 +9,7 @@ interface MetricCardProps {
 }
 
 const MetricCardImpl = ({ title, score, notAvailable }: MetricCardProps) => (
-    <div className={`flex flex-col items-center justify-center p-3 rounded-xl border shadow-inner hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${notAvailable ? 'bg-muted/40 border-border' : 'bg-primary/5 border-primary/20'}`}>
+    <div className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border hover:-translate-y-0.5 active:scale-[0.99] hover:shadow-[0_8px_20px_rgb(0,0,0,0.03)] transition-all duration-200 ${notAvailable ? 'bg-muted/40 border-border/80 shadow-inner' : 'bg-primary/5 border-primary/20 shadow-inner'}`}>
         <div className={`text-xs font-bold uppercase tracking-widest mb-1 text-center ${notAvailable ? 'text-muted-foreground' : 'text-primary'}`}>{title}</div>
         <div className="flex items-baseline gap-1">
             {notAvailable ? (

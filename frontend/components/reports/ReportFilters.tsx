@@ -154,7 +154,7 @@ export const ReportFilters = React.memo(function ReportFilters({
 
   return (
     <div className="lg:sticky lg:top-4 lg:col-span-1 md:col-span-1 lg:h-[calc(100vh-8.5rem)] lg:max-h-[calc(100vh-8.5rem)] flex flex-col animate-in fade-in slide-in-from-left-8 duration-700 ease-out fill-mode-both">
-      <Card className="h-full flex flex-col shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08)] border-border/80 !py-0 !gap-0 bg-card/80 backdrop-blur-md rounded-2xl overflow-hidden">
+      <Card className="h-full flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-border/80 !py-0 !gap-0 bg-card/45 backdrop-blur-xl rounded-2xl overflow-hidden">
         <CardHeader className="p-4 !pb-3 shrink-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-foreground">Interview Reports</h2>
@@ -224,7 +224,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                     <Input
                       id="search"
                       placeholder="Candidate Name"
-                      className="pl-8"
+                      className="pl-8 hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                       value={searchQuery}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -245,10 +245,10 @@ export const ReportFilters = React.memo(function ReportFilters({
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-muted/30 space-y-2">
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2">
             <Label htmlFor="job-filter" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Filter by Job</Label>
             <Select value={jobFilter} onValueChange={setJobFilter}>
-              <SelectTrigger id="job-filter" className="w-full h-9 text-sm rounded-lg bg-background/50 border-border/40">
+              <SelectTrigger id="job-filter" className="w-full h-10 text-sm rounded-xl bg-background/50 border-border/40 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200">
                 <SelectValue placeholder="All Jobs" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
@@ -261,12 +261,12 @@ export const ReportFilters = React.memo(function ReportFilters({
           </div>
 
           {/* Grouped Status/Exp/Skill Filters */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 ">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {/* Status Filter */}
-            <div className="space-y-1  rounded-xl border border-border/50 bg-muted/25">
+            <div className="space-y-1.5 p-2 rounded-xl border border-border/50 bg-muted/25">
               <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full h-5 text-xs rounded-lg bg-background/40 border-border/30">
+                <SelectTrigger className="w-full h-9 text-xs rounded-xl bg-background/40 border-border/30 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
@@ -281,10 +281,10 @@ export const ReportFilters = React.memo(function ReportFilters({
             </div>
 
             {/* Experience Filter */}
-            <div className="space-y-1 rounded-xl border border-border/50 bg-muted/25">
+            <div className="space-y-1.5 p-2 rounded-xl border border-border/50 bg-muted/25">
               <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Exp.</Label>
               <Select value={experienceFilter} onValueChange={setExperienceFilter}>
-                <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
+                <SelectTrigger className="w-full h-9 text-xs rounded-xl bg-background/40 border-border/30 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200">
                   <SelectValue placeholder="Exp." />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
@@ -297,10 +297,10 @@ export const ReportFilters = React.memo(function ReportFilters({
             </div>
 
             {/* Skill Filter */}
-            <div className="space-y-1  rounded-xl border border-border/50 bg-muted/25">
+            <div className="space-y-1.5 p-2 rounded-xl border border-border/50 bg-muted/25">
               <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Skills</Label>
               <Select value={skillFilter} onValueChange={setSkillFilter}>
-                <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
+                <SelectTrigger className="w-full h-9 text-xs rounded-xl bg-background/40 border-border/30 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200">
                   <SelectValue placeholder="Skills" />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg max-h-[300px]">
@@ -316,7 +316,7 @@ export const ReportFilters = React.memo(function ReportFilters({
           </div>
 
           {/* Score Range */}
-          <div className="space-y-1 rounded-xl border border-border/60 bg-muted/30">
+          <div className="space-y-2 p-3 rounded-xl border border-border/60 bg-muted/30">
             <div className="flex justify-between items-center">
               <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Score Range</Label>
               <span className="text-[13px] font-semibold text-primary">{pendingScoreRange[0]} - {pendingScoreRange[1]}</span>
@@ -336,9 +336,9 @@ export const ReportFilters = React.memo(function ReportFilters({
 
           {/* Calendar */}
           <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <div className="space-y-1 rounded-xl border border-border/60 bg-muted/30">
+            <div className="space-y-3 p-3 rounded-xl border border-border/60 bg-muted/30">
               <div className="space-y-2">
-                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest pb-1">Date Range</Label>
+                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Date Range</Label>
                 <div className="grid grid-cols-2 gap-1.5">
                   <DatePicker
                     label="From"

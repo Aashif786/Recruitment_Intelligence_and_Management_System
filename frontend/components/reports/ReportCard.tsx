@@ -13,7 +13,7 @@ const ReportCardImpl = ({ report, onClick }: ReportCardProps) => {
   const notCompleted = isInterviewNotCompleted(report)
   return (
     <div
-        className="bg-card/50 backdrop-blur-sm border rounded-xl px-6 py-5 shadow-sm hover:shadow-lg hover:border-primary/50 transition-all duration-300 cursor-pointer border-border group relative overflow-hidden"
+        className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl px-6 py-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:border-primary/40 transition-all duration-300 cursor-pointer group relative overflow-hidden active:scale-[0.99]"
         onClick={onClick}
     >
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

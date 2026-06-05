@@ -25,7 +25,7 @@ const getScoreBg = (score?: number) => {
 }
 
 const CategoryScoreCardImpl = ({ title, score, showNotAvailable }: CategoryScoreCardProps) => (
-    <Card className={`h-28 bg-card/60 backdrop-blur-md border border-border/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_-4px_rgba(0,0,0,0.10)] hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-300 overflow-hidden ${!showNotAvailable ? getScoreBg(score) : ''}`}>
+    <Card className={`h-28 bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-300 rounded-2xl overflow-hidden ${!showNotAvailable ? getScoreBg(score) : ''}`}>
         <CardContent className="h-full flex flex-col justify-center p-4">
             <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-2">{title}</div>
             {showNotAvailable ? (
