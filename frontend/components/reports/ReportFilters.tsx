@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Filter, Search, CheckCircle2, RotateCcw } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -37,7 +36,6 @@ interface ReportFiltersProps {
   onClearFilters: () => void
   allJobsData: any[] | undefined
   hideStats: boolean
-  onHideStatsChange: (value: boolean) => void
   interviewCounts: Record<string, number>
 }
 
@@ -59,7 +57,6 @@ export const ReportFilters = React.memo(function ReportFilters({
   onClearFilters,
   allJobsData,
   hideStats,
-  onHideStatsChange,
   interviewCounts,
 }: ReportFiltersProps) {
   const [searchQuery, setSearchQuery] = useState(appliedFilters.search)
@@ -156,9 +153,9 @@ export const ReportFilters = React.memo(function ReportFilters({
   }
 
   return (
-    <div className="lg:sticky lg:top-4 lg:col-span-1 md:col-span-1 lg:h-[calc(100vh-8.5rem)] lg:max-h-[calc(100vh-8.5rem)] flex flex-col animate-in fade-in slide-in-from-left-8 duration-700 ease-out fill-mode-both">
-      <Card className="h-full flex flex-col shadow-sm border-border/60 !py-0 !gap-0 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="p-4 !pb-0 shrink-0 border-b border-border/50">
+    <div className="lg:sticky lg:col-span-1 md:col-span-1 lg:h-[calc(100vh-08.5rem)] lg:max-h-[calc(100vh-8.5rem)] flex flex-col animate-in fade-in slide-in-from-left-8 duration-700 ease-out fill-mode-both">
+      <Card className="h-full flex flex-col shadow-sm border-border/40 !py-0 !gap-0 bg-card/80 backdrop-blur-sm">
+        <CardHeader className="p-3 !pb-0 shrink-0 border-b border-border/30">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-foreground">Interview Reports</h2>
             <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -215,18 +212,6 @@ export const ReportFilters = React.memo(function ReportFilters({
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-          {/* Hide Stats Toggle */}
-          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-muted/30">
-            <div className="flex flex-col gap-0.5">
-              <Label htmlFor="hide-stats" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Hide Stats</Label>
-              <span className="text-[10px] text-muted-foreground">Hide metrics and stats overview</span>
-            </div>
-            <Switch
-              id="hide-stats"
-              checked={hideStats}
-              onCheckedChange={onHideStatsChange}
-            />
-          </div>
 
           {/* Search */}
           <div className="grid w-full items-center gap-1.5">
@@ -260,7 +245,7 @@ export const ReportFilters = React.memo(function ReportFilters({
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2">
+          <div className="rounded-xl border border-border/60 bg-muted/30 space-y-2">
             <Label htmlFor="job-filter" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Filter by Job</Label>
             <Select value={jobFilter} onValueChange={setJobFilter}>
               <SelectTrigger id="job-filter" className="w-full h-9 text-sm rounded-lg bg-background/50 border-border/40">
@@ -276,12 +261,12 @@ export const ReportFilters = React.memo(function ReportFilters({
           </div>
 
           {/* Grouped Status/Exp/Skill Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 ">
             {/* Status Filter */}
-            <div className="space-y-1.5 p-2 rounded-xl border border-border/50 bg-muted/25">
+            <div className="space-y-1  rounded-xl border border-border/50 bg-muted/25">
               <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
+                <SelectTrigger className="w-full h-5 text-xs rounded-lg bg-background/40 border-border/30">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
@@ -296,7 +281,7 @@ export const ReportFilters = React.memo(function ReportFilters({
             </div>
 
             {/* Experience Filter */}
-            <div className="space-y-1.5 p-2 rounded-xl border border-border/50 bg-muted/25">
+            <div className="space-y-1 rounded-xl border border-border/50 bg-muted/25">
               <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Exp.</Label>
               <Select value={experienceFilter} onValueChange={setExperienceFilter}>
                 <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
@@ -312,7 +297,7 @@ export const ReportFilters = React.memo(function ReportFilters({
             </div>
 
             {/* Skill Filter */}
-            <div className="space-y-1.5 p-2 rounded-xl border border-border/50 bg-muted/25">
+            <div className="space-y-1  rounded-xl border border-border/50 bg-muted/25">
               <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Skills</Label>
               <Select value={skillFilter} onValueChange={setSkillFilter}>
                 <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
@@ -331,7 +316,7 @@ export const ReportFilters = React.memo(function ReportFilters({
           </div>
 
           {/* Score Range */}
-          <div className="space-y-1.5 p-3 rounded-xl border border-border/60 bg-muted/30">
+          <div className="space-y-1 rounded-xl border border-border/60 bg-muted/30">
             <div className="flex justify-between items-center">
               <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Score Range</Label>
               <span className="text-[13px] font-semibold text-primary">{pendingScoreRange[0]} - {pendingScoreRange[1]}</span>
@@ -351,7 +336,7 @@ export const ReportFilters = React.memo(function ReportFilters({
 
           {/* Calendar */}
           <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <div className="space-y-3 p-3 rounded-xl border border-border/60 bg-muted/30">
+            <div className="space-y-1 rounded-xl border border-border/60 bg-muted/30">
               <div className="space-y-2">
                 <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest pb-1">Date Range</Label>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -460,18 +445,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                     }}
                   />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setFromDate(null)
-                    setToDate(null)
-                    setDateFilter(undefined)
-                  }}
-                  className="h-7 text-xs text-muted-foreground hover:text-primary px-2 w-full mt-1 flex items-center gap-2"
-                >
-                  <RotateCcw className="h-3 w-3" /> Reset to Default
-                </Button>
+
               </div>
 
               <Separator />

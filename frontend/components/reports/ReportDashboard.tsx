@@ -4,6 +4,7 @@ import React, { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -29,8 +30,9 @@ interface ReportDashboardProps {
     avgQuestions: string
     totalApplied: number
     totalFinished: number
-  }
+    }
   hideStats: boolean
+  onHideStatsChange: (value: boolean) => void
   activeTab: string
   setActiveTab: (tab: string) => void
   reportsPage: number
@@ -56,6 +58,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
   filteredReports,
   metrics,
   hideStats,
+  onHideStatsChange,
   activeTab,
   setActiveTab,
   reportsPage,
@@ -87,18 +90,14 @@ export const ReportDashboard = React.memo(function ReportDashboard({
   }, [appliedFilters])
 
   return (
-    <div className="lg:col-span-3 md:col-span-2 space-y-4 lg:h-[calc(100vh-8.5rem)] lg:max-h-[calc(100vh-8.5rem)] lg:overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+    <div className="lg:col-span-3  flex-1 md:col-span-2 space-y-4 lg:h-[calc(100vh-8.5rem)] lg:max-h-[calc(100vh-8.5rem)] lg:overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
       {/* Compact Metrics Strip */}
       {!hideStats && (
         <div className="animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-100 rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2">
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
             <div className="rounded-md bg-muted/40 px-3 py-2">
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Total Applied</p>
               <p className="text-2xl font-bold leading-tight text-foreground">{metrics.totalApplied}</p>
-            </div>
-            <div className="rounded-md bg-muted/40 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Total Finished</p>
-              <p className="text-2xl font-bold leading-tight text-foreground">{metrics.totalFinished}</p>
             </div>
             <div className="rounded-md bg-muted/40 px-3 py-2">
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Total Reports</p>
@@ -222,8 +221,15 @@ export const ReportDashboard = React.memo(function ReportDashboard({
             <TabsTrigger value="table" className="rounded-full px-5 h-full">Table View</TabsTrigger>
             <TabsTrigger value="analytics" className="rounded-full px-5 h-full">Summary Analytics</TabsTrigger>
           </TabsList>
-          
           <div className="flex items-center gap-3">
+            <div className="flex flex-row h-11 items-center gap-2 rounded-md bg-muted/40 px-3 py-2">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Hide Stats</p>
+                <Switch
+                  id="hide-stats" 
+                  checked={hideStats}
+                  onCheckedChange={onHideStatsChange}
+                />
+            </div>
             {activeTab === 'table' && (
               <Button
                 onClick={() => void downloadCSV()}

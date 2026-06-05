@@ -596,11 +596,11 @@ export default function ReportsPage() {
 
       
       {/* Header - Fixed at the top of the component */}
-      <PageHeader
+      {/* <PageHeader
         title="Interview Reports"
         description={`Analytics and detailed reports for ${totalCount} candidates`}
         icon={BarChart}
-      />
+      /> */}
 
       {/* Question Detail Modal */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && setSelectedQuestion(null)}>
@@ -714,13 +714,13 @@ export default function ReportsPage() {
           onClearFilters={clearAllFilters}
           allJobsData={allJobsData}
           hideStats={hideStats}
-          onHideStatsChange={setHideStats}
           interviewCounts={interviewCounts}
         />
         <ReportDashboard
           filteredReports={filteredReports}
           metrics={metrics}
           hideStats={hideStats}
+          onHideStatsChange={setHideStats}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           reportsPage={reportsPage}
