@@ -61,6 +61,7 @@ interface OnboardingCandidate {
     candidate_name: string
     candidate_email: string
     job?: { title?: string }
+    job_title?: string
     status: string
     joining_date?: string
     offer_sent?: boolean
@@ -238,7 +239,7 @@ export default function OnboardingPage() {
         
         const headers = ["Name,Email,Job,Status,Joining Date,Approval"]
         const rows = candidates.map(c => 
-            `"${c.candidate_name}","${c.candidate_email}","${c.job?.title || ''}","${c.status}","${c.joining_date || ''}","${c.onboarding_approval_status}"`
+            `"${c.candidate_name}","${c.candidate_email}","${c.job_title || c.job?.title || ''}","${c.status}","${c.joining_date || ''}","${c.onboarding_approval_status}"`
         )
         
         const csvContent = "data:text/csv;charset=utf-8," + headers.concat(rows).join("\n")
@@ -258,9 +259,20 @@ export default function OnboardingPage() {
                 icon={CheckCircle2}
             >
                 <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="h-10 px-4 bg-primary/10 dark:bg-white/5 text-primary dark:text-white border-primary/20 dark:border-white/10 flex items-center justify-center font-bold text-sm rounded-xl">
-                        {totalCount} {totalCount === 1 ? 'Candidate' : 'Candidates'}
-                    </Badge>
+                    { (search || statusFilter !== 'all' || jobFilter !== 'all') ? (
+                        <>
+                            <Badge variant="outline" className="h-10 px-4 bg-primary/10 dark:bg-white/5 text-primary dark:text-white border-primary/20 dark:border-white/10 flex items-center justify-center font-bold text-sm rounded-xl">
+                                {filteredCandidates.length} {filteredCandidates.length === 1 ? 'Match' : 'Matches'}
+                            </Badge>
+                            <Badge variant="outline" className="h-10 px-4 bg-muted/50 text-muted-foreground border-border flex items-center justify-center font-bold text-sm rounded-xl">
+                                {totalCount} Total
+                            </Badge>
+                        </>
+                    ) : (
+                        <Badge variant="outline" className="h-10 px-4 bg-primary/10 dark:bg-white/5 text-primary dark:text-white border-primary/20 dark:border-white/10 flex items-center justify-center font-bold text-sm rounded-xl">
+                            {totalCount} {totalCount === 1 ? 'Candidate' : 'Candidates'}
+                        </Badge>
+                    )}
                     <Button variant="outline" className="gap-2 h-11 px-5 rounded-xl border-border font-bold" onClick={exportToCSV}>
                         <Download className="h-4 w-4" />
                         Export Data
@@ -392,7 +404,6 @@ export default function OnboardingPage() {
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl">
                                         <SelectItem value="all" className="font-bold">All Statuses</SelectItem>
-                                        <SelectItem value="hired" className="font-bold">Hired</SelectItem>
                                         <SelectItem value="pending_approval" className="font-bold">Approval Pending</SelectItem>
                                         <SelectItem value="offer_sent" className="font-bold">Offer Sent</SelectItem>
                                         <SelectItem value="accepted" className="font-bold">Accepted</SelectItem>
@@ -486,7 +497,7 @@ export default function OnboardingPage() {
                                         </TableCell>
                                         <TableCell>
                                             <div>
-                                                <div className="text-sm font-medium">{candidate.job?.title || 'Unknown Role'}</div>
+                                                <div className="text-sm font-medium">{candidate.job_title || candidate.job?.title || 'Unknown Role'}</div>
                                                 <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-1 font-semibold">
                                                     <Calendar className="h-3 w-3 opacity-60" />
                                                     Joining: {candidate.joining_date ? new Date(candidate.joining_date).toLocaleDateString() : 'TBD'}
