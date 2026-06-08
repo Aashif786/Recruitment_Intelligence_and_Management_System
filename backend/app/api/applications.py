@@ -32,10 +32,15 @@ from passlib.context import CryptContext
 from sqlalchemy.exc import IntegrityError
 import re
 import hashlib
+import asyncio
  
 from typing import Optional, List
 
 logger = logging.getLogger(__name__)
+
+# Semaphore: allows only ONE concurrent AI resume analysis.
+# This prevents Groq/AI rate-limit errors when many resumes are uploaded in a batch.
+_ai_analysis_semaphore = asyncio.Semaphore(1)
 
 # Persisted hint for HR (marker stripped in API responses). Heuristic also sets extraction_degraded.
 RIMS_EXTRACTION_DEGRADED_MARKER = "[[rims:extraction_degraded]]"
@@ -275,19 +280,7 @@ async def apply_for_job(
     db: Session = Depends(get_db)
 ):
     """Apply for a job with resume (Public endpoint)"""
-    # Name validation & XSS protection (MED-01)
-    if not candidate_name or len(candidate_name.strip()) < 2 or candidate_name.strip().isdigit():
-        raise HTTPException(
-            status_code=400,
-            detail="Valid full name required (must be at least 2 characters and cannot be purely numeric)."
-        )
-    import re
-    if not re.match(r"^[A-Za-z\s\-\.\']+$", candidate_name.strip()):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid characters in candidate name. Only letters, spaces, hyphens, periods, and apostrophes are allowed."
-        )
-
+    # Name validation removed as requested by user.
     request_id = None
     try:
         from app.core.observability import log_json
@@ -692,7 +685,10 @@ async def apply_for_job(
     return new_application
 
 async def process_application_background(application_id: int, job_id: int, abs_file_path: str, candidate_email: str, candidate_name: str):
-    """Heavy AI processing and notification workflow in background"""
+    """Heavy AI processing and notification workflow in background.
+    Serialized through _ai_analysis_semaphore to prevent concurrent Groq API calls
+    during batch uploads (which would cause rate-limit / 503 failures).
+    """
     db = SessionLocal()
     try:
         from app.services.candidate_service import CandidateService
@@ -805,8 +801,9 @@ async def process_application_background(application_id: int, job_id: int, abs_f
             }
             extraction_degraded_flag = True
         else:
-            # AI Parsing
-            extraction_data = await parse_resume_with_ai(resume_text, job_id, job.description, job.experience_level)
+            # AI Parsing — serialized through semaphore to avoid concurrent Groq rate-limit errors
+            async with _ai_analysis_semaphore:
+                extraction_data = await parse_resume_with_ai(resume_text, job_id, job.description, job.experience_level)
             extraction_degraded_flag = extraction_data.pop("extraction_degraded", False)
 
         # Store extraction (Versioning + Upsert pattern)
@@ -1159,6 +1156,8 @@ def get_hr_applications(
         if status and status != 'all':
             if status == "applied":
                 query = query.filter(Application.status.in_(("applied", "submitted")))
+            elif status == "hired":
+                query = query.filter(Application.status.in_(("hired", "onboarded", "offer_sent")))
             else:
                 query = query.filter(Application.status == status)
 

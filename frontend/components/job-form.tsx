@@ -504,7 +504,8 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                         {mode === 'create' ? 'Create New Job Position' : 'Edit Job Position'}
                     </CardTitle>
                     <div className="flex flex-col gap-4 pt-2 text-slate-600 dark:text-slate-400">
-                        <p className="text-sm">Define the role requirements manually or use AI to auto-fill them.</p>
+                        <p className="text-sm">Tip: Give hints about the role in Job Description
+ field and use AI to auto-fill the other fields.</p>
                         <div className="flex flex-wrap gap-2">
                             <input
                                 type="file"

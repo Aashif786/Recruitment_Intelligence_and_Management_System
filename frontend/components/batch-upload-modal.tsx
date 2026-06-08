@@ -564,7 +564,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent 
-        className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl transition-all duration-300"
+        className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl transition-all duration-300"
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -662,8 +662,20 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
                 <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3 text-left">Detailed Results</h4>
                 <div className="space-y-2">
                   {files.filter(f => f.status !== 'pending').map(file => (
-                      <div key={file.id} className="flex justify-between items-center p-2.5 rounded-xl text-xs border border-border/30 bg-background/50 gap-4">
-                          <span className="truncate max-w-[200px] sm:max-w-xs font-medium text-foreground">{file.file.name}</span>
+                      <div key={file.id} className="flex justify-between items-start p-2.5 rounded-xl text-xs border border-border/30 bg-background/50 gap-4">
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span className="truncate font-medium text-foreground">{file.file.name}</span>
+                            {file.status === 'failed' && file.errorMessage && (
+                              <span className="text-[10px] text-destructive/80 font-medium mt-0.5 leading-tight line-clamp-2">
+                                ⚠ {file.errorMessage}
+                              </span>
+                            )}
+                            {file.status === 'skipped' && file.skippedReason && (
+                              <span className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                                {file.skippedReason}
+                              </span>
+                            )}
+                          </div>
                           {file.status === 'success' && (
                             <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0 flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Success

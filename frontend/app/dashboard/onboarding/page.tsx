@@ -439,7 +439,25 @@ export default function OnboardingPage() {
                                                     size="sm" 
                                                     variant="ghost" 
                                                     className="h-8 w-8 p-0"
-                                                    onClick={() => handlePreviewOffer(candidate.id)}
+                                                    onClick={async () => {
+                                                        const win = window.open('', '_blank');
+                                                        if (!win) {
+                                                            toast.error("Popup blocked! Please allow popups for this site.");
+                                                            return;
+                                                        }
+                                                        win.document.write('<div style="font-family: sans-serif; padding: 40px; text-align: center; color: #666;">Loading offer letter preview...</div>');
+                                                        try {
+                                                            const res = await APIClient.get(`/api/onboarding/applications/${candidate.id}/offer-preview`) as any;
+                                                            win.document.open();
+                                                            win.document.write(res.html || '<div style="color: red; padding: 20px;">Offer letter is empty or not generated yet.</div>');
+                                                            win.document.close();
+                                                        } catch (error: any) {
+                                                            win.document.open();
+                                                            win.document.write(`<div style="color: red; padding: 20px; font-family: sans-serif;"><h3>Failed to load offer preview</h3><p>${error.message || "Unknown error"}</p></div>`);
+                                                            win.document.close();
+                                                            toast.error(error.message || "Failed to load offer preview");
+                                                        }
+                                                    }}
                                                 >
                                                     <Eye className="h-4 w-4 text-muted-foreground" />
                                                 </Button>

@@ -205,14 +205,9 @@ export default function HRDashboard() {
     }
   }, [dashboardData])
 
-  const chartData = useMemo(() => {
-    const rawData = (dashboardData as any)?.chart_data || []
-    return rawData.filter((item: any) => 
-      item.name !== 'Aptitude' && 
-      item.name !== 'Review' && 
-      item.name !== 'AI Interview'
-    )
-  }, [dashboardData])
+  // Chart data is shaped by the backend (Applied, Screened, Interview completed,
+  // Physical, Hired [aggregated], Rejected) – no client-side filtering needed.
+  const chartData = (dashboardData as any)?.chart_data || []
   const recentInterviews = useMemo(() => {
     if (paginatedInterviews?.items && Array.isArray(paginatedInterviews.items)) {
       return paginatedInterviews.items

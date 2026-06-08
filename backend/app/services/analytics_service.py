@@ -100,52 +100,45 @@ class AnalyticsService:
             
             pipeline_results = pipeline_query.group_by(Application.status).all()
             
-            # Map of internal status -> Display Name
+            # Map of internal status -> visible chart bucket name.
+            # offer_sent / accepted / hired / onboarded all roll up into 'Hired'
+            # so the chart reflects the total candidates progressing beyond Physical.
             status_map = {
                 'applied': 'Applied',
                 'screened': 'Screened',
-                'aptitude_round': 'Aptitude',
-                'ai_interview': 'AI Interview',
+                'aptitude_round': 'Applied',       # hidden – roll into Applied bucket
+                'ai_interview': 'Screened',         # hidden – roll into Screened bucket
                 'interview_completed': 'Interview completed',
-                'review_later': 'Review',
+                'review_later': 'Interview completed',  # treated same as completed
                 'physical_interview': 'Physical',
-                'pending_approval': 'Pending Approval',
-                'offer_sent': 'Offer Sent (Pending)',
-                'accepted': 'Accepted',
+                'pending_approval': 'Hired',        # post-physical -> Hired bucket
+                'offer_sent': 'Hired',
+                'accepted': 'Hired',
                 'hired': 'Hired',
-                'onboarded': 'Onboarded',
+                'onboarded': 'Hired',
                 'rejected': 'Rejected'
             }
             
-            # Strict chronological order for the pipeline chart
+            # Strict display order – exactly the 6 required stages
             CHART_ORDER = [
                 'Applied', 'Screened', 'Interview completed',
-                'Offer Sent', 'Accepted', 'Onboarded', 'Rejected'
+                'Physical', 'Hired', 'Rejected'
             ]
             
-            # Initialize with 0s for expected stages to keep chart consistent
+            # Initialize with 0s so all 6 bars always appear
             counts = {name: 0 for name in CHART_ORDER}
             for stat, count in pipeline_results:
-                display_name = status_map.get(stat, stat.replace('_', ' ').capitalize())
-                if display_name in counts:
+                display_name = status_map.get(stat)
+                if display_name and display_name in counts:
                     counts[display_name] += count
-                else:
-                    counts[display_name] = count
+                # Statuses not in status_map are silently ignored
             
-            # Format for Recharts: [{ name: "Applied", value: 10 }, ...]
-            # We follow the CHART_ORDER but only include stages with data OR core stages
-            core_stages = ["Applied", "AI Interview", "Hired", "Rejected"]
-            result["chart_data"] = []
-            
-            for name in CHART_ORDER:
-                value = counts.get(name, 0)
-                if value > 0 or name in core_stages:
-                    result["chart_data"].append({"name": name, "value": value})
-            
-            # Catch any other statuses not in CHART_ORDER
-            for name, value in counts.items():
-                if name not in CHART_ORDER and value > 0:
-                    result["chart_data"].append({"name": name, "value": value})
+            # Build the chart_data list – all 6 stages always included
+            core_stages = list(CHART_ORDER)   # every stage is core
+            result["chart_data"] = [
+                {"name": name, "value": counts[name]}
+                for name in CHART_ORDER
+            ]
 
             logger.info(f"[ANALYTICS DATA] {result}")
             return result
