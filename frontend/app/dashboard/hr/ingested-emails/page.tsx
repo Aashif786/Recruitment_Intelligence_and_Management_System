@@ -684,7 +684,7 @@ export default function IngestedEmailsPage() {
                                             disabled={selectableItems.length === 0}
                                             className={`w-4 h-4 rounded border transition-all flex items-center justify-center shrink-0 ${
                                                 selectableItems.length === 0 ? 'opacity-30 cursor-not-allowed bg-slate-100 border-slate-200' :
-                                                isAllSelected ? 'bg-primary border-primary text-primary-foreground' : 'bg-transparent border-input hover:border-primary/50'
+                                                isAllSelected ? 'bg-primary border-primary text-primary-foreground' : 'bg-background border-slate-400 dark:border-slate-600 hover:border-primary/50'
                                             }`}
                                         >
                                             {isAllSelected && <Check className="w-3 h-3 text-primary-foreground stroke-[4px]" />}
@@ -719,7 +719,7 @@ export default function IngestedEmailsPage() {
                                                     }}
                                                     className={`w-4 h-4 rounded border transition-all flex items-center justify-center shrink-0 ${
                                                         item.application_id ? 'opacity-30 cursor-not-allowed bg-slate-100 border-slate-200' :
-                                                        selectedIds.includes(item.id) ? 'bg-primary border-primary text-primary-foreground' : 'bg-transparent border-input hover:border-primary/50'
+                                                        selectedIds.includes(item.id) ? 'bg-primary border-primary text-primary-foreground' : 'bg-background border-slate-400 dark:border-slate-600 hover:border-primary/50'
                                                     }`}
                                                 >
                                                     {selectedIds.includes(item.id) && <Check className="w-3 h-3 text-primary-foreground stroke-[4px]" />}
