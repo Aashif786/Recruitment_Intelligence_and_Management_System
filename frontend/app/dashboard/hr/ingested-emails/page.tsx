@@ -579,12 +579,16 @@ export default function IngestedEmailsPage() {
                         </h3>
                         <p className="text-sm text-muted-foreground mt-1 max-w-sm">
                             {statusFilter === 'mapped'
-                                ? 'No resumes have been automatically matched to an open job yet. Sync emails to trigger AI mapping.'
+                                ? (user?.role === 'super_admin'
+                                    ? 'No resumes have been automatically matched to an open job yet. Sync emails to trigger AI mapping.'
+                                    : 'No resumes have been automatically matched to an open job yet. Newly mapped resumes will appear here automatically.')
                                 : statusFilter === 'unmapped'
                                 ? 'All ingested resumes have been assigned — nothing pending.'
                                 : debouncedSearch
                                 ? `No emails match "${debouncedSearch}". Try a different search term.`
-                                : "Click 'Sync Emails' to connect to your configured recruiter mailbox and fetch applicant resumes."}
+                                : user?.role === 'super_admin'
+                                ? "Click 'Sync Emails' to connect to your configured recruiter mailbox and fetch applicant resumes."
+                                : "No ingested resumes found. Newly fetched candidate resumes will appear here automatically."}
                         </p>
                     </div>
                 </div>
