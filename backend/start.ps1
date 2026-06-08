@@ -1,6 +1,6 @@
 Set-Location $PSScriptRoot
 
-$PORT     = 10000
+$PORT = 10000
 $PID_FILE = ".\.backend.pid"
 
 # ---------------------------------------------------------------------------
@@ -27,8 +27,8 @@ function Clear-Port {
     # -- Step 2: kill any remaining process found via netstat ---------------
     $netstatLines = netstat -ano 2>$null | Select-String ":$PORT\s"
     foreach ($line in $netstatLines) {
-        $parts   = ($line.ToString().Trim()) -split '\s+'
-        $netPid  = $parts[-1]
+        $parts = ($line.ToString().Trim()) -split '\s+'
+        $netPid = $parts[-1]
         if ($netPid -match '^\d+$' -and [int]$netPid -gt 0) {
             Write-Host "  Killing netstat PID $netPid on port $PORT..."
             taskkill /PID $netPid /F /T 2>$null | Out-Null
@@ -38,7 +38,7 @@ function Clear-Port {
 
     # -- Step 3: wait up to 30 s for the OS to release the socket ----------
     $waited = 0
-    while ($waited -lt 30) {
+    while ($waited -lt 20) {
         $still = netstat -ano 2>$null | Select-String ":$PORT\s"
         if (-not $still) { break }
         Start-Sleep -Seconds 1
@@ -51,7 +51,8 @@ function Clear-Port {
     $final = netstat -ano 2>$null | Select-String ":$PORT\s"
     if ($final) {
         Write-Host "  Note: Port $PORT may still show in netstat (TIME_WAIT) but SO_REUSEADDR will bypass it." -ForegroundColor Yellow
-    } else {
+    }
+    else {
         Write-Host "  Port $PORT is free." -ForegroundColor Green
     }
 }
@@ -72,7 +73,8 @@ function Test-Environment {
 
     try {
         $pyVersion = & ".\venv\Scripts\python.exe" -c "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')"
-    } catch {
+    }
+    catch {
         Write-Host "Error: Failed to run python from venv." -ForegroundColor Red
         return $false
     }
@@ -101,7 +103,8 @@ function Repair-Environment {
         Write-Host "Generating core requirements file..."
         if (Test-Path ".\requirements.txt") {
             Get-Content requirements.txt | Where-Object { $_ -notmatch 'chromadb' } | Set-Content requirements_core.txt
-        } else {
+        }
+        else {
             Write-Host "Error: requirements.txt not found. Cannot proceed." -ForegroundColor Red
             return
         }
@@ -124,7 +127,8 @@ function Repair-Environment {
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Repair complete! Your environment is now healthy." -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "Repair failed. Please check the logs above." -ForegroundColor Red
     }
 }
@@ -171,10 +175,10 @@ function Restart-Backend {
 $action = if ($args.Count -gt 0) { $args[0] } else { "start" }
 
 switch ($action) {
-    "start"   { Start-Backend }
-    "stop"    { Stop-Backend }
+    "start" { Start-Backend }
+    "stop" { Stop-Backend }
     "restart" { Restart-Backend }
-    "repair"  { Repair-Environment }
-    "check"   { Test-Environment }
-    default   { Write-Host "Usage: .\start.ps1 [start|stop|restart|repair|check]" }
+    "repair" { Repair-Environment }
+    "check" { Test-Environment }
+    default { Write-Host "Usage: .\start.ps1 [start|stop|restart|repair|check]" }
 }
