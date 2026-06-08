@@ -94,9 +94,27 @@ export default function OnboardingPage() {
     const totalCount = resp?.total || 0
     
     const [search, setSearch] = useState('')
+    const [statusFilter, setStatusFilter] = useState('all')
+    const [jobFilter, setJobFilter] = useState('all')
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
     const [showStats, setShowStats] = useState(true)
+
+    const handleResetFilters = () => {
+        setSearch('')
+        setStatusFilter('all')
+        setJobFilter('all')
+        setCurrentPage(1)
+    }
+
+    const jobTitles = useMemo(() => {
+        const titles = new Set<string>()
+        candidates.forEach(c => {
+            const title = c.job_title || c.job?.title
+            if (title) titles.add(title)
+        })
+        return Array.from(titles).sort()
+    }, [candidates])
 
     const sortedCandidates = useMemo(() => {
         return [...candidates].sort((a, b) => {
@@ -127,11 +145,23 @@ export default function OnboardingPage() {
     }, [candidates])
 
     const filteredCandidates = useMemo(() => {
-        return sortedCandidates?.filter(c => 
-            c.candidate_name.toLowerCase().includes(search.toLowerCase()) ||
-            c.candidate_email.toLowerCase().includes(search.toLowerCase())
-        ) || []
-    }, [sortedCandidates, search])
+        return sortedCandidates?.filter(c => {
+            const matchesSearch = 
+                c.candidate_name.toLowerCase().includes(search.toLowerCase()) ||
+                c.candidate_email.toLowerCase().includes(search.toLowerCase())
+            
+            const matchesStatus = 
+                statusFilter === 'all' || 
+                c.status === statusFilter
+                
+            const candidateJob = c.job_title || c.job?.title || 'Unknown Role'
+            const matchesJob = 
+                jobFilter === 'all' || 
+                candidateJob === jobFilter
+
+            return matchesSearch && matchesStatus && matchesJob
+        }) || []
+    }, [sortedCandidates, search, statusFilter, jobFilter])
 
     const totalPages = Math.ceil(filteredCandidates.length / pageSize)
     
@@ -334,18 +364,76 @@ export default function OnboardingPage() {
 
             <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 pt-0">
                 <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-6">
-                    <div className="flex items-center gap-4">
-                        <div className="relative flex-1 max-w-sm">
-                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                                placeholder="Search candidates..." 
-                                className="pl-10 h-9 bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
-                                value={search}
-                                onChange={(e) => {
-                                    setSearch(e.target.value)
-                                    setCurrentPage(1)
-                                }}
-                            />
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                            <div className="relative flex-1 max-w-md">
+                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Search by name or email..." 
+                                    className="pl-10 h-10 bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value)
+                                        setCurrentPage(1)
+                                    }}
+                                />
+                            </div>
+                            
+                            <div className="w-full sm:w-[180px]">
+                                <Select
+                                    value={statusFilter}
+                                    onValueChange={(val) => {
+                                        setStatusFilter(val)
+                                        setCurrentPage(1)
+                                    }}
+                                >
+                                    <SelectTrigger className="h-10 w-full rounded-xl border-border bg-background/50 hover:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all font-bold">
+                                        <SelectValue placeholder="All Statuses" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="all" className="font-bold">All Statuses</SelectItem>
+                                        <SelectItem value="hired" className="font-bold">Hired</SelectItem>
+                                        <SelectItem value="pending_approval" className="font-bold">Approval Pending</SelectItem>
+                                        <SelectItem value="offer_sent" className="font-bold">Offer Sent</SelectItem>
+                                        <SelectItem value="accepted" className="font-bold">Accepted</SelectItem>
+                                        <SelectItem value="onboarded" className="font-bold">Onboarded</SelectItem>
+                                        <SelectItem value="rejected" className="font-bold">Rejected</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="w-full sm:w-[200px]">
+                                <Select
+                                    value={jobFilter}
+                                    onValueChange={(val) => {
+                                        setJobFilter(val)
+                                        setCurrentPage(1)
+                                    }}
+                                >
+                                    <SelectTrigger className="h-10 w-full rounded-xl border-border bg-background/50 hover:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all font-bold">
+                                        <SelectValue placeholder="All Jobs" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="all" className="font-bold">All Jobs</SelectItem>
+                                        {jobTitles.map((title) => (
+                                            <SelectItem key={title} value={title} className="font-bold">
+                                                {title}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {(search || statusFilter !== 'all' || jobFilter !== 'all') && (
+                                <Button
+                                    variant="ghost"
+                                    onClick={handleResetFilters}
+                                    className="h-10 px-3 text-sm font-bold text-muted-foreground hover:text-primary transition-all duration-200 rounded-xl hover:bg-primary/5 gap-1.5"
+                                >
+                                    <RefreshCw className="h-3.5 w-3.5" />
+                                    Reset
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </CardHeader>
