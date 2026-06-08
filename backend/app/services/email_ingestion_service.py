@@ -242,20 +242,22 @@ _KEYWORDS_PATTERN = _KEYWORDS_PATTERN.replace("cover\\ letter", "cover\\s+letter
 _JOB_KEYWORDS_RE = re.compile(rf'\b({_KEYWORDS_PATTERN})s?\b', re.IGNORECASE)
 
 
-def _is_job_related_email(sender: str, subject: str, job_titles: list = None) -> bool:
+def _is_job_related_email(sender: str, subject: str, job_titles: list = None, job_codes: list = None,
+                          other_job_titles: list = None, other_job_codes: list = None) -> bool:
     """
     Return True ONLY for emails that look like genuine job applications.
 
     An email is accepted when:
-      - Its subject contains an explicit JOB-XXXXX code, OR
-      - Its subject contains a job/resume keyword, OR
-      - Its subject matches an actual open job title from the database
-        (60% word-overlap threshold).
+      - Its subject contains a matching job code for the current HR user, OR
+      - Its subject matches an open job title from the database for the current HR user
+        (60% word-overlap threshold), OR
+      - Its subject contains a job/resume keyword (only if it doesn't belong to another HR user).
 
     Automated bounce / marketing / system emails are always rejected.
     """
     subject_lower = (subject or "").lower().strip()
     sender_lower  = (sender  or "").lower().strip()
+    subject_upper = (subject or "").upper().strip()
 
     # 1. Hard reject: automated bounce / system senders
     # The "From" field may be either "Mailer-Daemon <...>" or "postmaster@..."
@@ -263,6 +265,30 @@ def _is_job_related_email(sender: str, subject: str, job_titles: list = None) ->
         if blocked in sender_lower:
             logger.debug(f"🚫 Skipping non-job email — blocked sender domain '{blocked}': {sender!r}")
             return False
+
+    # 1.1 Hard reject: if it explicitly contains a job code of another HR
+    if other_job_codes:
+        for code in other_job_codes:
+            if code in subject_upper:
+                logger.info(f"🚫 Skipping email — explicitly matches another HR's job code '{code}': {subject!r}")
+                return False
+
+    # 1.2 Hard reject: if it matches another HR's job title with high overlap (>= 80%)
+    if other_job_titles:
+        subject_words = set(subject_lower.split())
+        filler_words = {"for", "the", "a", "an", "to", "in", "at", "of", "and", "or",
+                        "my", "i", "am", "is", "re", "fwd", "fw", "regarding", "apply",
+                        "applying", "application", "interested", "-", "–", ":"}
+        subject_content_words = subject_words - filler_words
+        for title in other_job_titles:
+            title_words = set(title.lower().split())
+            if not title_words:
+                continue
+            match_count = len(title_words & subject_content_words)
+            match_pct = match_count / len(title_words) if len(title_words) > 0 else 0
+            if match_pct >= 0.8:
+                logger.info(f"🚫 Skipping email — explicitly matches another HR's job title '{title}' ({match_pct:.0%} overlap): {subject!r}")
+                return False
 
     # 2. Hard reject: common automated-reply subject prefixes
     auto_prefixes = (
@@ -280,15 +306,18 @@ def _is_job_related_email(sender: str, subject: str, job_titles: list = None) ->
             logger.debug(f"🚫 Skipping non-job email — automated subject prefix '{prefix}': {subject!r}")
             return False
 
-    # 3. Accept: explicit JOB-XXXXX code in subject
-    if subject and _JOB_CODE_RE.search(subject):
-        return True
+    # 3. Accept: explicit matching job code in subject
+    if job_codes:
+        for code in job_codes:
+            if code in subject_upper:
+                logger.info(f"✅ Email subject contains matching job code '{code}'")
+                return True
+    else:
+        if subject and _JOB_CODE_RE.search(subject):
+            logger.info("✅ Email subject contains a job code pattern")
+            return True
 
-    # 4. Accept: job/resume keyword in subject
-    if _JOB_KEYWORDS_RE.search(subject_lower):
-        return True
-
-    # 5. Accept: subject matches an actual open job title from the database
+    # 4. Accept: subject matches an actual open job title of ours
     #    Uses 60% word-overlap threshold to handle partial matches like
     #    "Applying for Python Dev" matching job title "Python Developer"
     if job_titles:
@@ -309,6 +338,11 @@ def _is_job_related_email(sender: str, subject: str, job_titles: list = None) ->
             if match_pct >= 0.6:
                 logger.info(f"✅ Email subject matches open job title '{title}' ({match_pct:.0%} overlap)")
                 return True
+
+    # 5. Accept: job/resume keyword in subject
+    if _JOB_KEYWORDS_RE.search(subject_lower):
+        logger.info(f"✅ Email subject contains job-related keyword")
+        return True
 
     # 6. Reject everything else (newsletters, promotions, unrelated personal mail)
     logger.debug(f"🚫 Skipping non-job email — no job keywords or title match in subject: {subject!r}")
@@ -404,11 +438,25 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str, hr_id:
         error_count = 0
         processed_count = 0
 
-        # Pre-fetch open job titles for job-relevance matching
-        # This allows emails whose subject mentions an actual job title to be accepted
+        # Pre-fetch open jobs for this HR user (or all if hr_id is None) to isolate sync scoping
         with SessionLocal() as local_db:
-            open_job_titles = [j.title for j in local_db.query(Job.title).filter(Job.status == 'open').all() if j.title]
-        logger.info(f"📋 Loaded {len(open_job_titles)} open job titles for subject matching: {open_job_titles}")
+            query = local_db.query(Job).filter(Job.status == 'open')
+            if hr_id is not None:
+                query = query.filter(Job.hr_id == hr_id)
+            hr_jobs = query.all()
+            open_job_titles = [j.title for j in hr_jobs if j.title]
+            open_job_codes = [j.job_id.upper() for j in hr_jobs if j.job_id]
+            
+            # Load all other open jobs to prevent cross-fetching
+            if hr_id is not None:
+                other_jobs = local_db.query(Job).filter(Job.status == 'open', Job.hr_id != hr_id).all()
+                other_job_titles = [j.title for j in other_jobs if j.title]
+                other_job_codes = [j.job_id.upper() for j in other_jobs if j.job_id]
+            else:
+                other_job_titles = []
+                other_job_codes = []
+
+        logger.info(f"📋 Loaded {len(open_job_titles)} open job titles and {len(open_job_codes)} job codes for user {hr_id}")
         
         logger.info(f"📧 Processing {len(email_ids)} email(s) for resume attachments...")
         
@@ -441,7 +489,14 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str, hr_id:
                     continue
 
                 # --- Job-relevance filter ---
-                if not _is_job_related_email(sender, subject, job_titles=open_job_titles):
+                if not _is_job_related_email(
+                    sender, 
+                    subject, 
+                    job_titles=open_job_titles, 
+                    job_codes=open_job_codes,
+                    other_job_titles=other_job_titles,
+                    other_job_codes=other_job_codes
+                ):
                     logger.info(f"⏭️  Skipping non-job-related email from {raw_email}: {subject!r}")
                     continue
                 
