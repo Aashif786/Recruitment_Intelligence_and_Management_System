@@ -140,12 +140,9 @@ export default function HRApplicationsPage() {
 
 
 
-  
   useEffect(() => {
     if (error) {
       console.error("[Applications Page] SWR Fetching Error:", error);
-    } else if (paginatedData) {
-      console.log("[Applications Page] SWR Fetching Success:", paginatedData);
     }
   }, [paginatedData, error]);
 

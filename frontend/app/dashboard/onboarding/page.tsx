@@ -572,7 +572,7 @@ export default function OnboardingPage() {
                                     size="sm"
                                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                     disabled={currentPage === 1}
-                                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
                                 >
                                     Previous
                                 </Button>
@@ -581,7 +581,7 @@ export default function OnboardingPage() {
                                     size="sm"
                                     onClick={() => setCurrentPage(prev => prev + 1)}
                                     disabled={currentPage >= totalPages}
-                                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
                                 >
                                     Next
                                 </Button>
@@ -622,7 +622,7 @@ export default function OnboardingPage() {
             )}
 
             <Dialog open={isApproveOpen} onOpenChange={setIsApproveOpen}>
-                <DialogContent className="max-w-md rounded-2xl border border-border bg-card/90 backdrop-blur-lg shadow-2xl p-6">
+                <DialogContent className="max-w-md rounded-3xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-2xl p-6">
                     <DialogHeader className="space-y-2">
                         <DialogTitle className="text-xl font-bold">Finalize Offer Approval</DialogTitle>
                         <DialogDescription className="text-sm text-muted-foreground leading-normal">
@@ -631,9 +631,9 @@ export default function OnboardingPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="mt-4 gap-2 sm:gap-0">
-                        <Button variant="outline" className="rounded-xl active:scale-95 transition-all" onClick={() => setIsApproveOpen(false)}>Cancel</Button>
+                        <Button variant="outline" className="rounded-xl active:scale-[0.99] transition-all" onClick={() => setIsApproveOpen(false)}>Cancel</Button>
                         <Button 
-                            className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-md shadow-amber-600/10 active:scale-[0.98] transition-all"
+                            className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-md shadow-amber-600/10 active:scale-[0.99] transition-all"
                             onClick={() => approvingCandidate && handleApprove(approvingCandidate)}
                         >
                             Confirm & Send
@@ -643,7 +643,7 @@ export default function OnboardingPage() {
             </Dialog>
 
             <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-                <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+                <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden border border-border/80 bg-card/45 backdrop-blur-xl shadow-2xl rounded-3xl">
                     <DialogHeader className="p-6 border-b bg-muted/30">
                         <div className="flex items-center justify-between gap-4">
                             <div>

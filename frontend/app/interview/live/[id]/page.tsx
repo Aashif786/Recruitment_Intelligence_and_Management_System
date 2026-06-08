@@ -18,7 +18,7 @@ export default function LiveInterviewPage() {
     }, [searchParams]);
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+        <div className="min-h-screen bg-gradient-to-tr from-primary/10 via-background to-accent/10 flex flex-col">
 
             <main className="flex-1 w-full max-w-7xl mx-auto p-6 md:p-12 overflow-hidden">
                 {token ? (

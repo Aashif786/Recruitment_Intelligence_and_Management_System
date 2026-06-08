@@ -34,7 +34,7 @@ export default function CompanyPage() {
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
                         <Link href="/jobs">
-                            <Button size="lg" className="h-14 px-8 text-lg font-bold bg-foreground hover:bg-foreground/90 text-background rounded-full shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1">
+                            <Button size="lg" className="h-14 px-8 text-lg font-bold bg-foreground hover:bg-foreground/90 text-background rounded-full shadow-xl hover:shadow-2xl active:scale-[0.99] transition-all hover:-translate-y-1">
                                 View Open Positions
                                 <ArrowRight className="ml-2 h-5 w-5" />
                             </Button>
@@ -88,7 +88,7 @@ export default function CompanyPage() {
 
 function ValueCard({ icon: Icon, title, description, delay }: { icon: any, title: string, description: string, delay: string }) {
     return (
-        <Card style={{ animationDelay: `${delay}ms` }} className="bg-card/50 backdrop-blur-md border-border hover:border-primary/30 transition-colors duration-300 animate-in fade-in slide-in-from-bottom-8 fill-mode-both shadow-sm hover:shadow-md">
+        <Card style={{ animationDelay: `${delay}ms` }} className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl active:scale-[0.99] hover:border-primary/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom-8 fill-mode-both hover:shadow-md">
             <CardContent className="p-8">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
                     <Icon className="h-6 w-6 text-primary" />
@@ -104,7 +104,7 @@ function ValueCard({ icon: Icon, title, description, delay }: { icon: any, title
 
 function TestimonialCard({ name, role, text, delay }: { name: string, role: string, text: string, delay: string }) {
     return (
-        <Card style={{ animationDelay: `${delay}ms` }} className="bg-background border-border shadow-md animate-in fade-in slide-in-from-bottom-8 fill-mode-both">
+        <Card style={{ animationDelay: `${delay}ms` }} className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl animate-in fade-in slide-in-from-bottom-8 fill-mode-both">
             <CardContent className="p-8 space-y-6">
                 <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map(i => <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400" />)}

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, or_
-from app.domain.models import Job, Application, Interview, InterviewReport, User, Offer
+from app.domain.models import Job, Application, Interview, Offer
 from typing import Dict, Any, List
 
 class AnalyticsService:
@@ -13,11 +13,11 @@ class AnalyticsService:
         Get consistent dashboard metrics with null safety and zero defaults.
         """
         import logging
-        from datetime import datetime, timedelta
+        from datetime import datetime
         logger = logging.getLogger(__name__)
 
         try:
-            from sqlalchemy import and_
+
             
             # Helper to apply shared filters — timestamps are stored as IST, compare directly
             def apply_filters(q, model_for_date=Application):

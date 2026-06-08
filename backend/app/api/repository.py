@@ -14,7 +14,6 @@ import logging
 from app.infrastructure.database import get_db
 from app.domain.models import QuestionSet
 from app.core.auth import get_current_hr
-from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/repository", tags=["Repository"])

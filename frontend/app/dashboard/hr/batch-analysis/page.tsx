@@ -260,7 +260,7 @@ export default function BatchAnalysisPage() {
               <Button
                 onClick={() => setIsBatchModalOpen(true)}
                 size="lg"
-                className="gap-2 rounded-xl px-8 shadow-md active:scale-[0.98] transition-all duration-200"
+                className="gap-2 rounded-xl px-8 shadow-md active:scale-[0.99] transition-all duration-200"
               >
                 <UploadCloud className="h-4 w-4" />
                 Run Batch Analysis
@@ -405,7 +405,7 @@ export default function BatchAnalysisPage() {
                 <Button
                   onClick={handleFilteredExport}
                   disabled={isExporting || !!dateError || liveCount === 0}
-                  className="flex-1 gap-2 active:scale-[0.98] transition-all duration-200"
+                  className="flex-1 gap-2 active:scale-[0.99] transition-all duration-200"
                 >
                   {isExporting ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Exporting...</>
@@ -414,7 +414,7 @@ export default function BatchAnalysisPage() {
                   )}
                 </Button>
                 {hasFilters && (
-                  <Button variant="outline" onClick={clearFilters} className="shrink-0 active:scale-[0.98] transition-all duration-200">
+                  <Button variant="outline" onClick={clearFilters} className="shrink-0 active:scale-[0.99] transition-all duration-200">
                     Clear Filters
                   </Button>
                 )}

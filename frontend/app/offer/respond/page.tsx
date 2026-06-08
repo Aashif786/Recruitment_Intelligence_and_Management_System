@@ -73,7 +73,7 @@ export default function OfferRespondPage() {
                <div className="absolute bottom-[-10%] left-[-10%] w-[350px] h-[350px] bg-accent/8 rounded-full blur-[100px] animate-pulse duration-[8s] delay-1000" />
             </div>
 
-            <Card className="max-w-xl w-full bg-card/65 backdrop-blur-xl border border-border/80 shadow-[0_8px_40px_rgba(0,0,0,0.08)] rounded-[2.2rem] overflow-hidden relative z-10">
+            <Card className="max-w-xl w-full bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden relative z-10">
                 <div className="h-1.5 bg-gradient-to-r from-primary to-accent w-full" />
                 
                 {view === 'loading' && (
@@ -129,7 +129,7 @@ export default function OfferRespondPage() {
                                     <div className="flex flex-col md:flex-row gap-4 pt-4">
                                         <Button 
                                             size="lg"
-                                            className="flex-1 h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl shadow-lg hover:shadow-emerald-600/20 active:scale-[0.98] transition-all cursor-pointer"
+                                            className="flex-1 h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl shadow-lg hover:shadow-emerald-600/20 active:scale-[0.99] transition-all cursor-pointer"
                                             onClick={() => submitResponse('accept')}
                                             disabled={isSubmitting}
                                         >
@@ -138,7 +138,7 @@ export default function OfferRespondPage() {
                                         <Button 
                                             size="lg"
                                             variant="outline"
-                                            className="flex-1 h-14 border-border/80 hover:bg-red-500/10 hover:text-red-600 hover:border-red-200 font-extrabold rounded-xl active:scale-[0.98] transition-all cursor-pointer"
+                                            className="flex-1 h-14 border-border/80 hover:bg-red-500/10 hover:text-red-600 hover:border-red-200 font-extrabold rounded-xl active:scale-[0.99] transition-all cursor-pointer"
                                             onClick={() => submitResponse('reject')}
                                             disabled={isSubmitting}
                                         >
@@ -207,7 +207,7 @@ export default function OfferRespondPage() {
                                         <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider ml-1">Your Registered Email</p>
                                         <input 
                                             type="email"
-                                            className="w-full p-3 text-sm border border-border/80 bg-muted/30 focus:bg-background/80 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                            className="w-full p-3 text-sm border border-border/80 bg-muted/30 focus:bg-background/80 rounded-xl focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary outline-none transition-all"
                                             placeholder="Enter the email you applied with..."
                                             value={offerData?.candidate_email || ''}
                                             onChange={(e) => setOfferData(prev => ({ ...prev, candidate_email: e.target.value }))}
@@ -216,7 +216,7 @@ export default function OfferRespondPage() {
                                     <div className="space-y-1">
                                         <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider ml-1">Describe the Problem</p>
                                         <textarea 
-                                            className="w-full min-h-[100px] p-4 text-sm border border-border/80 bg-muted/30 focus:bg-background/80 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                            className="w-full min-h-[100px] p-4 text-sm border border-border/80 bg-muted/30 focus:bg-background/80 rounded-xl focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary outline-none transition-all"
                                             placeholder="e.g. My joining date is incorrect, or the Accept button is showing an error..."
                                             value={message}
                                             onChange={(e) => setMessage(e.target.value)}
@@ -248,7 +248,7 @@ export default function OfferRespondPage() {
                                                     access_key: 'onboarding_error', 
                                                     grievance_type: 'Onboarding Issue (Link Error)', 
                                                     description: `[AUTO_FALLBACK_LINK_ERROR]\nOriginal Token: ${token}\nMessage: ${message}` 
-                                                })
+                                                 })
                                                 toast.success("Ticket #" + d2.id + " raised using onboarding fallback. We found your record.")
                                             } catch (e2: any) {
                                                 toast.error(e.message || 'Failed to raise ticket.')
@@ -257,7 +257,7 @@ export default function OfferRespondPage() {
                                             setIsSubmitting(false)
                                         }
                                     }} 
-                                    className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.98] transition-all cursor-pointer"
+                                    className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.99] transition-all cursor-pointer"
                                 >
                                     Raise Support Ticket
                                 </Button>

@@ -509,7 +509,7 @@ export default function PublicJobDetailPage() {
                 </div>
 
                 {/* Job Details Column */}
-                <div className="lg:w-2/3 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 bg-card/65 backdrop-blur-xl border border-border/80 rounded-[2rem] p-8 md:p-10 shadow-lg mt-8 lg:mt-0">
+                <div className="lg:w-2/3 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.02)] mt-8 lg:mt-0">
                     <div>
                         <div className="flex flex-wrap items-center gap-3 mb-4">
                             {job.status === 'closed' && (
@@ -539,14 +539,14 @@ export default function PublicJobDetailPage() {
                             {user?.role === 'hr' && (
                                 <div className="flex items-center gap-2 p-2 bg-muted/40 border border-border/60 rounded-xl shrink-0">
                                     <Link href={`/dashboard/hr/jobs/${job.id}/edit`}>
-                                        <Button variant="ghost" size="sm" className="h-8 text-primary hover:bg-primary/10 active:scale-95 transition-all">
+                                        <Button variant="ghost" size="sm" className="h-8 text-primary hover:bg-primary/10 active:scale-[0.99] transition-all">
                                             <Edit2 className="w-4 h-4 mr-2" /> Edit
                                         </Button>
                                     </Link>
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 text-muted-foreground hover:bg-muted active:scale-95 transition-all"
+                                        className="h-8 text-muted-foreground hover:bg-muted active:scale-[0.99] transition-all"
                                         onClick={handleCloseJob}
                                     >
                                         <XCircle className="w-4 h-4 mr-2" /> Close
@@ -555,7 +555,7 @@ export default function PublicJobDetailPage() {
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 text-destructive hover:bg-destructive/10 active:scale-95 transition-all"
+                                        className="h-8 text-destructive hover:bg-destructive/10 active:scale-[0.99] transition-all"
                                         onClick={handleDeleteJob}
                                     >
                                         <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -722,7 +722,7 @@ export default function PublicJobDetailPage() {
                                 </CardContent>
                             </Card>
                         ) : (
-                            <Card className="relative shadow-2xl border border-border/80 bg-card/75 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+                            <Card className="relative shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-border/80 bg-card/45 backdrop-blur-xl rounded-2xl overflow-hidden">
                                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-accent"></div>
                                 <CardHeader className="pt-8 pb-4">
                                     <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">Apply Now</CardTitle>
@@ -744,7 +744,7 @@ export default function PublicJobDetailPage() {
                                                     required
                                                     value={candidateName}
                                                     onChange={(e) => setCandidateName(e.target.value)}
-                                                    className="h-12 bg-muted/40 focus:bg-background/80 transition-all border-border/80 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary rounded-xl"
+                                                    className="h-12 bg-muted/40 focus:bg-background/80 border-border/80 focus-visible:ring-4 focus-visible:ring-primary/10 hover:border-primary/40 focus-visible:border-primary rounded-xl transition-all"
                                                     placeholder="Jane Doe"
                                                 />
                                             </div>
@@ -766,7 +766,7 @@ export default function PublicJobDetailPage() {
                                                         debouncedValidateEmail(v)
                                                     }}
                                                     onBlur={() => validateEmail(candidateEmail)}
-                                                    className={`h-12 bg-muted/40 focus:bg-background/80 transition-all border-border/80 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary rounded-xl ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                                                    className={`h-12 bg-muted/40 focus:bg-background/80 border-border/80 focus-visible:ring-4 focus-visible:ring-primary/10 hover:border-primary/40 focus-visible:border-primary rounded-xl transition-all ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                                                     placeholder="jane@example.com"
                                                 />
                                                 {emailError && (
@@ -780,7 +780,7 @@ export default function PublicJobDetailPage() {
                                                 <Label htmlFor="phone" className="text-sm font-bold">Phone*</Label>
                                                 <div className="flex gap-2">
                                                     <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-                                                        <SelectTrigger className="w-[125px] h-12 bg-muted/40 border-border/80 focus:ring-2 focus:ring-primary/30 rounded-xl shrink-0 px-3">
+                                                        <SelectTrigger className="w-[125px] h-12 bg-muted/40 border-border/80 focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary rounded-xl shrink-0 px-3 transition-all">
                                                             <SelectValue placeholder="Country" />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -801,7 +801,7 @@ export default function PublicJobDetailPage() {
                                                         onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); setCandidatePhone(v); debouncedValidatePhone(v); }}
                                                         onBlur={() => validatePhone(candidatePhone)}
                                                         maxLength={COUNTRY_CODES.find(c => c.name === selectedCountry)?.placeholder.length || 15}
-                                                        className={`flex-1 h-12 bg-muted/40 focus:bg-background/80 transition-all border-border/80 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                                                        className={`flex-1 h-12 bg-muted/40 focus:bg-background/80 transition-all border-border/80 focus-visible:ring-4 focus-visible:ring-primary/10 hover:border-primary/40 focus-visible:border-primary rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                                                         placeholder={COUNTRY_CODES.find(c => c.name === selectedCountry)?.placeholder}
                                                     />
                                                 </div>
@@ -974,7 +974,7 @@ export default function PublicJobDetailPage() {
             </main>
 
             <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
-                <DialogContent className="rounded-[2rem]">
+                <DialogContent className="border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl">
                     <DialogHeader>
                         <DialogTitle className="font-extrabold text-xl">Confirm Action</DialogTitle>
                         <DialogDescription className="font-medium text-muted-foreground">
@@ -985,7 +985,7 @@ export default function PublicJobDetailPage() {
                     </DialogHeader>
                     <DialogFooter className="gap-2 sm:gap-0">
                         <Button variant="outline" className="rounded-xl font-bold" onClick={() => setConfirmAction(null)}>Cancel</Button>
-                        <Button variant="destructive" className="rounded-xl font-bold active:scale-95 transition-all" onClick={handleConfirmAction}>Confirm</Button>
+                        <Button variant="destructive" className="rounded-xl font-bold active:scale-[0.99] transition-all" onClick={handleConfirmAction}>Confirm</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

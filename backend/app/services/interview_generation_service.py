@@ -1,47 +1,23 @@
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request, BackgroundTasks, Body
-from fastapi.responses import JSONResponse, FileResponse, StreamingResponse, RedirectResponse
-from sqlalchemy.orm import Session, joinedload, load_only
-from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timezone, timedelta
+
+from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
+from datetime import datetime
 import json
 import os
 import random
 import logging
-import asyncio
-import traceback
 import tempfile
-import shutil
 from app.core.config import get_settings
-from app.core.observability import log_json
-from app.infrastructure.database import get_db
-from app.domain.models import User, Interview, Application, InterviewQuestion, InterviewAnswer, InterviewAnswerVersion, InterviewReport, Job, InterviewReportVersion, InterviewMonitoringEvent
-from app.core.timezone import get_ist_now, to_naive_ist
-from app.domain.schemas import (
-    InterviewStart, InterviewAnswerSubmit, InterviewResponse, 
-    InterviewQuestionResponse, InterviewDetailResponse, InterviewReportResponse,
-    InterviewListResponse, InterviewAccess, MonitoringEventCreate, MonitoringEventResponse
-)
-
-
-
-from app.core.auth import get_current_user, get_current_hr, get_current_interview, get_current_interview_any_status, pwd_context, create_access_token
-from app.core.ownership import validate_hr_ownership, validate_hr_ownership_for_interview
+from app.domain.models import Interview, Application, InterviewQuestion, Job
 from app.services.ai_service import (
-    generate_adaptive_interview_question,
-    evaluate_interview_answer,
-    generate_interview_report,
-    analyze_introduction,
-    evaluate_detailed_answer,
-    generate_domain_questions,
     generate_behavioral_question,
     generate_custom_domain_questions_with_meta,
     generate_behavioral_batch,
     extract_questions_from_text,
-    transcribe_audio
 )
 from app.services.resume_parser import parse_content_from_path
-from app.services.job_queue import create_job, complete_job, fail_job, get_job, ai_jobs
+from app.services.job_queue import complete_job, fail_job, get_job
 
 # Import termination checker (reuse analyzer singleton from ai_service)
 try:
@@ -54,10 +30,6 @@ _termination_checker = _RA()
 router = APIRouter(prefix="/api/interviews", tags=["interviews"])
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-from app.core.rate_limiter import limiter
-from app.core.idempotency import is_duplicate_request
-from app.core.ephemeral_result_cache import cache_get as _idem_cache_get, cache_set as _idem_cache_set
 
 
 

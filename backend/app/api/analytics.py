@@ -1,17 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload, contains_eager
 from sqlalchemy import func, and_, or_
-from typing import List, Dict, Any, Optional
+from typing import Optional
 from app.infrastructure.database import get_db
 from app.domain.models import User, Job, Application, Interview, InterviewReport, InterviewQuestion, InterviewAnswer
 from app.core.auth import get_current_hr
 import json
-import os
 import traceback
 from datetime import datetime
 import logging
-from app.core.config import get_settings
-from app.core.storage import get_signed_url
 
 logger = logging.getLogger(__name__)
 

@@ -305,7 +305,7 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting || isLoading || passwordCriteriaCount < 4 || !agreedToTerms}
-                className="w-full h-12 bg-foreground hover:bg-foreground/90 text-background font-bold rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
+                className="w-full h-12 bg-foreground hover:bg-foreground/90 text-background font-bold rounded-xl shadow-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2 group"
               >
                 {isSubmitting ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -368,7 +368,7 @@ function InputField({ id, label, type, placeholder, value, onChange, icon: Icon,
           autoComplete={autoComplete}
           required
           className={cn(
-            "w-full h-12 pl-12 pr-4 bg-muted/30 border border-border/50 rounded-xl outline-none transition-all duration-300",
+            "w-full h-12 pl-12 pr-4 bg-muted/30 border border-border/80 rounded-xl outline-none transition-all duration-300",
             "focus:border-primary focus:ring-4 focus:ring-primary/10 focus:bg-background",
             "placeholder:text-muted-foreground/40 text-foreground font-medium shadow-sm",
             disabled && "opacity-50 cursor-not-allowed"

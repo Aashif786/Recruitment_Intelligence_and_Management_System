@@ -312,7 +312,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
                   </div>
                 </div>
 
-                <div className="p-3 flex items-center justify-center bg-card border-t border-border">
+                <div className="p-3 flex items-center justify-center bg-card/45 backdrop-blur-xl border-t border-border">
                   <span className="text-xs font-bold text-foreground capitalize tracking-wide">
                     {ev.event_type.replace('_', ' ')}
                   </span>
@@ -324,7 +324,7 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
       </ScrollArea>
 
       <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-        <DialogContent className="max-w-5xl rounded-3xl p-0 bg-card/95 backdrop-blur-xl border border-border/80 shadow-2xl overflow-hidden">
+        <DialogContent className="max-w-5xl rounded-3xl p-0 border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl overflow-hidden">
           <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 p-6">
             <DialogHeader>
               <div className="flex items-center justify-between pr-8">

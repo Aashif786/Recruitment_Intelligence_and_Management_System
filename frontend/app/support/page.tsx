@@ -90,7 +90,7 @@ export default function SupportPage() {
             <div className="flex-1 min-h-screen flex items-center justify-center bg-muted/30 p-6 relative overflow-hidden">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl h-96 bg-blue-500/10 blur-[120px] pointer-events-none" />
                 
-                <Card className="max-w-md w-full border border-border/50 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] bg-card/80 backdrop-blur-xl rounded-[3rem] overflow-hidden animate-in zoom-in-95 fade-in duration-700">
+                <Card className="max-w-md w-full border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] bg-card/45 backdrop-blur-xl rounded-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-700">
                     <div className="h-2 bg-green-500"></div>
                     <CardHeader className="text-center p-12 pb-6">
                         <div className="mx-auto w-24 h-24 bg-green-50 rounded-3xl flex items-center justify-center text-green-600 mb-8 border border-green-100 shadow-xl shadow-green-500/10 rotate-3 transition-transform hover:rotate-0">
@@ -137,7 +137,7 @@ export default function SupportPage() {
                     Back to Interview
                 </Button>
 
-                <Card className="border border-border/50 shadow-2xl bg-card/80 backdrop-blur-sm overflow-hidden rounded-[2.5rem] animate-in slide-in-from-bottom-8 duration-700 ease-out">
+                <Card className="border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] bg-card/45 backdrop-blur-xl overflow-hidden rounded-2xl animate-in slide-in-from-bottom-8 duration-700 ease-out">
                     <div className="h-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 animate-gradient-x"></div>
                     
                     <CardHeader className="space-y-4 p-8 md:p-12 pb-6">
@@ -174,11 +174,11 @@ export default function SupportPage() {
                                         placeholder="you@example.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="h-14 px-5 rounded-2xl border-2 border-slate-100 focus:border-blue-600 focus:ring-0 text-lg transition-all font-bold"
+                                        className="h-14 px-5 rounded-2xl border border-border/80 focus-visible:ring-4 focus-visible:ring-primary/10 hover:border-primary/40 focus-visible:border-primary text-lg transition-all font-bold bg-muted/40 focus:bg-background/80"
                                         required
                                     />
                                 </div>
-
+ 
                                 <div className="space-y-3">
                                     <Label htmlFor="accessKey" className="text-xs font-black uppercase tracking-widest text-slate-400">
                                         Access Key
@@ -189,7 +189,7 @@ export default function SupportPage() {
                                         placeholder="H4IE-..."
                                         value={accessKey}
                                         onChange={(e) => setAccessKey(e.target.value.trim())}
-                                        className="h-14 px-5 rounded-2xl border-2 border-slate-100 focus:border-blue-600 focus:ring-0 tracking-widest font-mono text-lg transition-all"
+                                        className="h-14 px-5 rounded-2xl border border-border/80 focus-visible:ring-4 focus-visible:ring-primary/10 hover:border-primary/40 focus-visible:border-primary tracking-widest font-mono text-lg transition-all bg-muted/40 focus:bg-background/80"
                                         required
                                     />
                                 </div>
@@ -204,14 +204,14 @@ export default function SupportPage() {
                                         { id: 'misconduct_appeal', label: 'Misconduct Appeal', desc: 'Appeal a proctoring warning' },
                                         { id: 'other', label: 'Other Issue', desc: 'Process or scheduling' }
                                     ].map((opt) => (
-                                        <label key={opt.id} htmlFor={opt.id} className={`relative flex flex-col p-5 rounded-2xl border-2 transition-all cursor-pointer group ${issueType === opt.id
-                                            ? 'border-blue-600 bg-blue-50/30'
-                                            : 'border-slate-100 hover:border-blue-200 hover:bg-slate-50/50'
+                                        <label key={opt.id} htmlFor={opt.id} className={`relative flex flex-col p-5 rounded-2xl border transition-all cursor-pointer group active:scale-[0.99] ${issueType === opt.id
+                                            ? 'border-primary bg-primary/10 shadow-[0_8px_30px_rgb(0,0,0,0.02)]'
+                                            : 'border-border/80 hover:border-primary/40 hover:bg-muted/30 bg-card/45 backdrop-blur-md'
                                             }`}>
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className="font-black text-slate-900 dark:text-white">{opt.label}</span>
                                                 <RadioGroupItem value={opt.id} id={opt.id} className="sr-only" />
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${issueType === opt.id ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}>
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${issueType === opt.id ? 'border-primary bg-primary' : 'border-border/80'}`}>
                                                     {issueType === opt.id && <div className="w-2 h-2 rounded-full bg-white" />}
                                                 </div>
                                             </div>
@@ -231,7 +231,7 @@ export default function SupportPage() {
                                 <Textarea
                                     id="description"
                                     placeholder="Please describe exactly what happened..."
-                                    className="min-h-[160px] p-6 rounded-2xl border-2 border-slate-100 focus:border-blue-600 focus:ring-0 text-lg transition-all resize-none font-medium"
+                                    className="min-h-[160px] p-6 rounded-2xl border border-border/80 focus-visible:ring-4 focus-visible:ring-primary/10 hover:border-primary/40 focus-visible:border-primary text-lg transition-all bg-muted/40 focus:bg-background/80 resize-none font-medium"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     required
@@ -249,7 +249,7 @@ export default function SupportPage() {
 
                             <Button
                                 type="submit"
-                                className="w-full h-18 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xl shadow-2xl transition-all active:scale-[0.98] disabled:opacity-50"
+                                className="w-full h-18 rounded-2xl bg-slate-950 hover:bg-slate-800 text-white font-black text-xl shadow-2xl transition-all active:scale-[0.99] disabled:opacity-50"
                                 disabled={!canSubmit}
                             >
                                 {isSubmitting ? (

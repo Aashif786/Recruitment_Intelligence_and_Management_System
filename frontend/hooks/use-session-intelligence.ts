@@ -125,7 +125,7 @@ export function useSessionIntelligence() {
     });
     const currentPreds = getPredictedNextPages(pathname || s.lastVisitedPage, s);
     if (currentPreds.length > 0) {
-      console.log('🔮 Current Route Predictions:');
+      console.debug('🔮 Current Route Predictions:');
       console.table(currentPreds);
     }
     console.groupEnd();

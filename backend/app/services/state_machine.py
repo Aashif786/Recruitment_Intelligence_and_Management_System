@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 from app.core.timezone import get_ist_now
 
 """
@@ -18,16 +18,14 @@ Design principles:
 import json
 import logging
 from datetime import datetime, timezone, timedelta
-from enum import Enum
 from typing import Optional, Dict, List, Tuple
 
-from sqlalchemy import or_, and_, func, select, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.exc import OperationalError
 
 from app.domain.models import Application, Job, AuditLog
 from app.domain.constants import CandidateState, TransitionAction
-from app.services.email_service import send_interview_invitation_email
 
 logger = logging.getLogger(__name__)
 

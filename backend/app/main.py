@@ -21,12 +21,10 @@ if os.getenv("BACKEND_START_MODE") not in ["script", "docker"]:
     sys.exit(1)
 
 from fastapi import FastAPI, HTTPException, status, Request as FastAPIRequest
-from fastapi.routing import APIRoute
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
-from typing import Callable, Any
 import asyncio
 import json
 import logging
@@ -47,7 +45,6 @@ from app.domain.models import (
 
 
 from app.core.logging_config import setup_logging
-from app.core.observability import log_json
 
 settings = get_settings()
 

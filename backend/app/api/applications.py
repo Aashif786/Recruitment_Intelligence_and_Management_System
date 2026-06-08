@@ -1,14 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks, Form, Request, Query
+from fastapi.responses import ORJSONResponse
 from app.core.timezone import get_ist_now
-# Performance Serialization Fallback
-try:
-    import orjson
-    from fastapi.responses import ORJSONResponse
-except ImportError:
-    from fastapi.responses import JSONResponse as ORJSONResponse
-from sqlalchemy import or_, and_, func, text, cast, String, extract, inspect as sa_inspect
-from sqlalchemy.orm import Session, joinedload, selectinload, defer, load_only
-from sqlalchemy.orm.exc import ObjectDeletedError
+from sqlalchemy import or_, func, text, extract, inspect as sa_inspect
+from sqlalchemy.orm import Session, joinedload, selectinload, load_only
 from app.core.storage import upload_file, get_signed_url, get_public_url
 import os
 import json
@@ -16,7 +10,7 @@ import logging
 import time
 from datetime import datetime, timezone, timedelta
 from app.infrastructure.database import get_db, SessionLocal
-from app.domain.models import User, Application, Job, ResumeExtraction, Interview, InterviewAnswer, ResumeExtractionVersion, InterviewReport, AttachmentResume
+from app.domain.models import User, Application, Job, ResumeExtraction, Interview, ResumeExtractionVersion
 from app.domain.schemas import (
     ApplicationCreate,
     ApplicationStatusUpdate,
@@ -30,17 +24,16 @@ from app.domain.schemas import (
     HasAppliedResponse,
     ApplicationListResponse,
 )
-from app.core.auth import get_current_user, get_current_hr, get_current_admin
+from app.core.auth import get_current_hr, get_current_admin
 from app.core.ownership import validate_hr_ownership
 from app.services.ai_service import parse_resume_with_ai, extract_basic_candidate_info
 from app.services.email_service import send_application_received_email, send_rejected_email, send_approved_for_interview_email
-import secrets
 from passlib.context import CryptContext
 from sqlalchemy.exc import IntegrityError
 import re
 import hashlib
  
-from typing import Optional, List, Union
+from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +197,6 @@ def build_application_detail_response(application: Application, current_user_id:
     
     return detail
 
-import asyncio
 import time
 from pathlib import Path
 

@@ -9,7 +9,7 @@ Key shape: ``idem:{scope}:{logical_key}:{X-Request-ID}`` (same family as
 
 TTL uses the same bounds as ``idempotency`` (settings / env). Falls back to in-process dict when Redis is absent.
 """
-from __future__ import annotations
+
 
 import json
 import logging

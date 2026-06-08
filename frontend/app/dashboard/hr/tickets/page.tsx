@@ -397,7 +397,7 @@ export default function HRTicketsPage() {
                                     size="sm"
                                     onClick={() => setCurrentPage(prev => prev + 1)}
                                     disabled={currentPage >= Math.ceil(resp.total / pageSize) || isLoading}
-                                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                    className="h-8 px-4 rounded-xl font-bold bg-background dark:bg-muted border-border transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
                                 >
                                     Next
                                 </Button>
@@ -434,7 +434,7 @@ export default function HRTicketsPage() {
                     setHrResponse('')
                 }
             }}>
-                <DialogContent className="max-w-5xl w-[95vw] sm:w-[90vw] bg-card/90 backdrop-blur-lg border border-border/80 shadow-2xl p-0 overflow-hidden rounded-2xl">
+                <DialogContent className="max-w-5xl w-[95vw] sm:w-[90vw] bg-card/45 backdrop-blur-xl border border-border/80 shadow-2xl p-0 overflow-hidden rounded-3xl">
                     <DialogHeader className="p-6 pb-0">
                         <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-2">
                             Ticket Details
@@ -580,7 +580,7 @@ export default function HRTicketsPage() {
 
                                         <Button
                                             variant="outline"
-                                            className="flex-1 min-w-[120px] font-bold border-2 border-primary/10 hover:border-primary/40 hover:bg-primary/5 text-primary rounded-xl h-12 px-3 transition-all active:scale-95"
+                                            className="flex-1 min-w-[120px] font-bold border-2 border-primary/10 hover:border-primary/40 hover:bg-primary/5 text-primary rounded-xl h-12 px-3 transition-all active:scale-[0.99]"
                                             onClick={() => handleResolve(selectedTicket.id, 'reply')}
                                             disabled={isResolving || !hrResponse.trim()}
                                         >
@@ -590,7 +590,7 @@ export default function HRTicketsPage() {
 
                                         <Button
                                             variant="outline"
-                                            className="flex-1 min-w-[120px] font-bold border-2 border-primary/20 hover:border-primary text-primary rounded-xl h-12 px-3 transition-all active:scale-95"
+                                            className="flex-1 min-w-[120px] font-bold border-2 border-primary/20 hover:border-primary text-primary rounded-xl h-12 px-3 transition-all active:scale-[0.99]"
                                             onClick={() => handleResolve(selectedTicket.id, 'resolve')}
                                             disabled={isResolving}
                                         >
@@ -600,7 +600,7 @@ export default function HRTicketsPage() {
 
                                         {selectedTicket.interview_id && (
                                             <Button
-                                                className="flex-[2] min-w-[180px] font-bold bg-primary hover:bg-primary/90 text-white shadow-md rounded-xl h-12 px-4 transition-all active:scale-95 animate-in fade-in slide-in-from-right-2 duration-500"
+                                                className="flex-[2] min-w-[180px] font-bold bg-primary hover:bg-primary/90 text-white shadow-md rounded-xl h-12 px-4 transition-all active:scale-[0.99] animate-in fade-in slide-in-from-right-2 duration-500"
                                                 onClick={() => handleResolve(selectedTicket.id, 'reissue_key')}
                                                 disabled={isResolving}
                                             >
@@ -627,7 +627,7 @@ export default function HRTicketsPage() {
             </Dialog>
             {/* Feedback Details Dialog */}
             <Dialog open={!!selectedFeedback} onOpenChange={(open) => !open && setSelectedFeedback(null)}>
-                <DialogContent className="max-w-xl bg-card/90 backdrop-blur-lg border border-border/80 shadow-2xl p-0 overflow-hidden rounded-2xl">
+                <DialogContent className="max-w-xl bg-card/45 backdrop-blur-xl border border-border/80 shadow-2xl p-0 overflow-hidden rounded-3xl">
                     <DialogHeader className="p-6 pb-2">
                         <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-2">
                             Candidate Feedback

@@ -570,7 +570,7 @@ const ActionButton = React.memo(({ href, label }: { href: string, label: string 
     <Link href={href} className="block group">
       <Button 
         variant="outline" 
-        className="w-full justify-between text-foreground hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary active:bg-primary/10 active:text-primary border-border hover:border-primary/40 active:scale-[0.98] transition-all duration-200 rounded-xl"
+        className="w-full justify-between text-foreground hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary active:bg-primary/10 active:text-primary border-border hover:border-primary/40 active:scale-[0.99] transition-all duration-200 rounded-xl"
       >
         {label}
         <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />

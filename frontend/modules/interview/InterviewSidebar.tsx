@@ -18,8 +18,8 @@ const SidebarSection = ({ title, count, current, startIndex, completed, incorrec
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center px-1">
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">{title}</h3>
-                <span className="text-[10px] font-bold text-slate-400">{completed.length}/{count}</span>
+                <h3 className="text-sm font-black text-foreground uppercase tracking-widest">{title}</h3>
+                <span className="text-[10px] font-bold text-muted-foreground">{completed.length}/{count}</span>
             </div>
             <div className="grid grid-cols-5 gap-2">
                 {Array.from({ length: count }).map((_, i) => {
@@ -29,11 +29,11 @@ const SidebarSection = ({ title, count, current, startIndex, completed, incorrec
                     const isSkipped = skipped.includes(globalIndex);
                     const isCurrent = current === globalIndex;
 
-                    let bgColor = "bg-white border-slate-200 text-slate-400";
+                    let bgColor = "bg-background border-border text-muted-foreground";
                     if (isLocked) {
-                        bgColor = "bg-slate-50 border-slate-100 text-slate-300 opacity-40 cursor-not-allowed";
+                        bgColor = "bg-muted/40 border-border/50 text-muted-foreground/30 opacity-40 cursor-not-allowed";
                     } else if (isCurrent) {
-                        bgColor = "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200";
+                        bgColor = "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20";
                     } else if (isIncorrect) {
                         bgColor = "bg-red-500 border-red-500 text-white";
                     } else if (isCompleted) {
@@ -118,26 +118,26 @@ export default function InterviewSidebar({
     }, [groupedQuestions, completedQuestions, displayOrder]);
 
     return (
-        <div className="space-y-8 p-6 bg-white border-r border-slate-100 h-full overflow-y-auto no-scrollbar">
+        <div className="space-y-8 p-6 bg-sidebar/45 backdrop-blur-xl border-r border-border/80 h-full overflow-y-auto no-scrollbar shadow-[2px_0_20px_-4px_rgba(0,0,0,0.02)]">
             {/* Security Status Card */}
-            <div className="p-4 bg-slate-900 rounded-2xl space-y-3">
+            <div className="p-4 bg-card/45 border border-border/80 rounded-2xl space-y-3 shadow-inner">
                 <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Security Monitor</span>
+                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Security Monitor</span>
                     <div className="flex gap-1">
                         {[1, 2, 3].map(s => (
-                            <div key={s} className={`w-2 h-2 rounded-full ${strikes >= s ? 'bg-red-500 animate-pulse' : 'bg-slate-700'}`} />
+                            <div key={s} className={`w-2 h-2 rounded-full ${strikes >= s ? 'bg-red-500 animate-pulse' : 'bg-muted-foreground/30'}`} />
                         ))}
                     </div>
                 </div>
-                <p className="text-[9px] font-medium text-slate-500 leading-tight">
+                <p className="text-[9px] font-medium text-muted-foreground leading-tight">
                     {strikes === 0 ? "No violations detected. Session secure." : strikes === 1 ? "1 violation recorded. Please stay focused." : strikes === 2 ? "2 violations recorded. Critical alert." : "3 violations recorded. One strike remaining!"}
                 </p>
             </div>
 
             {/* Question Status Legend */}
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100/80 space-y-2.5">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Question Status Guide</span>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-bold text-slate-600">
+            <div className="p-4 bg-card/45 border border-border/80 rounded-2xl space-y-2.5 shadow-sm">
+                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block">Question Status Guide</span>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-bold text-muted-foreground">
                     <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm" />
                         <span>Active</span>
@@ -151,7 +151,7 @@ export default function InterviewSidebar({
                         <span>Skipped</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-white border border-slate-200 shadow-sm" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-background border border-border shadow-sm" />
                         <span>Pending</span>
                     </div>
                 </div>

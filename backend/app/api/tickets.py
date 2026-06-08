@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from sqlalchemy import or_
+
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 from datetime import datetime
@@ -25,7 +25,7 @@ from app.core.auth import (
 from app.core.ownership import validate_hr_ownership
 from app.services.email_service import send_ticket_resolved_email, send_key_reissued_email
 from app.core.timezone import get_ist_now
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 router = APIRouter(prefix="/api/tickets", tags=["Tickets"])
 from fastapi import Request

@@ -1,7 +1,7 @@
 import re
 import asyncio
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 from .config import MODEL_NAME, SKILL_CATEGORIES
 from .utils import extract_skills, analyze_response_quality
 from app.services.ai_client import ai_client, is_ai_unavailable_response

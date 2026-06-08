@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
 
     return (
         <div className="flex items-center justify-center min-h-screen py-12 px-4">
-            <Card className="w-full max-w-md shadow-2xl relative z-10 bg-card rounded-[2rem] border-border/40">
+            <Card className="w-full max-w-md bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-3xl relative z-10">
                 <CardContent className="p-8">
 
                     <div className="text-center mb-8">
@@ -81,7 +81,7 @@ export default function ForgotPasswordPage() {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
-                                        className="w-full pl-10 pr-4 py-3 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-muted-foreground text-foreground"
+                                        className="w-full pl-10 pr-4 py-3 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground"
                                         placeholder="you@company.com"
                                         disabled={isSubmitting}
                                     />
@@ -91,7 +91,7 @@ export default function ForgotPasswordPage() {
                             <Button
                                 type="submit"
                                 disabled={isSubmitting}
-                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 rounded-xl shadow-lg shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5"
+                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 rounded-xl shadow-lg shadow-primary/25 active:scale-[0.99] transition-all duration-200"
                             >
                                 {isSubmitting ? (
                                     <>

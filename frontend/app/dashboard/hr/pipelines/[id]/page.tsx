@@ -23,7 +23,7 @@ export default function PipelinePage() {
                 <Button
                     variant="ghost"
                     onClick={() => router.push('/dashboard/hr/pipeline')} 
-                    className="gap-2 text-muted-foreground hover:text-foreground h-auto p-0 flex items-center transition-colors group w-fit"
+                    className="gap-2 text-muted-foreground hover:text-foreground h-auto p-0 flex items-center active:scale-[0.99] transition-all group w-fit"
                 >
                     <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
                     <span className="text-sm font-bold">Back to Pipeline</span>
@@ -36,10 +36,10 @@ export default function PipelinePage() {
                         icon={GitBranch}
                     />
 
-                    <div className="inline-flex items-center rounded-xl border border-border/80 bg-muted/20 backdrop-blur-md p-1 shadow-sm">
+                    <div className="inline-flex items-center rounded-xl border border-border/80 bg-card/45 backdrop-blur-xl p-1 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                         <Button
                             size="sm"
-                            className="rounded-lg h-8 px-3 active:scale-[0.98] transition-all duration-200"
+                            className="rounded-lg h-8 px-3 active:scale-[0.99] transition-all duration-200"
                         >
                             <Users className="h-4 w-4 mr-1.5" />
                             Pipeline View
@@ -48,7 +48,7 @@ export default function PipelinePage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => router.push(`/dashboard/hr/ranking/${jobId}`)}
-                            className="rounded-lg h-8 px-3 text-muted-foreground active:scale-[0.98] hover:text-foreground transition-all duration-200"
+                            className="rounded-lg h-8 px-3 text-muted-foreground active:scale-[0.99] hover:text-foreground transition-all duration-200"
                         >
                             <Trophy className="h-4 w-4 mr-1.5" />
                             Candidate Ranking

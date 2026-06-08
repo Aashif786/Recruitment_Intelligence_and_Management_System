@@ -1,22 +1,20 @@
-from typing import List, Optional
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request, BackgroundTasks, Body
-from fastapi.responses import JSONResponse, FileResponse, StreamingResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload, load_only
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone, timedelta
 import json
 import os
-import random
 import logging
-import asyncio
 import traceback
 import tempfile
 import shutil
 from app.core.config import get_settings
 from app.core.observability import log_json
 from app.infrastructure.database import get_db
-from app.domain.models import User, Interview, Application, InterviewQuestion, InterviewAnswer, InterviewAnswerVersion, InterviewReport, Job, InterviewReportVersion, InterviewMonitoringEvent
+from app.domain.models import User, Interview, Application, InterviewQuestion, InterviewAnswer, InterviewAnswerVersion, InterviewReport, Job, InterviewMonitoringEvent
 from app.core.timezone import get_ist_now, to_naive_ist
 from app.domain.schemas import (
     InterviewStart, InterviewAnswerSubmit, InterviewResponse, 
@@ -41,8 +39,6 @@ from app.services.ai_service import (
     extract_questions_from_text,
     transcribe_audio
 )
-from app.services.resume_parser import parse_content_from_path
-from app.services.job_queue import create_job, complete_job, fail_job, get_job, ai_jobs
 
 # Import termination checker (reuse analyzer singleton from ai_service)
 try:
@@ -58,7 +54,7 @@ settings = get_settings()
 
 from app.core.rate_limiter import limiter
 from app.core.idempotency import is_duplicate_request
-from app.core.ephemeral_result_cache import cache_get as _idem_cache_get, cache_set as _idem_cache_set
+
 
 
 
@@ -67,9 +63,22 @@ STAGE_FIRST_LEVEL = "first_level"
 STAGE_COMPLETED = "completed"
 
 # --- Imported Refactored Services ---
-from app.services.interview_generation_service import STAGE_APTITUDE, STAGE_FIRST_LEVEL, STAGE_COMPLETED, _load_questions_from_repo_set, check_job_status, background_generate_questions, _set_interview_status, _determine_initial_stage, _enforce_stage, _question_count_for_stage, _generate_aptitude_questions, _generate_first_level_questions, _generate_fallback_questions_direct
+
 from app.services.interview_evaluation_service import evaluate_answer_task
 from app.services.interview_reporting_service import _finalize_interview_and_report, _finalize_interview_and_report_internal
+from app.services.interview_generation_service import (
+    _determine_initial_stage,
+    background_generate_questions,
+    _generate_fallback_questions_direct,
+    _set_interview_status,
+    _question_count_for_stage,
+    _enforce_stage,
+)
+from app.core.ephemeral_result_cache import (
+    cache_get as _idem_cache_get,
+    cache_set as _idem_cache_set,
+)
+from app.services.job_queue import ai_jobs, create_job
 
 @router.post("/access")
 @limiter.limit("15/minute")

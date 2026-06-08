@@ -4,24 +4,22 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 from app.infrastructure.database import get_db
 from app.domain.models import User, Application, GlobalSettings, Notification, AuditLog
-from app.domain.schemas import ApplicationResponse, OfferResponseRequest
+from app.domain.schemas import OfferResponseRequest
 from app.core.auth import get_current_hr, get_current_admin
-from app.services.offer_letter_service import generate_offer_letter_pdf, get_offer_letter_data
-from app.services.email_service import send_offer_letter_email, send_simple_email, send_onboarding_reminder_email, send_joining_confirmation_email, send_onboarding_summary_email
+from app.services.offer_letter_service import get_offer_letter_data
+from app.services.email_service import send_offer_letter_email, send_onboarding_reminder_email, send_joining_confirmation_email, send_onboarding_summary_email
 from app.core.config import get_settings
 from typing import List, Optional
 import os
 import uuid
 import logging
 import json
-import random
+
 import string
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter, landscape
-from reportlab.lib.units import inch
-from fastapi.responses import FileResponse, RedirectResponse
+from reportlab.lib.pagesizes import letter
 from io import BytesIO
-from app.core.storage import upload_file, get_signed_url, get_public_url, get_supabase_client
+from app.core.storage import upload_file, get_signed_url
 from app.core.timezone import get_ist_now, IST, to_naive_ist
 
 import secrets
@@ -29,7 +27,7 @@ import time
 from collections import defaultdict
 
 import httpx
-from jinja2 import Template
+
 from app.services.offer_letter_service import get_offer_letter_data
 
 logger = logging.getLogger(__name__)
@@ -52,7 +50,7 @@ def rate_limit(ip: str):
     
     if redis_client:
         try:
-            import redis
+
             redis_key = f"rate_limit:onboarding:{ip}"
             current_count = redis_client.get(redis_key)
             if current_count is None:

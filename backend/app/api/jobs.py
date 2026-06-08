@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.domain.models import User, Job, Application, JobVersion
 from app.domain.schemas import JobCreate, JobUpdate, JobResponse, JobExtractionResponse, JobPublicResponse
-from app.core.auth import get_current_user, get_current_hr
+from app.core.auth import get_current_hr
 from app.core.ownership import validate_hr_ownership
 from app.core.rate_limiter import limiter
 from app.services.ai_service import extract_job_details

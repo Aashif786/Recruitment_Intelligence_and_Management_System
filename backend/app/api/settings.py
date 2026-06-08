@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db, SessionLocal
 from app.domain.models import GlobalSettings, User
 from app.domain.schemas import GlobalSettingsUpdate, GlobalSettingsResponse
-from app.core.auth import get_current_hr, get_current_admin
+from app.core.auth import get_current_admin
 from app.services.email_ingestion_service import fetch_resume_attachments, run_batch_resume_processing
 from app.core.encryption import encrypt_field, decrypt_field
 import imaplib
