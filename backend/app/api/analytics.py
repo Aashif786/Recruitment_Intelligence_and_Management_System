@@ -33,7 +33,7 @@ def _build_reports_query(
     db: Session,
     current_user: User,
     *,
-    job_id: Optional[int] = None,
+    job_id: Optional[str] = None,
     status: Optional[str] = None,
     experience: Optional[str] = None,
     skill: Optional[str] = None,
@@ -64,7 +64,11 @@ def _build_reports_query(
         query = query.filter(hr_scope)
 
     if job_id and str(job_id).lower() != "all":
-        query = query.filter(Application.job_id == job_id)
+        job_id_str = str(job_id).strip()
+        if job_id_str.isdigit():
+            query = query.filter(Application.job_id == int(job_id_str))
+        else:
+            query = query.filter(Job.job_id == job_id_str)
 
     if status and str(status).lower() != "all":
         status_lower = status.lower()
@@ -77,7 +81,15 @@ def _build_reports_query(
         elif status_lower == "reject":
             query = query.filter(eff_score <= 4)
         elif status_lower == "not completed":
-            query = query.filter(or_(Interview.id.is_(None), Interview.status != "completed"))
+            query = query.filter(
+                or_(
+                    Interview.id.is_(None),
+                    and_(
+                        Interview.status != "completed",
+                        Interview.status != "terminated",
+                    )
+                )
+            )
         elif status_lower == "terminated":
             query = query.filter(
                 or_(
@@ -130,6 +142,7 @@ def _build_reports_query(
             or_(
                 Application.candidate_name.ilike(term),
                 Job.title.ilike(term),
+                Job.job_id.ilike(term),
             )
         )
 
@@ -187,7 +200,7 @@ def get_skills_config(request: Request):
 @router.get("/dashboard")
 @limiter.limit("60/minute")
 def get_dashboard_analytics(
-    request: Request, job_id: Optional[int] = None,
+    request: Request, job_id: Optional[str] = None,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
     current_user: User = Depends(get_current_hr),
@@ -199,11 +212,35 @@ def get_dashboard_analytics(
         # Apply visibility isolation
         hr_id = current_user.id if current_user.role.lower() != "super_admin" else None
         
+        resolved_job_id = None
+        if job_id and str(job_id).lower() != "all":
+            job_id_str = str(job_id).strip()
+            if job_id_str.isdigit():
+                resolved_job_id = int(job_id_str)
+            else:
+                job_obj = db.query(Job).filter(Job.job_id == job_id_str).first()
+                if job_obj:
+                    resolved_job_id = job_obj.id
+                else:
+                    return {
+                        "success": True,
+                        "data": {
+                            "total_applications": 0,
+                            "total_interviews": 0,
+                            "completed_interviews": 0,
+                            "success_rate": 0,
+                            "average_score": 0,
+                            "offers_released": 0,
+                            "chart_data": []
+                        },
+                        "error": None
+                    }
+
         # Call service with filters
         metadata = AnalyticsService.get_dashboard(
             db, 
             hr_id=hr_id, 
-            job_id=job_id,
+            job_id=resolved_job_id,
             from_date=from_date,
             to_date=to_date
         )
@@ -234,7 +271,7 @@ def get_dashboard_analytics(
 @limiter.limit("60/minute")
 def get_reports_heatmap(
     request: Request,
-    job_id: Optional[int] = None,
+    job_id: Optional[str] = None,
     status: Optional[str] = None,
     experience: Optional[str] = None,
     skill: Optional[str] = None,
@@ -289,7 +326,7 @@ def get_reports_heatmap(
 @limiter.limit("10/minute")
 def export_interview_reports_csv(
     request: Request,
-    job_id: Optional[int] = None,
+    job_id: Optional[str] = None,
     status: Optional[str] = None,
     experience: Optional[str] = None,
     skill: Optional[str] = None,
@@ -428,7 +465,7 @@ def export_interview_reports_csv(
 @router.get("/reports")
 @limiter.limit("60/minute")
 def get_interview_reports(
-    request: Request, job_id: Optional[int] = None,
+    request: Request, job_id: Optional[str] = None,
     status: Optional[str] = None,
     experience: Optional[str] = None,
     skill: Optional[str] = None,
@@ -473,7 +510,11 @@ def get_interview_reports(
             if hr_scope is not None:
                 base_app_query = base_app_query.filter(hr_scope)
             if job_id and str(job_id).lower() != "all":
-                base_app_query = base_app_query.filter(Application.job_id == job_id)
+                job_id_str = str(job_id).strip()
+                if job_id_str.isdigit():
+                    base_app_query = base_app_query.filter(Application.job_id == int(job_id_str))
+                else:
+                    base_app_query = base_app_query.filter(Job.job_id == job_id_str)
             if from_date:
                 try:
                     sd = datetime.strptime(from_date, "%Y-%m-%d").replace(hour=0, minute=0, second=0)
@@ -512,7 +553,7 @@ def get_interview_reports(
             for row in score_data:
                 s = float(row.score or 0)
                 m_total_score += s
-                if row.term_reason:
+                if row.term_reason or row.iv_status == 'terminated':
                     m_terminated += 1
                 elif row.iv_status != 'completed':
                     m_incomplete += 1
@@ -830,7 +871,7 @@ def get_filtered_interviews(
     search: Optional[str] = None,
     date: Optional[str] = None,
     status: Optional[str] = None,
-    job_id: Optional[int] = None,
+    job_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 50,
     current_user: User = Depends(get_current_hr),
@@ -861,15 +902,20 @@ def get_filtered_interviews(
         query = query.filter(hr_scope)
 
     # Filter by Job ID
-    if job_id:
-        query = query.filter(Application.job_id == job_id)
+    if job_id and str(job_id).lower() != "all":
+        job_id_str = str(job_id).strip()
+        if job_id_str.isdigit():
+            query = query.filter(Application.job_id == int(job_id_str))
+        else:
+            query = query.filter(Job.job_id == job_id_str)
 
     # Apply global search if present
     if search:
         query = query.filter(or_(
             Application.candidate_name.ilike(f"%{search}%"),
             Interview.test_id.ilike(f"%{search}%"),
-            Job.title.ilike(f"%{search}%")
+            Job.title.ilike(f"%{search}%"),
+            Job.job_id.ilike(f"%{search}%")
         ))
 
     # Apply specific filters
