@@ -119,9 +119,8 @@ class AnalyticsService:
             
             # Strict chronological order for the pipeline chart
             CHART_ORDER = [
-                'Applied', 'Screened', 'Aptitude', 'AI Interview', 'Interview completed',
-                'Review', 'Physical', 'Pending Approval', 'Offer Sent (Pending)', 
-                'Accepted', 'Hired', 'Onboarded', 'Rejected'
+                'Applied', 'Screened', 'Interview completed',
+                'Offer Sent', 'Accepted', 'Onboarded', 'Rejected'
             ]
             
             # Initialize with 0s for expected stages to keep chart consistent

@@ -44,6 +44,11 @@ import useSWR from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
 import { APIClient } from '@/app/dashboard/lib/api-client'
 import { useBranding } from '@/lib/branding-client'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { user, logout } = useAuth()
@@ -137,15 +142,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </div>
 
                     {/* Collapse Button - shown in both states */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={toggleSidebar}
-                        className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl transition-all duration-200"
-                    >
-                        <PanelLeft className="h-4 w-4 group-data-[collapsible=icon]:hidden" />
-                        <PanelRight className="h-4 w-4 hidden group-data-[collapsible=icon]:block" />
-                    </Button>
+                    {state === 'collapsed' ? (
+                        <Tooltip side="right" align="center">
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={toggleSidebar}
+                                    className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl transition-all duration-200"
+                                >
+                                    <PanelRight className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                                Expand Sidebar
+                            </TooltipContent>
+                        </Tooltip>
+                    ) : (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleSidebar}
+                            className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl transition-all duration-200"
+                        >
+                            <PanelLeft className="h-4 w-4 group-data-[collapsible=icon]:hidden" />
+                            <PanelRight className="h-4 w-4 hidden group-data-[collapsible=icon]:block" />
+                        </Button>
+                    )}
                 </div>
             </SidebarHeader>
 
@@ -158,52 +181,67 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                        (link.href !== '/dashboard/hr' && pathname.startsWith(link.href)) ||
                                        (link.href.includes('pipeline') && pathname.includes('pipeline'))
 
+                        const isCollapsed = state === 'collapsed'
+                        const buttonContent = (
+                            <SidebarMenuButton
+                                asChild
+                                isActive={isActive}
+                                className={cn(
+                                    "relative gap-3 rounded-lg transition-all duration-200 group/item",
+                                    "text-sidebar-foreground hover:bg-sidebar-accent/30",
+                                    isActive && "bg-sidebar-accent/60 text-primary font-bold shadow-sm"
+                                )}
+                            >
+                                <Link href={link.href} prefetch={false} className="flex items-center justify-between w-full">
+                                    {isActive && (
+                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-gradient-to-b from-primary to-primary/60 rounded-r-full z-20 shadow-[2px_0_8px_color-mix(in_oklab,var(--primary)_40%,transparent)] animate-in fade-in slide-in-from-left-1 duration-300" />
+                                    )}
+                                    <div className="flex items-center gap-3">
+                                        <Icon className={cn(
+                                            "h-5 w-5 shrink-0 transition-all duration-200 group-hover/item:scale-110 group-hover/item:rotate-[4deg]",
+                                            isActive ? "text-primary" : "text-muted-foreground group-hover/item:text-sidebar-foreground"
+                                        )} />
+                                        <span className={cn(
+                                            "group-data-[collapsible=icon]:hidden transition-colors",
+                                            isActive ? "text-primary" : "text-sidebar-foreground"
+                                        )}>
+                                            {link.label}
+                                        </span>
+                                    </div>
+                                    {link.label === 'Applications' && pendingCount > 0 && (
+                                        <Badge
+                                            variant="secondary"
+                                            className="ml-auto h-5 min-w-5 flex items-center justify-center rounded-full px-1 text-[10px] font-bold bg-primary text-primary-foreground group-data-[collapsible=icon]:hidden animate-pulse shadow-sm shadow-primary/25"
+                                        >
+                                            {pendingCount}
+                                        </Badge>
+                                    )}
+                                        {link.label === 'Tickets' && ticketCount > 0 && (
+                                        <Badge
+                                            variant="secondary"
+                                            className="ml-auto h-5 min-w-5 flex items-center justify-center rounded-full px-1 text-[10px] font-bold bg-destructive text-destructive-foreground animate-pulse group-data-[collapsible=icon]:hidden"
+                                        >
+                                            {ticketCount}
+                                        </Badge>
+                                    )}
+                                </Link>
+                            </SidebarMenuButton>
+                        )
+
                         return (
                             <SidebarMenuItem key={link.href}>
-                                <SidebarMenuButton
-                                    asChild
-                                    isActive={isActive}
-                                    tooltip={link.label}
-                                    className={cn(
-                                        "relative gap-3 rounded-lg transition-all duration-200 group/item",
-                                        "text-sidebar-foreground hover:bg-sidebar-accent/30",
-                                        isActive && "bg-sidebar-accent/60 text-primary font-bold shadow-sm"
-                                    )}
-                                >
-                                    <Link href={link.href} prefetch={false} className="flex items-center justify-between w-full">
-                                        {isActive && (
-                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-gradient-to-b from-primary to-primary/60 rounded-r-full z-20 shadow-[2px_0_8px_color-mix(in_oklab,var(--primary)_40%,transparent)] animate-in fade-in slide-in-from-left-1 duration-300" />
-                                        )}
-                                        <div className="flex items-center gap-3">
-                                            <Icon className={cn(
-                                                "h-5 w-5 shrink-0 transition-all duration-200 group-hover/item:scale-110 group-hover/item:rotate-[4deg]",
-                                                isActive ? "text-primary" : "text-muted-foreground group-hover/item:text-sidebar-foreground"
-                                            )} />
-                                            <span className={cn(
-                                                "group-data-[collapsible=icon]:hidden transition-colors",
-                                                isActive ? "text-primary" : "text-sidebar-foreground"
-                                            )}>
-                                                {link.label}
-                                            </span>
-                                        </div>
-                                        {link.label === 'Applications' && pendingCount > 0 && (
-                                            <Badge
-                                                variant="secondary"
-                                                className="ml-auto h-5 min-w-5 flex items-center justify-center rounded-full px-1 text-[10px] font-bold bg-primary text-primary-foreground group-data-[collapsible=icon]:hidden animate-pulse shadow-sm shadow-primary/25"
-                                            >
-                                                {pendingCount}
-                                            </Badge>
-                                        )}
-                                            {link.label === 'Tickets' && ticketCount > 0 && (
-                                            <Badge
-                                                variant="secondary"
-                                                className="ml-auto h-5 min-w-5 flex items-center justify-center rounded-full px-1 text-[10px] font-bold bg-destructive text-destructive-foreground animate-pulse group-data-[collapsible=icon]:hidden"
-                                            >
-                                                {ticketCount}
-                                            </Badge>
-                                        )}
-                                    </Link>
-                                </SidebarMenuButton>
+                                {isCollapsed ? (
+                                    <Tooltip side="right" align="center">
+                                        <TooltipTrigger asChild>
+                                            {buttonContent}
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right">
+                                            {link.label}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                ) : (
+                                    buttonContent
+                                )}
                             </SidebarMenuItem>
                         )
                     })}
@@ -231,15 +269,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
                     {/* Collapsed Avatar / Sign Out trigger */}
                     <div className="hidden group-data-[collapsible=icon]:flex">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={logout}
-                            title="Sign Out"
-                            className="h-9 w-9 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all active:scale-95 duration-200"
-                        >
-                            <LogOut className="h-4 w-4" />
-                        </Button>
+                        {state === 'collapsed' ? (
+                            <Tooltip side="right" align="center">
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={logout}
+                                        className="h-9 w-9 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all active:scale-95 duration-200"
+                                    >
+                                        <LogOut className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                    Sign Out
+                                </TooltipContent>
+                            </Tooltip>
+                        ) : (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={logout}
+                                className="h-9 w-9 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all active:scale-95 duration-200"
+                            >
+                                <LogOut className="h-4 w-4" />
+                            </Button>
+                        )}
                     </div>
 
                     {/* Sign Out Button (Visible when expanded) */}

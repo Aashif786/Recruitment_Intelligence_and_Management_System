@@ -205,7 +205,14 @@ export default function HRDashboard() {
     }
   }, [dashboardData])
 
-  const chartData = (dashboardData as any)?.chart_data || []
+  const chartData = useMemo(() => {
+    const rawData = (dashboardData as any)?.chart_data || []
+    return rawData.filter((item: any) => 
+      item.name !== 'Aptitude' && 
+      item.name !== 'Review' && 
+      item.name !== 'AI Interview'
+    )
+  }, [dashboardData])
   const recentInterviews = useMemo(() => {
     if (paginatedInterviews?.items && Array.isArray(paginatedInterviews.items)) {
       return paginatedInterviews.items
@@ -236,7 +243,7 @@ export default function HRDashboard() {
       {/* Header */}
       <PageHeader 
         title="Recruitment Dashboard"
-        description="AI-Powered Hiring Intelligence"
+        description="AI-Powered Intelligent Dashboard "
         icon={LayoutDashboard}
       />
 
@@ -336,7 +343,7 @@ export default function HRDashboard() {
             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
               <CardTitle >Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 pt-6">
+            <CardContent className="space-y-4 pt-6">
               <ActionButton href="/dashboard/hr/applications" label="Review Applications" />
               <ActionButton href="/dashboard/hr/pipeline" label="Hiring Pipeline" />
               <ActionButton href="/dashboard/hr/reports" label="View Reports" />
@@ -347,196 +354,7 @@ export default function HRDashboard() {
           </Card>
         </div>
       </div>
-      {/* Recent Interviews Table */}
-      <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden pt-0 animate-in fade-in duration-500 delay-700">
-        <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle >Recent Interviews</CardTitle>
-              <CardDescription>Upcoming and recently completed sessions</CardDescription>
-            </div>
-            <Clock className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-6">
-          {/* Filter Bar */}
-          <div className="flex flex-col md:flex-row gap-4 p-4 bg-muted/20 backdrop-blur-md rounded-2xl border border-border/60 items-center shadow-inner">
-            <div className="flex-1 w-full relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search candidates, roles, or IDs..."
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="bg-card h-10 pl-10 pr-10 border-border focus:ring-primary shadow-sm hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all rounded-xl"
-              />
-              {isFiltering && (
-                <RotateCw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary animate-spin" />
-              )}
-            </div>
 
-            {/* Job Filter Addition */}
-            <div className="w-full md:w-48">
-              <Select
-                value={jobFilter}
-                onValueChange={setJobFilter}
-              >
-                <SelectTrigger className="bg-card h-10 border-border shadow-sm rounded-xl">
-                   <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
-                   <SelectValue placeholder="All Jobs" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Jobs</SelectItem>
-                  {(jobs || []).map((job) => (
-                    <SelectItem key={job.id} value={job.id.toString()}>
-                      {job.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="w-full md:w-48">
-              <Select
-                value={filters.status}
-                onValueChange={(value) => setFilters({ ...filters, status: value })}
-              >
-                <SelectTrigger className="bg-card h-10 border-border shadow-sm rounded-xl">
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="not_started">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="terminated">Terminated</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="w-full md:w-32">
-              <Select
-                value={String(pageSize)}
-                onValueChange={(value) => setPageSize(Number(value))}
-              >
-                <SelectTrigger className="bg-card h-10 border-border shadow-sm rounded-xl">
-                  <span className="text-xs text-muted-foreground mr-2">Show:</span>
-                  <SelectValue placeholder="10" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleReset}
-              className="h-10 w-10 shrink-0 border-border hover:bg-muted active:scale-[0.98] transition-all shadow-sm rounded-xl"
-              title="Reset all filters"
-            >
-              <RotateCcw className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </div>
-
-          {recentInterviews.length > 0 ? (
-            <div className="relative">
-              {isFiltering && (
-                <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-md">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              )}
-              <Table>
-                <TableHeader className="bg-muted/30 border-b border-border/40">
-                  <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="font-bold py-4">Candidate ID</TableHead>
-                    <TableHead className="font-bold">Candidate</TableHead>
-                    <TableHead className="font-bold">Job Role</TableHead>
-                    <TableHead className="font-bold">Date</TableHead>
-                    <TableHead className="font-bold">Status</TableHead>
-                    <TableHead className="font-bold text-right pr-6">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentInterviews.map((interview: any) => (
-                    <TableRow key={interview.id} className="hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200">
-                      <TableCell className="font-mono text-sm text-muted-foreground">
-                        {interview.test_id || 'N/A'}
-                      </TableCell>
-                      <TableCell className="font-medium text-foreground">{interview.candidate_name}</TableCell>
-                      <TableCell className="text-foreground/80">{interview.job_title}</TableCell>
-                      <TableCell className="text-muted-foreground">{new Date(interview.date).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          interview.status === 'completed' ? 'default' :
-                            interview.status === 'scheduled' ? 'secondary' : 'outline'
-                        } className={
-                          interview.status === 'completed' ? 'bg-primary/10 text-primary hover:bg-primary/20 border-primary/20' :
-                            interview.status === 'scheduled' ? 'bg-secondary/15 text-secondary-foreground border-border hover:bg-secondary/20' : ''
-                        }>
-                          {interview.status.replace('_', ' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                        <Link 
-                          href={interview.report_id ? `/dashboard/hr/reports?search=${encodeURIComponent(interview.candidate_name)}&reportId=${interview.report_id}` : `/dashboard/hr/reports`} 
-                          className="text-primary hover:underline text-sm font-semibold"
-                        >
-                          View Details
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              
-              {/* Pagination Controls */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-border">
-                <div className="text-sm text-muted-foreground">
-                  Showing <span className="font-semibold text-foreground/80">{Math.min(pageSize, paginatedInterviews?.total || recentInterviews.length)}</span> of <span className="font-semibold text-foreground/80">{paginatedInterviews?.total || recentInterviews.length}</span> candidates
-                </div>
-                <div className="flex items-center gap-4">
-                   <div className="text-sm font-medium text-muted-foreground mr-2">
-                     Page <span className="text-foreground">{currentPage}</span> of {Math.ceil((paginatedInterviews?.total || 1) / pageSize)}
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       disabled={currentPage === 1 || isFiltering}
-                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                       className="h-8 shadow-sm"
-                     >
-                       Previous
-                     </Button>
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       disabled={currentPage >= Math.ceil((paginatedInterviews?.total || 0) / pageSize) || isFiltering}
-                       onClick={() => setCurrentPage(prev => prev + 1)}
-                       className="h-8 shadow-sm"
-                     >
-                       Next
-                     </Button>
-                   </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground border-2 border-dashed border-muted rounded-lg">
-              <div className="p-3 bg-muted w-fit rounded-full mx-auto mb-3">
-                <Search className="h-6 w-6" />
-              </div>
-              <p className="font-medium">No interviews match your filters.</p>
-              <Button variant="link" onClick={handleReset} className="text-primary">Clear all filters</Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

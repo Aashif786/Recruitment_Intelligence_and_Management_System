@@ -134,7 +134,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
           )}
           {appliedFilters.status !== 'All' && (
             <Badge onClick={() => onRemoveAppliedFilter('status')} variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-primary/5 border-primary/20 text-primary">
-              Status: {appliedFilters.status === 'Select' ? 'High Score' : appliedFilters.status === 'Consider' ? 'Avg Score' : appliedFilters.status === 'Reject' ? 'Low Score' : getStatusLabel(appliedFilters.status)}
+              Status: {appliedFilters.status === 'Select' ? 'Selected' : appliedFilters.status === 'Consider' ? 'On Hold' : appliedFilters.status === 'Reject' ? 'Rejected' : getStatusLabel(appliedFilters.status)}
               <XCircle className="h-3 w-3 cursor-pointer hover:text-destructive" />
             </Badge>
           )}
