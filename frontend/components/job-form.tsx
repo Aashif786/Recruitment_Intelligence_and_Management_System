@@ -468,7 +468,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
 
     const validateDuration = (value: number) => {
         if (!value) { setDurationError(null); return }
-        if (value < 1 || value > 300) { setDurationError('Duration must be 1-300 mins'); return }
+        if (value < 1 || value > 300) { setDurationError('Duration must be 60-300 mins'); return }
         setDurationError(null)
     }
 
@@ -778,7 +778,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                     <input
                                         id="duration_minutes"
                                         type="number"
-                                        min="10"
+                                        min="60"
                                         max="300"
                                         required
                                         className="w-32 h-10 px-3 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground transition-all"
