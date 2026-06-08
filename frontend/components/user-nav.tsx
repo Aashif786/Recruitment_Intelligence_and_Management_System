@@ -114,10 +114,12 @@ export function UserNav() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="opacity-50 my-1" />
                 <DropdownMenuGroup className="p-1">
-                    <DropdownMenuItem className="cursor-pointer py-2.5 rounded-xl focus:bg-primary/5 gap-2.5" onClick={() => router.push('/dashboard/settings')}>
-                        <Settings className="h-4 w-4 text-muted-foreground" />
-                        <span>Settings</span>
-                    </DropdownMenuItem>
+                    {user?.role === 'super_admin' && (
+                        <DropdownMenuItem className="cursor-pointer py-2.5 rounded-xl focus:bg-primary/5 gap-2.5" onClick={() => router.push('/dashboard/settings')}>
+                            <Settings className="h-4 w-4 text-muted-foreground" />
+                            <span>Settings</span>
+                        </DropdownMenuItem>
+                    )}
                     {user?.role === 'super_admin' && (
                         <DropdownMenuItem
                             className="cursor-pointer py-2.5 rounded-xl focus:bg-primary/5 gap-2.5"

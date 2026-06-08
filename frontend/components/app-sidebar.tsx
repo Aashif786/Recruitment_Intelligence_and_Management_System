@@ -108,12 +108,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         { href: '/dashboard/hr/batch-analysis', label: 'Batch Analysis', icon: FileText },
         { href: '/dashboard/onboarding', label: 'Onboarding', icon: CheckCircle2 },
         { href: '/dashboard/repository', label: 'Repository', icon: Database },
-        { href: '/dashboard/settings', label: 'Settings', icon: Settings },
     ]
 
     if (user?.role === 'super_admin') {
         links.splice(3, 0, { href: '/dashboard/hr/approvals', label: 'HR Management', icon: UserCheck })
-        // links.splice(links.length - 1, 0, { href: '/dashboard/reliability', label: 'Reliability', icon: Activity })
+        links.push({ href: '/dashboard/settings', label: 'Settings', icon: Settings })
     }
 
     return (
