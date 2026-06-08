@@ -370,18 +370,20 @@ export default function IngestedEmailsPage() {
                                 Configure Mailbox
                             </Button>
                         )}
-                        <Button
-                            onClick={handleSync}
-                            disabled={isSyncing}
-                            className="gap-2 bg-primary text-primary-foreground shadow-sm rounded-xl h-11 font-semibold active:scale-[0.98] hover:shadow-md transition-all duration-200"
-                        >
-                            {isSyncing ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <RefreshCw className="h-4 w-4" />
-                            )}
-                            Sync Emails
-                        </Button>
+                        {user?.role === 'super_admin' && (
+                          <Button
+                              onClick={handleSync}
+                              disabled={isSyncing}
+                              className="gap-2 bg-primary text-primary-foreground shadow-sm rounded-xl h-11 font-semibold active:scale-[0.98] hover:shadow-md transition-all duration-200"
+                          >
+                              {isSyncing ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                  <RefreshCw className="h-4 w-4" />
+                              )}
+                              Sync Emails
+                          </Button>
+                        )}
                     </div>
                 </div>
             </PageHeader>
