@@ -51,6 +51,7 @@ import {
     Save,
     Zap,
     WifiOff,
+    Trash2,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/app/dashboard/lib/auth-context'
@@ -327,6 +328,22 @@ export default function IngestedEmailsPage() {
             toast.error(err.message || 'Could not assign the candidate to the selected job. Please try again.', { id: toastId })
         } finally {
             setIsAssigning(false)
+        }
+    }
+
+    const handleDeleteEmail = async (id: number) => {
+        if (!confirm('Are you sure you want to remove this ingested email record?')) {
+            return
+        }
+
+        const toastId = toast.loading('Deleting ingested email...')
+        try {
+            await APIClient.delete(`/api/applications/ingested-emails/${id}`)
+            toast.success('Ingested email deleted successfully', { id: toastId })
+            mutate()
+        } catch (err: any) {
+            console.error('Delete error:', err)
+            toast.error(err.message || 'Could not delete the ingested email. Please try again.', { id: toastId })
         }
     }
 
@@ -670,7 +687,7 @@ export default function IngestedEmailsPage() {
                                             )}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex justify-end w-full">
+                                            <div className="flex justify-end items-center gap-2 w-full">
                                                 {item.application_id ? (
                                                     <Button
                                                         size="sm"
@@ -681,27 +698,41 @@ export default function IngestedEmailsPage() {
                                                         View Candidate
                                                     </Button>
                                                 ) : (
-                                                    // SEC-1 Fix: Backend /assign requires super_admin.
-                                                    // Hide button for regular HR to avoid confusing 403 errors.
-                                                    !item.file_url ? (
-                                                        <Badge className="bg-rose-50 text-rose-400 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/25 text-[10px] font-semibold px-2 py-0.5 flex items-center gap-1 w-max">
-                                                            <AlertTriangle className="h-3 w-3" />
-                                                            No Resume
-                                                        </Badge>
-                                                    ) : (user?.role === 'super_admin' || user?.role === 'hr') ? (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => setSelectedResume(item)}
-                                                            className="h-9 px-3 text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-500/10 border-amber-500/30 rounded-xl shadow-none"
-                                                        >
-                                                            Assign to Job
-                                                        </Button>
-                                                    ) : (
-                                                        <Badge className="bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-semibold px-2 py-0.5">
-                                                            Unassigned
-                                                        </Badge>
-                                                    )
+                                                    <>
+                                                        {!item.file_url ? (
+                                                            <Badge className="bg-rose-50 text-rose-400 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/25 text-[10px] font-semibold px-2 py-0.5 flex items-center gap-1 w-max">
+                                                                <AlertTriangle className="h-3 w-3" />
+                                                                No Resume
+                                                            </Badge>
+                                                        ) : (user?.role === 'super_admin' || user?.role === 'hr') ? (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => setSelectedResume(item)}
+                                                                className="h-9 px-3 text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-500/10 border-amber-500/30 rounded-xl shadow-none"
+                                                            >
+                                                                Assign to Job
+                                                            </Button>
+                                                        ) : (
+                                                            <Badge className="bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-semibold px-2 py-0.5">
+                                                                Unassigned
+                                                            </Badge>
+                                                        )}
+                                                        {(user?.role === 'super_admin' || user?.role === 'hr') && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteEmail(item.id);
+                                                                }}
+                                                                className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                                                                title="Delete Ingested Email"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         </TableCell>

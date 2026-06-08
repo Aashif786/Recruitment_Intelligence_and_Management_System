@@ -2117,6 +2117,26 @@ async def assign_ingested_email(
         "application_id": new_application.id
     }
 
+@router.delete("/ingested-emails/{resume_id}")
+def delete_ingested_email(
+    resume_id: int,
+    current_user: User = Depends(get_current_hr),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete an ingested email record (HR / Admin only).
+    """
+    item = db.query(AttachmentResume).filter(AttachmentResume.id == resume_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Ingested resume not found")
+        
+    if current_user.role not in ["super_admin", "admin", "hr"]:
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete ingested emails")
+        
+    db.delete(item)
+    db.commit()
+    return {"status": "success", "message": "Ingested email deleted successfully."}
+
 @router.get("/{application_id}", response_model=ApplicationDetailResponse)
 def get_application(
     application_id: int,
