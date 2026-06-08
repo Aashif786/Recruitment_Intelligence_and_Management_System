@@ -276,18 +276,17 @@ export const ReportFilters = React.memo(function ReportFilters({
               </Select>
             </div>
 
-            {/* Status Filter */}
+            {/* Suggestion Filter */}
             <div className="space-y-1  rounded-xl border border-border/50 bg-muted/25">
-              {/* <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</Label> */}
+              {/* <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Suggestion</Label> */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full h-5 text-xs rounded-lg bg-background/40 border-border/30">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder="Suggestion" />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
-                  <SelectItem value="All">STATUS</SelectItem>
-                  <SelectItem value="Select">Selected (&gt;6)</SelectItem>
-                  <SelectItem value="Consider">On Hold (4-6)</SelectItem>
-                  <SelectItem value="Reject">Rejected (&lt;4)</SelectItem>
+                  <SelectItem value="All">SUGGESTION</SelectItem>
+                  <SelectItem value="Consider">Consider</SelectItem>
+                  <SelectItem value="Reject">Reject</SelectItem>
                   <SelectItem value="Terminated">Terminated</SelectItem>
                 </SelectContent>
               </Select>
