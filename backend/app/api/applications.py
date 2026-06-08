@@ -1098,9 +1098,10 @@ def get_pending_applications_count(
         or_(func.trim(Application.file_status).in_(('active', 'missing')), Application.file_status == None)
     )
 
-    # Apply visibility isolation (Disabled: standard HR sees all applications by default)
-    # if current_user.role.lower() != "super_admin":
-    #     q = q.filter(Application.hr_id == current_user.id)
+    # Apply visibility isolation: Anyone not a super_admin is restricted to their own data
+    if current_user.role.lower() not in ["super_admin", "admin"]:
+        q = q.outerjoin(Job, Application.job_id == Job.id)
+        q = q.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
 
     count = q.scalar() or 0
     return {"count": count}
@@ -1218,11 +1219,10 @@ def get_hr_applications(
 
         # 3. Security
         # Apply visibility isolation: Anyone not a super_admin is restricted to their own apps
-        # (Disabled: standard HR sees all applications by default)
-        # if current_user.role.lower() not in ["super_admin", "admin"]:
-        #     # Standard HR sees jobs they own OR apps they are assigned to
-        #     # Note: Job is already joined via outerjoin at the start of the query
-        #     query = query.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
+        if current_user.role.lower() not in ["super_admin", "admin"]:
+            # Standard HR sees jobs they own OR apps they are assigned to
+            # Note: Job is already joined via outerjoin at the start of the query
+            query = query.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
         # Super Admin sees all.
 
         # 4. Retrieval
@@ -1323,23 +1323,16 @@ async def ingest_email_resumes(
     request: Request,
     req: EmailIngestRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
     """
     Trigger manual email ingestion via IMAP and map/analyze them immediately.
-    BUG-001 Fix: IMAP credentials are read server-side from GlobalSettings, never from the request body.
     """
-    # Read IMAP credentials from server-side settings (never from request body)
-    from app.domain.models import GlobalSettings
     from app.core.encryption import decrypt_field
-    settings_records = db.query(GlobalSettings).filter(
-        GlobalSettings.key.in_(["imap_email", "imap_password"])
-    ).all()
-    settings_dict = {s.key: s.value for s in settings_records}
 
-    imap_email = settings_dict.get("imap_email") or settings.imap_email or ""
-    enc_password = settings_dict.get("imap_password") or settings.imap_password or ""
+    imap_email = current_user.imap_email or ""
+    enc_password = current_user.imap_password or ""
     
     imap_password = decrypt_field(enc_password) if enc_password else ""
 
@@ -1350,7 +1343,7 @@ async def ingest_email_resumes(
         )
 
     # Phase 1: Rapid Fetch (Synchronous but optimized)
-    result = fetch_resume_attachments(db, imap_email, imap_password)
+    result = fetch_resume_attachments(db, imap_email, imap_password, hr_id=current_user.id)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
     
@@ -1359,7 +1352,7 @@ async def ingest_email_resumes(
     async def run_batch_in_background():
         bg_db = SessionLocal()
         try:
-            await run_batch_resume_processing(bg_db)
+            await run_batch_resume_processing(bg_db, hr_id=current_user.id)
         finally:
             bg_db.close()
             
@@ -1512,6 +1505,70 @@ def _resolve_resume_mapping(
 
 
 
+def _resolve_resume_mapping_bool(
+    item: AttachmentResume,
+    db: Session,
+    app_paths_set: set,
+    app_emails_no_path_set: set,
+    app_emails_job_set: set
+) -> bool:
+    app_found, is_processed = _resolve_resume_mapping(
+        item, db, app_paths_set, app_emails_no_path_set, app_emails_job_set
+    )
+    return bool(app_found)
+
+
+def _is_email_visible_to_user(
+    item: AttachmentResume,
+    current_user: User,
+    db: Session,
+    hr_app_paths: set,
+    hr_app_emails_no_path: set,
+    hr_app_emails_job: set,
+    global_app_paths: set,
+    global_app_emails_no_path: set,
+    global_app_emails_job: set,
+    hr_job_ids: set
+) -> tuple[bool, bool]:
+    """
+    Returns (is_visible, is_mapped) for the given email item.
+    """
+    if current_user.role in ["super_admin", "admin"]:
+        is_mapped = _resolve_resume_mapping_bool(
+            item, db, global_app_paths, global_app_emails_no_path, global_app_emails_job
+        )
+        return True, is_mapped
+
+    # Regular HR user
+    # 1. Visible if fetched by this HR manager
+    if getattr(item, 'hr_id', None) == current_user.id:
+        is_mapped = _resolve_resume_mapping_bool(
+            item, db, hr_app_paths, hr_app_emails_no_path, hr_app_emails_job
+        )
+        return True, is_mapped
+
+    # 2. Visible if mapped to this HR user's job or application
+    is_mapped_to_hr = _resolve_resume_mapping_bool(
+        item, db, hr_app_paths, hr_app_emails_no_path, hr_app_emails_job
+    )
+    if is_mapped_to_hr:
+        return True, True
+
+    # 3. If mapped globally to another HR, hide it
+    is_mapped_globally = _resolve_resume_mapping_bool(
+        item, db, global_app_paths, global_app_emails_no_path, global_app_emails_job
+    )
+    if is_mapped_globally:
+        return False, False
+
+    # 4. Visible if unmapped but targets this HR user's job code
+    target_job_id = _get_target_job_id_from_subject(item.subject, db)
+    if target_job_id and target_job_id in hr_job_ids:
+        return True, False
+
+    return False, False
+
+
 @router.get("/ingested-emails/stats")
 def get_ingested_emails_stats(
     current_user: User = Depends(get_current_hr),
@@ -1522,32 +1579,62 @@ def get_ingested_emails_stats(
     total ingested, auto-mapped (has application), and pending assignment.
     """
     items = db.query(AttachmentResume).all()
-    total_ingested = len(items)
     
     # Pre-fetch application mapping data for efficient lookups
     applications_data = db.query(Application.resume_file_path, Application.candidate_email, Application.job_id).all()
     
     # Store in sets for O(1) lookups
-    app_paths = set()
-    app_emails_no_path = set()
-    app_emails_job = set()
+    global_app_paths = set()
+    global_app_emails_no_path = set()
+    global_app_emails_job = set()
     
     for a in applications_data:
         if a.candidate_email:
             email_key = a.candidate_email.lower().strip()
             if a.job_id:
-                app_emails_job.add((email_key, a.job_id))
+                global_app_emails_job.add((email_key, a.job_id))
             path_id = _extract_storage_path_identifier(a.resume_file_path) if a.resume_file_path else None
             if path_id:
-                app_paths.add(path_id)
+                global_app_paths.add(path_id)
             else:
-                app_emails_no_path.add(email_key)
+                global_app_emails_no_path.add(email_key)
+                
+    hr_app_paths = set()
+    hr_app_emails_no_path = set()
+    hr_app_emails_job = set()
+    hr_job_ids = set()
     
+    if current_user.role not in ["super_admin", "admin"]:
+        hr_job_ids = {j.id for j in db.query(Job.id).filter(Job.hr_id == current_user.id).all()}
+        hr_applications_data = db.query(Application.resume_file_path, Application.candidate_email, Application.job_id).outerjoin(Job).filter(
+            (Job.hr_id == current_user.id) | (Application.hr_id == current_user.id)
+        ).all()
+        
+        for a in hr_applications_data:
+            if a.candidate_email:
+                email_key = a.candidate_email.lower().strip()
+                if a.job_id:
+                    hr_app_emails_job.add((email_key, a.job_id))
+                path_id = _extract_storage_path_identifier(a.resume_file_path) if a.resume_file_path else None
+                if path_id:
+                    hr_app_paths.add(path_id)
+                else:
+                    hr_app_emails_no_path.add(email_key)
+
+    total_ingested = 0
     auto_mapped = 0
+    
     for item in items:
-        app_found, is_processed = _resolve_resume_mapping(item, db, app_paths, app_emails_no_path, app_emails_job)
-        if app_found:
-            auto_mapped += 1
+        is_visible, is_mapped = _is_email_visible_to_user(
+            item, current_user, db,
+            hr_app_paths, hr_app_emails_no_path, hr_app_emails_job,
+            global_app_paths, global_app_emails_no_path, global_app_emails_job,
+            hr_job_ids
+        )
+        if is_visible:
+            total_ingested += 1
+            if is_mapped:
+                auto_mapped += 1
                 
     return {
         "total_ingested": total_ingested,
@@ -1567,15 +1654,7 @@ def get_ingested_emails(
 ):
     """
     List all ingested email resumes (HR only).
-
-    BUG-B Fix: Pre-build application lookup sets once (O(n)) and pass them
-    into _resolve_resume_mapping to eliminate one DB query per row (N+1).
-
-    BUG-G Fix: Compute global_stats inline from the results already in memory
-    instead of calling get_ingested_emails_stats() which causes a second full scan.
-
-    BUG-C Fix: Regenerate fresh signed URLs before returning so 24-hour expiry
-    on stored signed URLs does not leave dead links in the table.
+    Enforces role-based isolation: standard HR users only see emails matching their applications/jobs.
     """
     from app.core.storage import get_signed_url
 
@@ -1591,32 +1670,62 @@ def get_ingested_emails(
     # Fetch all items for accurate mapping-based filtering in Python
     items = query.order_by(AttachmentResume.id.desc()).all()
 
-    # BUG-B Fix: Pre-fetch application mapping data once — O(n) sets for O(1) lookups.
+    # Pre-fetch application mapping data once — O(n) sets for O(1) lookups.
     applications_data = db.query(Application.resume_file_path, Application.candidate_email, Application.job_id).all()
     
-    app_paths_set = set()
-    app_emails_no_path_set = set()
-    app_emails_job_set = set()
+    global_app_paths = set()
+    global_app_emails_no_path = set()
+    global_app_emails_job = set()
     
     for a in applications_data:
         if a.candidate_email:
             email_key = a.candidate_email.lower().strip()
             if a.job_id:
-                app_emails_job_set.add((email_key, a.job_id))
+                global_app_emails_job.add((email_key, a.job_id))
             path_id = _extract_storage_path_identifier(a.resume_file_path) if a.resume_file_path else None
             if path_id:
-                app_paths_set.add(path_id)
+                global_app_paths.add(path_id)
             else:
-                app_emails_no_path_set.add(email_key)
+                global_app_emails_no_path.add(email_key)
+
+    hr_app_paths = set()
+    hr_app_emails_no_path = set()
+    hr_app_emails_job = set()
+    hr_job_ids = set()
+    
+    if current_user.role not in ["super_admin", "admin"]:
+        hr_job_ids = {j.id for j in db.query(Job.id).filter(Job.hr_id == current_user.id).all()}
+        hr_applications_data = db.query(Application.resume_file_path, Application.candidate_email, Application.job_id).outerjoin(Job).filter(
+            (Job.hr_id == current_user.id) | (Application.hr_id == current_user.id)
+        ).all()
+        
+        for a in hr_applications_data:
+            if a.candidate_email:
+                email_key = a.candidate_email.lower().strip()
+                if a.job_id:
+                    hr_app_emails_job.add((email_key, a.job_id))
+                path_id = _extract_storage_path_identifier(a.resume_file_path) if a.resume_file_path else None
+                if path_id:
+                    hr_app_paths.add(path_id)
+                else:
+                    hr_app_emails_no_path.add(email_key)
+
+    visible_items_with_mapping = []
+    for item in items:
+        is_visible, is_mapped = _is_email_visible_to_user(
+            item, current_user, db,
+            hr_app_paths, hr_app_emails_no_path, hr_app_emails_job,
+            global_app_paths, global_app_emails_no_path, global_app_emails_job,
+            hr_job_ids
+        )
+        if is_visible:
+            visible_items_with_mapping.append((item, is_mapped))
 
     results = []
 
-    for item in items:
-        # BUG-B Fix: Pass pre-built sets — avoids per-row DB queries.
-        app_found, is_processed = _resolve_resume_mapping(item, db, app_paths_set, app_emails_no_path_set, app_emails_job_set)
-
+    for item, is_mapped in visible_items_with_mapping:
         app_obj = None
-        if app_found:
+        if is_mapped:
             # Only hit the DB when we know a match exists (subset of all rows).
             sender_str = item.sender_email or ""
             match = re.search(r'<([^>]+)>', sender_str)
@@ -1678,13 +1787,10 @@ def get_ingested_emails(
                 dup_query = dup_query.filter(Application.id != app_obj.id)
             is_duplicate = dup_query.count() > 0
 
-        # BUG-C Fix: The stored file_url is a Supabase signed URL that expires in 24 hours.
-        # Regenerate a fresh signed URL on every API response so links never go dead.
         fresh_file_url = item.file_url
         if item.file_url:
             path_id_for_url = _extract_storage_path_identifier(item.file_url)
             if path_id_for_url:
-                # Strip bucket prefix before calling get_signed_url
                 storage_key = path_id_for_url
                 if storage_key.startswith("MAIL_ATTACHMENTS/"):
                     storage_key = storage_key[len("MAIL_ATTACHMENTS/"):]
@@ -1702,7 +1808,7 @@ def get_ingested_emails(
             "file_name": item.file_name,
             "file_url": fresh_file_url,
             "received_at": item.received_at.replace(tzinfo=timezone.utc) if item.received_at else None,
-            "processed": is_processed or (app_obj is not None),
+            "processed": is_mapped or (app_obj is not None),
             "mapping_failed": getattr(item, 'mapping_failed', False),
             "application_id": app_obj.id if app_obj else None,
             "job_title": app_obj.job.title if app_obj and app_obj.job else None,
@@ -1710,24 +1816,39 @@ def get_ingested_emails(
             "is_duplicate": is_duplicate
         })
 
-    # BUG-G Fix: Compute stats inline from the results we already have in memory
-    # instead of calling get_ingested_emails_stats() which runs a second full table scan.
-    total_ingested = db.query(AttachmentResume).count()
-    auto_mapped_count = sum(1 for r in results if r["application_id"] is not None)
-    
-    logger.debug(f"📊 Stats (partial - from filtered results): Total={total_ingested}, Auto-Mapped={auto_mapped_count}")
-    
-    # Stats must reflect ALL records, not just the filtered/searched subset
-    all_items_for_stats = results if not search else db.query(AttachmentResume).all()
-    if search:
-        # For search results, global stats still need full counts — use pre-built sets
-        all_results_app_found = [
-            (i, _resolve_resume_mapping(i, db, app_paths_set, app_emails_no_path_set, app_emails_job_set))
-            for i in all_items_for_stats
-        ]
-        auto_mapped_global = sum(1 for (i, (af, ip)) in all_results_app_found if af)
+    # Stats scoping
+    if current_user.role not in ["super_admin", "admin"]:
+        if search:
+            # Stats reflect all items the user is authorized to see (without search)
+            all_db_items = db.query(AttachmentResume).order_by(AttachmentResume.id.desc()).all()
+            all_visible_items = []
+            for item in all_db_items:
+                is_visible, is_mapped = _is_email_visible_to_user(
+                    item, current_user, db,
+                    hr_app_paths, hr_app_emails_no_path, hr_app_emails_job,
+                    global_app_paths, global_app_emails_no_path, global_app_emails_job,
+                    hr_job_ids
+                )
+                if is_visible:
+                    all_visible_items.append((item, is_mapped))
+        else:
+            all_visible_items = visible_items_with_mapping
+
+        total_ingested = len(all_visible_items)
+        auto_mapped_global = sum(1 for (item, is_mapped) in all_visible_items if is_mapped)
     else:
-        auto_mapped_global = auto_mapped_count
+        total_ingested = db.query(AttachmentResume).count()
+        auto_mapped_count = sum(1 for r in results if r["application_id"] is not None)
+        
+        if search:
+            all_items_for_stats = db.query(AttachmentResume).all()
+            all_results_app_found = [
+                (i, _resolve_resume_mapping(i, db, global_app_paths, global_app_emails_no_path, global_app_emails_job))
+                for i in all_items_for_stats
+            ]
+            auto_mapped_global = sum(1 for (i, (af, ip)) in all_results_app_found if af)
+        else:
+            auto_mapped_global = auto_mapped_count
 
     # Python-level filter to match UI's status filter accurately
     if processed is not None:
@@ -1764,13 +1885,14 @@ async def assign_ingested_email(
     resume_id: int,
     req: AssignResumeRequest,
     background_tasks: BackgroundTasks,
-    # BUG-014 Fix: Only super_admin can assign ingested resumes to prevent IDOR
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
     """
     Manually assign an unmapped email resume to a specific job (HR only)
     """
+    import re
+    from sqlalchemy import or_
     resume = db.query(AttachmentResume).filter(AttachmentResume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Ingested resume not found")
@@ -1781,10 +1903,63 @@ async def assign_ingested_email(
             status_code=400,
             detail="This email has no resume attachment. Only emails with attached resumes (PDF/DOCX) can be assigned to a job."
         )
+
+    # Check if the current user has access to the resume (standard HR visibility check to prevent IDOR)
+    if current_user.role not in ["super_admin", "admin"]:
+        # 1. Check if the resume was fetched by this HR manager
+        if resume.hr_id != current_user.id:
+            # 2. Check if the resume is already mapped to one of this HR manager's jobs or applications
+            path_id = _extract_storage_path_identifier(resume.file_url) if resume.file_url else None
+            sender_str = resume.sender_email or ""
+            match_email = re.search(r'<([^>]+)>', sender_str)
+            raw_email = match_email.group(1).lower().strip() if match_email else sender_str.lower().strip()
+            
+            is_mapped_to_hr = False
+            if path_id:
+                is_mapped_to_hr = db.query(Application).outerjoin(Job).filter(
+                    (Job.hr_id == current_user.id) | (Application.hr_id == current_user.id),
+                    (Application.resume_file_path == path_id) | (Application.resume_file_path.like(f"%{path_id}%"))
+                ).count() > 0
+            if not is_mapped_to_hr and raw_email:
+                is_mapped_to_hr = db.query(Application).outerjoin(Job).filter(
+                    (Job.hr_id == current_user.id) | (Application.hr_id == current_user.id),
+                    func.trim(func.lower(Application.candidate_email)) == raw_email,
+                    or_(Application.resume_file_path == None, Application.resume_file_path == "")
+                ).count() > 0
+            
+            # 3. Check if the resume is mapped globally to someone else
+            is_mapped_globally = False
+            if not is_mapped_to_hr:
+                if path_id:
+                    is_mapped_globally = db.query(Application).filter(
+                        (Application.resume_file_path == path_id) | (Application.resume_file_path.like(f"%{path_id}%"))
+                    ).count() > 0
+                if not is_mapped_globally and raw_email:
+                    is_mapped_globally = db.query(Application).filter(
+                        func.trim(func.lower(Application.candidate_email)) == raw_email,
+                        or_(Application.resume_file_path == None, Application.resume_file_path == "")
+                    ).count() > 0
+
+            # 4. Check if it targets this HR user's job code
+            is_target_job_owned = False
+            if not is_mapped_to_hr and not is_mapped_globally:
+                target_job_id = _get_target_job_id_from_subject(resume.subject, db)
+                if target_job_id:
+                    is_target_job_owned = db.query(Job).filter(
+                        Job.id == target_job_id,
+                        Job.hr_id == current_user.id
+                    ).count() > 0
+
+            if not is_mapped_to_hr and not is_target_job_owned:
+                raise HTTPException(status_code=403, detail="Forbidden: You do not have access to this ingested email")
         
     job = db.query(Job).filter(Job.id == req.job_id, Job.status == 'open').first()
     if not job:
         raise HTTPException(status_code=404, detail="Target open job not found")
+
+    # Validate target job ownership for standard HR managers to prevent IDOR
+    if current_user.role not in ["super_admin", "admin"] and job.hr_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this job")
         
     # ── Resolve candidate details ──────────────────────────────────
     sender_str = resume.sender_email or ""
@@ -1838,7 +2013,6 @@ async def assign_ingested_email(
             candidate_phone_hash = compute_phone_hash(norm_p)
 
     # ── Duplicate check ────────────────────────────────────────────
-    from sqlalchemy import or_
     filters = []
     if raw_email:
         filters.append(Application.candidate_email.ilike(raw_email))

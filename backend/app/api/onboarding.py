@@ -277,7 +277,8 @@ def get_onboarding_candidates(
     candidates = query.options(
         joinedload(Application.job),
         joinedload(Application.hr),
-        joinedload(Application.onboarding)
+        joinedload(Application.onboarding),
+        joinedload(Application.offer)
     ).all()
     
     items = []
@@ -295,6 +296,12 @@ def get_onboarding_candidates(
             "assigned_hr_id": c.hr_id,
             "assigned_hr_name": c.hr.full_name if c.hr else "Unknown",
             "job_title": c.job.title if c.job else "Unknown Role",
+            "offer_sent": c.offer_sent,
+            "offer_response_status": c.offer_response_status,
+            "offer_email_status": c.offer_email_status,
+            "offer_token_expiry": c.offer_token_expiry.isoformat() if c.offer_token_expiry else None,
+            "candidate_photo_path": c.candidate_photo_path,
+            "onboarding_approval_status": c.offer_approval_status,
         })
         
     return {"items": items, "total": total}

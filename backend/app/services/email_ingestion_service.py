@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from app.domain.models import AttachmentResume, Application, Job
 from app.core.config import get_settings
 import logging
+import requests
 import re
 
 
@@ -241,23 +242,17 @@ _KEYWORDS_PATTERN = _KEYWORDS_PATTERN.replace("cover\\ letter", "cover\\s+letter
 _JOB_KEYWORDS_RE = re.compile(rf'\b({_KEYWORDS_PATTERN})s?\b', re.IGNORECASE)
 
 
-def _is_job_related_email(sender: str, subject: str, job_titles: list = None) -> bool:
+def _is_job_related_email(sender: str, subject: str, allowed_jobs: list = None) -> bool:
     """
-    Return True ONLY for emails that look like genuine job applications.
-
-    An email is accepted when:
-      - Its subject contains an explicit JOB-XXXXX code, OR
-      - Its subject contains a job/resume keyword, OR
-      - Its subject matches an actual open job title from the database
-        (60% word-overlap threshold).
-
-    Automated bounce / marketing / system emails are always rejected.
+    Return True ONLY for emails that look like genuine job applications matching an open job.
+    An email is accepted ONLY when BOTH the Job ID and Job Title of the target job
+    are present in the subject.
     """
     subject_lower = (subject or "").lower().strip()
     sender_lower  = (sender  or "").lower().strip()
+    subject_upper = (subject or "").upper().strip()
 
     # 1. Hard reject: automated bounce / system senders
-    # The "From" field may be either "Mailer-Daemon <...>" or "postmaster@..."
     for blocked in _BLOCKED_SENDER_DOMAINS:
         if blocked in sender_lower:
             logger.debug(f"🚫 Skipping non-job email — blocked sender domain '{blocked}': {sender!r}")
@@ -279,41 +274,43 @@ def _is_job_related_email(sender: str, subject: str, job_titles: list = None) ->
             logger.debug(f"🚫 Skipping non-job email — automated subject prefix '{prefix}': {subject!r}")
             return False
 
-    # 3. Accept: explicit JOB-XXXXX code in subject
-    if subject and _JOB_CODE_RE.search(subject):
-        return True
-
-    # 4. Accept: job/resume keyword in subject
-    if _JOB_KEYWORDS_RE.search(subject_lower):
-        return True
-
-    # 5. Accept: subject matches an actual open job title from the database
-    #    Uses 60% word-overlap threshold to handle partial matches like
-    #    "Applying for Python Dev" matching job title "Python Developer"
-    if job_titles:
+    # 3. Match against allowed jobs (must have both Job ID and Job Title matching)
+    if allowed_jobs:
         subject_words = set(subject_lower.split())
-        # Remove common filler words from subject for better matching
         filler_words = {"for", "the", "a", "an", "to", "in", "at", "of", "and", "or",
                         "my", "i", "am", "is", "re", "fwd", "fw", "regarding", "apply",
                         "applying", "application", "interested", "-", "–", ":"}
         subject_content_words = subject_words - filler_words
 
-        for title in job_titles:
-            title_words = set(title.lower().split())
-            if not title_words:
+        for job_id, title in allowed_jobs:
+            code = (job_id or "").upper().strip()
+            if not code or code not in subject_upper:
                 continue
-            # Count how many words from the job title appear in the subject
-            match_count = len(title_words & subject_content_words)
-            match_pct = match_count / len(title_words)
-            if match_pct >= 0.6:
-                logger.info(f"✅ Email subject matches open job title '{title}' ({match_pct:.0%} overlap)")
+
+            # Check title (substring or 60% overlap)
+            title_lower = (title or "").lower().strip()
+            if not title_lower:
+                continue
+
+            title_match = False
+            if title_lower in subject_lower:
+                title_match = True
+            else:
+                title_words = set(title_lower.split())
+                if title_words:
+                    match_count = len(title_words & subject_content_words)
+                    match_pct = match_count / len(title_words)
+                    if match_pct >= 0.6:
+                        title_match = True
+
+            if title_match:
+                logger.info(f"✅ Email subject matched job '{code}' ('{title}') — both Job ID and Title are present.")
                 return True
 
-    # 6. Reject everything else (newsletters, promotions, unrelated personal mail)
-    logger.debug(f"🚫 Skipping non-job email — no job keywords or title match in subject: {subject!r}")
+    logger.debug(f"🚫 Skipping email — does not contain both Job ID and Job Title of an open job: {subject!r}")
     return False
 
-def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
+def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str, hr_id: int = None):
     """
     Connect to IMAP, fetch emails, extract attachments (PDFs/Docx), 
     and store them into the AttachmentResume table with comprehensive error handling.
@@ -342,30 +339,32 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
             return {"success": False, "error": f"Could not access inbox. Status: {status}"}
         
         # ── Checkpoint-based IMAP search ──────────────────────────────────
-        # Instead of fetching the last N emails, we maintain a checkpoint
-        # (`last_email_sync_at` in GlobalSettings). On each sync we fetch:
-        #   1. All UNSEEN emails (always, to catch newly arrived unread mail)
-        #   2. All emails received SINCE the last checkpoint date
-        # On first-ever sync (no checkpoint), we use today's date.
-        # After a successful sync, the checkpoint is updated to now.
-        # The database's Message-ID unique constraint prevents duplicates.
-        from app.domain.models import GlobalSettings as GS
         from app.infrastructure.database import SessionLocal
 
         since_date_str = None
         with SessionLocal() as local_db:
-            checkpoint_row = local_db.query(GS).filter(GS.key == "last_email_sync_at").first()
-            if checkpoint_row and checkpoint_row.value:
-                try:
-                    last_sync_dt = datetime.fromisoformat(checkpoint_row.value)
-                    since_date_str = last_sync_dt.strftime("%d-%b-%Y")  # IMAP date format
-                    logger.info(f"📌 Checkpoint found: last sync was {checkpoint_row.value} → SINCE {since_date_str}")
-                except Exception:
-                    since_date_str = datetime.utcnow().strftime("%d-%b-%Y")
-                    logger.warning(f"⚠️  Could not parse checkpoint '{checkpoint_row.value}'. Using today: {since_date_str}")
+            # Query the date of the last synced email for this user
+            last_email = local_db.query(AttachmentResume).filter(
+                AttachmentResume.hr_id == hr_id
+            ).order_by(AttachmentResume.received_at.desc()).first() if hr_id else None
+            
+            if last_email and last_email.received_at:
+                since_date_str = last_email.received_at.strftime("%d-%b-%Y")
+                logger.info(f"📌 Checkpoint found: last sync email date was {last_email.received_at} → SINCE {since_date_str}")
             else:
-                since_date_str = datetime.utcnow().strftime("%d-%b-%Y")
-                logger.info(f"📌 No checkpoint found (first sync). Using today: {since_date_str}")
+                # Fall back to checking global settings if hr_id is None
+                from app.domain.models import GlobalSettings as GS
+                checkpoint_row = local_db.query(GS).filter(GS.key == "last_email_sync_at").first() if not hr_id else None
+                if checkpoint_row and checkpoint_row.value:
+                    try:
+                        last_sync_dt = datetime.fromisoformat(checkpoint_row.value)
+                        since_date_str = last_sync_dt.strftime("%d-%b-%Y")
+                        logger.info(f"📌 Global checkpoint found: last sync was {checkpoint_row.value} → SINCE {since_date_str}")
+                    except Exception:
+                        since_date_str = datetime.utcnow().strftime("%d-%b-%Y")
+                else:
+                    since_date_str = datetime.utcnow().strftime("%d-%b-%Y")
+                    logger.info(f"📌 No checkpoint found. Using today: {since_date_str}")
 
         # 1. Fetch UNSEEN emails
         status, unseen_messages = mail.search(None, 'UNSEEN')
@@ -401,11 +400,15 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
         error_count = 0
         processed_count = 0
 
-        # Pre-fetch open job titles for job-relevance matching
-        # This allows emails whose subject mentions an actual job title to be accepted
+        # Pre-fetch open jobs for this HR user (or all if hr_id is None) to isolate sync scoping
         with SessionLocal() as local_db:
-            open_job_titles = [j.title for j in local_db.query(Job.title).filter(Job.status == 'open').all() if j.title]
-        logger.info(f"📋 Loaded {len(open_job_titles)} open job titles for subject matching: {open_job_titles}")
+            query = local_db.query(Job).filter(Job.status == 'open')
+            if hr_id is not None:
+                query = query.filter(Job.hr_id == hr_id)
+            hr_jobs = query.all()
+            allowed_jobs = [(j.job_id, j.title) for j in hr_jobs if j.job_id and j.title]
+
+        logger.info(f"📋 Loaded {len(allowed_jobs)} open jobs for relevance filtering: {allowed_jobs}")
         
         logger.info(f"📧 Processing {len(email_ids)} email(s) for resume attachments...")
         
@@ -437,10 +440,8 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                     logger.warning(f"Could not extract valid email from: {sender}")
                     continue
 
-                # --- Job-relevance filter ---
-                # Only ingest emails that look like genuine job applications.
-                # Bounce notifications, marketing emails, OOO replies, etc. are skipped.
-                if not _is_job_related_email(sender, subject, job_titles=open_job_titles):
+                # --- Job-relevance filter (must contain both Job ID and Job Title) ---
+                if not _is_job_related_email(sender, subject, allowed_jobs=allowed_jobs):
                     logger.info(f"⏭️  Skipping non-job-related email from {raw_email}: {subject!r}")
                     continue
                 
@@ -475,9 +476,6 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                     
                     # Secondary duplicate check - more specific composite key
                     if not existing and subject and raw_email:
-                        # Include Message-ID in the search if it exists, or check for exact received_at timestamp
-                        # to allow multiple emails from the same sender with same subject on the same day
-                        # (e.g. if they sent multiple versions or applied for multiple roles)
                         existing = local_db.query(AttachmentResume).filter(
                             AttachmentResume.subject == subject,
                             AttachmentResume.sender_email.ilike(f"%{raw_email}%"),
@@ -504,8 +502,6 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                         
                         # Decode email body
                         email_body = _decode_email_body(msg_obj)
-                        # BUG-003 Fix: Truncate email body to 2000 chars to prevent PII accumulation.
-                        # Only the subject line is needed for job code matching.
                         email_body = email_body[:2000] if email_body else ""
 
                         # Extract and process attachments
@@ -517,39 +513,31 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                 content_disposition = str(part.get("Content-Disposition", ""))
                                 
                                 if content_disposition and ("attachment" in content_disposition or "inline" in content_disposition):
-                                    # Extract filename
                                     filename = part.get_filename()
                                     if not filename:
-                                        # Try Content-Type name parameter
                                         filename = part.get_param('name')
                                     
                                     if filename:
                                         filename = _decode_filename(filename)
                                         
                                         if not filename:
-                                            # Generate fallback filename
                                             ext = mimetypes.guess_extension(content_type) or '.bin'
                                             filename = f"resume_{int(time.time())}{ext}"
                                             logger.warning(f"Generated fallback filename: {filename}")
                                         
-                                        # Check if it's a resume
                                         is_resume = filename.lower().endswith((".pdf", ".doc", ".docx"))
                                         if not is_resume:
                                             continue
                                         
-                                        # Get file data
                                         file_data = part.get_payload(decode=True)
                                         if not file_data or len(file_data) == 0:
                                             logger.warning(f"Empty attachment data for {filename} from {raw_email}")
                                             continue
                                         
-                                        # Check file size (10MB limit)
                                         if len(file_data) > 10 * 1024 * 1024:
                                             logger.warning(f"Attachment {filename} exceeds 10MB limit ({len(file_data)} bytes)")
                                             continue
                                         
-                                        # BUG-018 Fix: Validate magic bytes before accepting attachment.
-                                        # This prevents storing HTML/JS files renamed to .pdf/.doc.
                                         ext_lower = filename.lower()
                                         magic_valid = True
                                         if ext_lower.endswith(".pdf") and not file_data.startswith(b"%PDF"):
@@ -563,12 +551,10 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                             magic_valid = False
                                         if not magic_valid:
                                             continue
-
-                                        # Infer MIME type if missing
+ 
                                         if not content_type or content_type == 'application/octet-stream':
                                             content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
                                         
-                                        # Save to Supabase Storage Bucket with retry and random suffix collision avoidance
                                         from app.core.storage import upload_file, get_signed_url, delete_file
                                         
                                         safe_sender = raw_email.split("@")[0].replace(".", "_")
@@ -576,10 +562,8 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                         random_suffix = str(uuid.uuid4())[:6]
                                         storage_path = f"ingested/{safe_sender}_{int(time.time())}_{random_suffix}_{safe_filename}"
                                         
-                                        # Try upload with retry
                                         upload_res = upload_file('MAIL_ATTACHMENTS', storage_path, file_data, content_type)
                                         if not upload_res:
-                                            logger.warning(f"First upload attempt failed. Retrying...")
                                             time.sleep(2)
                                             upload_res = upload_file('MAIL_ATTACHMENTS', storage_path, file_data, content_type)
                                         
@@ -587,17 +571,12 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                             logger.error(f"Failed to upload {filename} after retry. Skipping.")
                                             continue
                                         
-                                        # BUG-019 Fix: Use signed URLs (expiring) instead of public URLs.
-                                        # This prevents unauthenticated access to candidate resumes.
-                                        # Get signed URL with retry
                                         file_url = get_signed_url('MAIL_ATTACHMENTS', storage_path, expires_in=86400)
                                         if not file_url:
-                                            logger.warning(f"First get_signed_url attempt failed. Retrying...")
                                             time.sleep(2)
                                             file_url = get_signed_url('MAIL_ATTACHMENTS', storage_path, expires_in=86400)
                                         
                                         if not file_url:
-                                            # BUG-006 Fix: Delete orphaned file when URL fetch fails.
                                             if upload_res:
                                                 try:
                                                     delete_file('MAIL_ATTACHMENTS', storage_path)
@@ -608,7 +587,6 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                             continue
                                         
                                         # Create database record
-                                        # SECURITY: Store sanitized filename to prevent path traversal
                                         new_resume = AttachmentResume(
                                             message_id=msg_id,
                                             sender_email=sender,
@@ -620,7 +598,8 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                             mime_type=content_type,
                                             received_at=received_at,
                                             retry_count=0,
-                                            last_error=None
+                                            last_error=None,
+                                            hr_id=hr_id
                                         )
                                         with SessionLocal() as local_db:
                                             existing_check = local_db.query(AttachmentResume).filter(
@@ -651,7 +630,8 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                                 processed=True,  # Mark processed since there is no attachment to parse/map
                                 mapping_failed=True,
                                 retry_count=0,
-                                last_error="No resume attachment found in email."
+                                last_error="No resume attachment found in email.",
+                                hr_id=hr_id
                             )
                             with SessionLocal() as local_db:
                                 existing_check = local_db.query(AttachmentResume).filter(
@@ -667,28 +647,27 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
                 logger.error(f"Error processing email {email_id.decode() if isinstance(email_id, bytes) else email_id}: {e}", exc_info=True)
                 error_count += 1
 
-        # BUG-003 Fix: Comprehensive summary logging
         logger.info(f"   • UNSEEN: {len(unseen_ids)}, SINCE {since_date_str}: {len(since_ids)}")
         logger.info(f"   • Processed: {len(email_ids)}")
         logger.info(f"   • ✅ Saved: {saved_count}")
         logger.info(f"   • ⏭️  Duplicates: {duplicate_count}")
         logger.info(f"   • ❌ Errors: {error_count}")
 
-        # ── Save checkpoint ───────────────────────────────────────────────
-        # Update (or create) the last_email_sync_at checkpoint so the next
-        # sync only fetches emails from this moment forward.
-        sync_now = datetime.utcnow().isoformat()
-        try:
-            with SessionLocal() as local_db:
-                checkpoint_row = local_db.query(GS).filter(GS.key == "last_email_sync_at").first()
-                if checkpoint_row:
-                    checkpoint_row.value = sync_now
-                else:
-                    local_db.add(GS(key="last_email_sync_at", value=sync_now))
-                local_db.commit()
-            logger.info(f"📌 Checkpoint updated: last_email_sync_at = {sync_now}")
-        except Exception as ckpt_err:
-            logger.warning(f"⚠️  Failed to save sync checkpoint: {ckpt_err}")
+        # ── Save global checkpoint only if hr_id is None ────────────────
+        if hr_id is None:
+            sync_now = datetime.utcnow().isoformat()
+            try:
+                with SessionLocal() as local_db:
+                    from app.domain.models import GlobalSettings as GS
+                    checkpoint_row = local_db.query(GS).filter(GS.key == "last_email_sync_at").first()
+                    if checkpoint_row:
+                        checkpoint_row.value = sync_now
+                    else:
+                        local_db.add(GS(key="last_email_sync_at", value=sync_now))
+                    local_db.commit()
+                logger.info(f"📌 Global checkpoint updated: last_email_sync_at = {sync_now}")
+            except Exception as ckpt_err:
+                logger.warning(f"⚠️  Failed to save global sync checkpoint: {ckpt_err}")
         
         mail.close()
         mail.logout()
@@ -711,7 +690,7 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str):
         return {"success": False, "error": "Mailbox sync failed. Please verify your IMAP credentials and try again."}
 
 
-async def run_batch_resume_processing(db: Session = None):
+async def run_batch_resume_processing(db: Session = None, hr_id: int = None):
     """
     Finds all unprocessed resumes from the email ingestion database,
     automatically creates target Job Applications for them, and triggers the AI analysis pipeline.
@@ -722,16 +701,22 @@ async def run_batch_resume_processing(db: Session = None):
     
     # 1. Fetch the IDs of unprocessed resumes first using a short-lived session
     with SessionLocal() as init_db:
-        unprocessed_ids = [r.id for r in init_db.query(AttachmentResume.id).filter(
+        query = init_db.query(AttachmentResume.id).filter(
             AttachmentResume.processed == False
-        ).order_by(AttachmentResume.id.asc()).limit(30).all()]
+        )
+        if hr_id is not None:
+            query = query.filter(AttachmentResume.hr_id == hr_id)
+        unprocessed_ids = [r.id for r in query.order_by(AttachmentResume.id.asc()).limit(30).all()]
         
     if not unprocessed_ids:
         return {"message": "No new resumes to process.", "count": 0}
         
     # 2. Fetch open jobs data using a short-lived session
     with SessionLocal() as jobs_db:
-        open_jobs = jobs_db.query(Job).filter(Job.status == 'open').all()
+        query = jobs_db.query(Job).filter(Job.status == 'open')
+        if hr_id is not None:
+            query = query.filter(Job.hr_id == hr_id)
+        open_jobs = query.all()
         if not open_jobs:
             logger.warning("No open jobs available to assign incoming emailed resumes to.")
             return {"message": "No open jobs to map resumes.", "count": 0}

@@ -43,6 +43,10 @@ class User(Base):
     updated_at = Column(DateTime, default=get_ist_now, server_default=func.now(), onupdate=get_ist_now)
     password_changed_at = Column(DateTime, nullable=True)
 
+    imap_email = Column(String(255), nullable=True)
+    imap_password = Column(EncryptedText, nullable=True)
+    auto_sync_enabled = Column(Boolean, default=False)
+
     # Relationships
     jobs = relationship("Job", back_populates="hr")
     hiring_decisions = relationship("HiringDecision", back_populates="hr")
@@ -860,4 +864,7 @@ class AttachmentResume(Base):
     mapping_failed = Column(Boolean, default=False, server_default="false")
     retry_count = Column(Integer, default=0)
     last_error = Column(Text, nullable=True) # Store error messages for debugging
+    hr_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True)
+    
+    hr = relationship("User", foreign_keys=[hr_id])
 

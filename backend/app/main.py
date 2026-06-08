@@ -286,28 +286,36 @@ async def _imap_polling_loop():
             except Exception as sweep_err:
                 logger.error(f"Failed to run stuck applications recovery sweep: {sweep_err}")
 
-            # Fetch global settings from DB
-            settings_records = db.query(GlobalSettings).all()
-            settings_dict = {s.key: s.value for s in settings_records}
+            # Fetch all users with auto_sync_enabled == True
+            from app.domain.models import User
+            users_with_sync = db.query(User).filter(User.auto_sync_enabled == True).all()
+            
+            # Keep list of sync parameters to process after closing primary db session
+            sync_targets = []
+            for u in users_with_sync:
+                if u.imap_email and u.imap_password:
+                    sync_targets.append({
+                        "id": u.id,
+                        "email": u.imap_email,
+                        "password_enc": u.imap_password
+                    })
 
             # Close the primary DB session to release its connection back to the pool
             db.close()
             db = None
 
-            auto_sync_enabled = settings_dict.get("auto_sync_enabled", "false").lower() == "true"
-
-            if auto_sync_enabled:
-                imap_email = settings_dict.get("imap_email") or settings.imap_email or ''
-                raw_pass = settings_dict.get("imap_password") or settings.imap_password or ''
-                imap_password = decrypt_field(raw_pass).strip()
-
-                if imap_email and imap_password:
-                    fetch_resume_attachments(None, imap_email, imap_password)
-                else:
-                    logger.info("IMAP auto-sync skipped: IMAP credentials are not configured.")
-
+            if sync_targets:
                 from app.services.email_ingestion_service import run_batch_resume_processing
-                await run_batch_resume_processing(None)
+                for target in sync_targets:
+                    try:
+                        imap_password = decrypt_field(target["password_enc"]).strip()
+                        logger.info(f"Running auto-sync for user ID {target['id']} ({target['email']})")
+                        fetch_resume_attachments(None, target["email"], imap_password, hr_id=target["id"])
+                        await run_batch_resume_processing(None, hr_id=target["id"])
+                    except Exception as sync_err:
+                        logger.error(f"Auto-sync failed for user {target['id']}: {sync_err}")
+            else:
+                logger.debug("No users have auto-sync enabled.")
             
             # Record success timestamp and reset circuit breaker
             app.state.imap_last_success = time.time()
@@ -575,12 +583,17 @@ app.include_router(repository.router)
 @app.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: FastAPIRequest, exc: RequestValidationError):
     errs = exc.errors()
+    errors_list = []
+    for e in errs:
+        loc = e.get('loc', [])
+        field_name = loc[-1] if loc else "payload"
+        errors_list.append(f"{field_name}: {e['msg']}")
     response = JSONResponse(
         status_code=422,
         content={
             "success": False,
             "data": None,
-            "error": "Validation failed: " + "; ".join([f"{e['loc'][-1]}: {e['msg']}" for e in errs])
+            "error": "Validation failed: " + "; ".join(errors_list)
         }
     )
     origin = request.headers.get("origin")

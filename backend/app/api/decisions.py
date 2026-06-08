@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timezone
 from typing import Optional
@@ -310,9 +311,8 @@ def get_hiring_pipeline(
         query = query.filter(Application.status == status_filter)
 
     # Apply visibility isolation: Anyone not a super_admin is restricted to their own data
-    # (Disabled: standard HR sees all applications on the pipeline board by default)
-    # if current_user.role.lower() != "super_admin":
-    #     query = query.filter(Application.hr_id == current_user.id)
+    if current_user.role.lower() not in ["super_admin", "admin"]:
+        query = query.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
     
     total = query.count()
     applications = query.all()

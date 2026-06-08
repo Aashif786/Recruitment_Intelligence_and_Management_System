@@ -103,7 +103,7 @@ export default function IngestedEmailsPage() {
     // Load current settings on mount — use /sensitive endpoint so we get real IMAP values
     useEffect(() => {
         const loadSettings = async () => {
-            if (user?.role !== 'super_admin') return
+            if (!user) return
             try {
                 // BUG-A Fix: Must call /sensitive to get actual imap_email, imap_configured,
                 // and auto_sync_enabled. The public GET /api/settings strips all these fields.
@@ -360,16 +360,14 @@ export default function IngestedEmailsPage() {
                         </Badge>
                     )}
                     <div className="flex gap-3">
-                        {user?.role === 'super_admin' && (
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowCredentials(!showCredentials)}
-                                className={`gap-2 border-border shadow-sm rounded-xl h-11 active:scale-[0.98] transition-all duration-200 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
-                            >
-                                <Settings className="h-4 w-4" />
-                                Configure Mailbox
-                            </Button>
-                        )}
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowCredentials(!showCredentials)}
+                            className={`gap-2 border-border shadow-sm rounded-xl h-11 active:scale-[0.98] transition-all duration-200 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
+                        >
+                            <Settings className="h-4 w-4" />
+                            Configure Mailbox
+                        </Button>
                         <Button
                             onClick={handleSync}
                             disabled={isSyncing}
@@ -387,7 +385,7 @@ export default function IngestedEmailsPage() {
             </PageHeader>
 
             {/* Credentials Card */}
-            {showCredentials && user?.role === 'super_admin' && (
+            {showCredentials && (
                 <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-6">
                         <div className="flex items-center justify-between">
@@ -685,13 +683,12 @@ export default function IngestedEmailsPage() {
                                                 ) : (
                                                     // SEC-1 Fix: Backend /assign requires super_admin.
                                                     // Hide button for regular HR to avoid confusing 403 errors.
-                                                    // FIX: Cannot assign to job without a resume attachment.
                                                     !item.file_url ? (
                                                         <Badge className="bg-rose-50 text-rose-400 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/25 text-[10px] font-semibold px-2 py-0.5 flex items-center gap-1 w-max">
                                                             <AlertTriangle className="h-3 w-3" />
                                                             No Resume
                                                         </Badge>
-                                                    ) : user?.role === 'super_admin' ? (
+                                                    ) : (user?.role === 'super_admin' || user?.role === 'hr') ? (
                                                         <Button
                                                             size="sm"
                                                             variant="outline"

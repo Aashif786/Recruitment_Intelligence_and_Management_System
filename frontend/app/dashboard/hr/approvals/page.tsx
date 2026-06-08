@@ -280,6 +280,17 @@ export default function ApprovalsPage() {
                             Deactivate
                           </Button>
                         )}
+                        {status === 'approved' && !hrUser.is_active && (
+                          <Button
+                            size="sm"
+                            className="h-8 text-xs font-bold shadow-sm shadow-primary/20 rounded-lg active:scale-[0.99] transition-all duration-200"
+                            disabled={processingId === hrUser.id}
+                            onClick={() => handleApprove(hrUser.id)}
+                          >
+                            <Check className="mr-1.5 h-3.5 w-3.5" />
+                            Reactivate
+                          </Button>
+                        )}
                         {status === 'rejected' && (
                           <span className="text-xs text-muted-foreground italic">No actions available</span>
                         )}

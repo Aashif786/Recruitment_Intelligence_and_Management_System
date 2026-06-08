@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case, or_
+from sqlalchemy import func, case, or_, and_
 from app.domain.models import Job, Application, Interview, Offer
 from typing import Dict, Any, List
 
@@ -48,7 +48,7 @@ class AnalyticsService:
             metrics_query = db.query(
                 func.count(Application.id).label("total_apps"),
                 func.count(case((Application.status.in_(['accepted', 'hired', 'onboarded']), Application.id))).label("hired_apps"),
-                func.count(case((Offer.offer_sent == True, Application.id))).label("offered_apps"),
+                func.count(case((and_(Offer.offer_sent == True, Application.status.in_(['hired', 'pending_approval', 'offer_sent', 'accepted', 'onboarded'])), Application.id))).label("offered_apps"),
                 func.count(case((Application.status.in_(['accepted', 'hired', 'onboarded', 'rejected']), Application.id))).label("closed_apps"),
                 func.avg(case((Application.composite_score > 0, Application.composite_score))).label("avg_score")
             ).outerjoin(Offer, Application.id == Offer.application_id)

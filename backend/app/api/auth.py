@@ -72,7 +72,7 @@ def register(request: Request, user_data: UserRegister, background_tasks: Backgr
 
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
-        if existing_user.approval_status == "approved":
+        if existing_user.approval_status == "approved" and existing_user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="An approved account already exists for this email."
@@ -82,7 +82,7 @@ def register(request: Request, user_data: UserRegister, background_tasks: Backgr
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="This email has been rejected and cannot be registered again."
             )
-        if existing_user.is_verified:
+        if existing_user.approval_status != "approved" and existing_user.is_verified:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="An approval request for this email is already pending Super Admin review."
@@ -294,6 +294,11 @@ def login(request: Request, response: Response, credentials: UserLogin, db: Sess
         )
     
     if user.role == "pending_hr" or user.approval_status != "approved" or not user.is_active:
+        if user.approval_status == "approved" and not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This account has been deactivated. Please contact your administrator."
+            )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is pending approval by the Super Admin."
@@ -346,7 +351,7 @@ def get_hr_requests(
     if status == "pending":
         query = query.filter(User.approval_status == "pending", User.is_verified == True)
     elif status == "approved":
-        query = query.filter(User.approval_status == "approved", User.is_active == True)
+        query = query.filter(User.approval_status == "approved")
     elif status == "rejected":
         query = query.filter(User.approval_status == "rejected")
     
