@@ -208,7 +208,7 @@ export const ReportFilters = React.memo(function ReportFilters({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+        <CardContent className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-premium">
 
           {/* Search */}
           <div className="grid w-full items-center gap-1.5">

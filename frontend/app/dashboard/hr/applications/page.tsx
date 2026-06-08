@@ -445,7 +445,7 @@ export default function HRApplicationsPage() {
             <div className="col-span-2">Skills Match</div>
             <div className="col-span-2">Scores</div>
             <div className="col-span-2 text-center">Status</div>
-            <div className="col-span-1 text-right ml-3">Actions</div>
+            <div className="col-span-1 xl:col-span-2 text-right">Actions</div>
           </div>
 
           <div className="bg-transparent divide-y divide-border/40">

@@ -159,7 +159,7 @@ export default function LeaderboardPage() {
                 </CardContent>
             </Card>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-border">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-border mx-4 mb-4">
                     <div className="text-sm text-muted-foreground font-medium">
                         Showing <span className="font-semibold text-foreground/80">{Math.min(pageSize, sortedRanked.length)}</span> of <span className="font-semibold text-foreground/80">{sortedRanked.length}</span> candidates
                     </div>

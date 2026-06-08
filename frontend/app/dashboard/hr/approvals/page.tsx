@@ -214,7 +214,7 @@ export default function ApprovalsPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Full Name</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right transform translate-x-[-70px]">Actions</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

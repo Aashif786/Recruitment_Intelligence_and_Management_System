@@ -15,10 +15,10 @@ import '@tensorflow/tfjs-backend-webgl';
 import * as blazeface from '@tensorflow-models/blazeface';
 import {
   Loader2, ShieldCheck, ShieldAlert,
-  UserCheck, Eye, BrainCircuit, CheckCircle2, Trophy, LogOut, CameraOff
+  UserCheck, Eye, BrainCircuit, CheckCircle2, Trophy, LogOut, CameraOff, AlertTriangle
 } from 'lucide-react';
 import InterviewSidebar from './InterviewSidebar';
-import { FeedbackDialog } from '@/components/interview-support';
+import { FeedbackDialog, IssueReportDialog } from '@/components/interview-support';
 
 interface InterviewSessionProps {
   sessionId: string;
@@ -158,6 +158,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   // ── completion/feedback state ──
   const [showAllDoneModal, setShowAllDoneModal] = useState(false);
   const [showFeedbackPanel, setShowFeedbackPanel] = useState(false);
+  const [showIssueDialog, setShowIssueDialog] = useState(false);
   const [finalScores, setFinalScores] = useState<Array<{question_number: number; question_type: string; score: number | null}>>([]);
 
   // ─── SECURITY VIOLATION ────────────────────────────────────────────────────
@@ -1337,6 +1338,14 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                 </div>
                 <Button
                   size="sm"
+                  onClick={() => setShowIssueDialog(true)}
+                  className="text-xs font-black uppercase tracking-widest bg-amber-500/10 hover:bg-amber-500 text-amber-600 hover:text-white border border-amber-500/30 hover:border-amber-500 rounded-xl px-4 py-2 transition-all duration-200 flex items-center gap-2 active:scale-[0.99] cursor-pointer"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Report Issue
+                </Button>
+                <Button
+                  size="sm"
                   onClick={handleEndSession}
                   className="text-xs font-black uppercase tracking-widest bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 hover:border-red-500 rounded-xl px-4 py-2 transition-all duration-200 flex items-center gap-2 active:scale-[0.99] cursor-pointer"
                 >
@@ -1448,6 +1457,12 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           </div>
         )}
       </div>
+
+      <IssueReportDialog
+        open={showIssueDialog}
+        onOpenChange={setShowIssueDialog}
+        interviewId={interviewId}
+      />
 
       {/* ── FULLSCREEN GATE OVERLAY ──────────────────────────────────────────────── */}
       {showFullscreenGate && (

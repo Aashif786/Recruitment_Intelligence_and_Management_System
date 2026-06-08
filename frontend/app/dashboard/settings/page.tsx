@@ -579,7 +579,7 @@ export default function SettingsPage() {
                         </div>
                         <Textarea 
                             id="offer_letter_template" 
-                            className="min-h-[250px] max-h-[500px] font-mono text-[11px] pt-8 leading-relaxed resize-y scrollbar-thin hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
+                            className="min-h-[250px] max-h-[500px] font-mono text-[11px] pt-8 leading-relaxed resize-y scrollbar-premium hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                             value={settings.offer_letter_template} 
                             onChange={(e) => setSettings({...settings, offer_letter_template: e.target.value})}
                             placeholder="<html>\n  <head>\n    <style>...</style>\n  </head>\n  <body>\n    <h1>Welcome {{candidate_name}}!</h1>\n  </body>\n</html>"

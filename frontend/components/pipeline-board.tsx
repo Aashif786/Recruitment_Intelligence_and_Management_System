@@ -242,7 +242,7 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
     }
 
     return (
-        <div className="flex h-full gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
+        <div className="flex h-full gap-4 overflow-x-auto pb-4 scrollbar-premium">
             {STATUS_COLUMNS.map((column, colIndex) => {
                 const colKey = Array.isArray(column.id) ? column.id.join("-") : column.id;
                 const colApps = getColumnApplications(column.id);
