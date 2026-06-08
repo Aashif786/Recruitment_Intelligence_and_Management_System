@@ -110,28 +110,31 @@ class AnalyticsService:
                 'ai_interview': 'Screened',         # hidden – roll into Screened bucket
                 'interview_completed': 'Interview completed',
                 'review_later': 'Interview completed',  # treated same as completed
-                'physical_interview': 'Physical',
-                'pending_approval': 'Hired',        # post-physical -> Hired bucket
-                'offer_sent': 'Hired',
+                'physical_interview': 'Physical Interview',
+                'pending_approval': 'Hired',   
+                'offer_sent': 'Offer Sent',
                 'accepted': 'Hired',
                 'hired': 'Hired',
-                'onboarded': 'Hired',
+                'onboarded': 'Onboarded',
                 'rejected': 'Rejected'
             }
             
             # Strict display order – exactly the 6 required stages
-            CHART_ORDER = [
+            CHART_ORDER = [ 
                 'Applied', 'Screened', 'Interview completed',
-                'Physical', 'Hired', 'Rejected'
+                'Physical Interview', 'Hired','Onboarded', 'Offer Sent','Rejected' 
             ]
             
-            # Initialize with 0s so all 6 bars always appear
+            # Initialize with 0s so all bars always appear
             counts = {name: 0 for name in CHART_ORDER}
             for stat, count in pipeline_results:
                 display_name = status_map.get(stat)
                 if display_name and display_name in counts:
                     counts[display_name] += count
                 # Statuses not in status_map are silently ignored
+                
+            # 'Hired' should also include the counts from 'Offer Sent' and 'Onboarded'
+            counts['Hired'] += counts['Offer Sent'] + counts['Onboarded']
             
             # Build the chart_data list – all 6 stages always included
             core_stages = list(CHART_ORDER)   # every stage is core
