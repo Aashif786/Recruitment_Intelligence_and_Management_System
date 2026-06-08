@@ -256,6 +256,9 @@ async def get_hr_offer_preview(
 
 @router.get("/candidates", response_model=None)
 def get_onboarding_candidates(
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    job_title: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_hr)
 ):
@@ -265,13 +268,30 @@ def get_onboarding_candidates(
     
     query = db.query(Application).filter(
         Application.status.in_(["hired", "pending_approval", "offer_sent", "accepted", "onboarded"])
-    ).order_by(Application.id.desc())
+    )
     
-    # Apply visibility isolation
-    if current_user.role.lower() in ["hr", "staff"]:
-        # Join Job to filter by ownership
+    if status and status != "all":
+        query = query.filter(Application.status == status)
+        
+    if search:
+        query = query.filter(
+            or_(
+                Application.candidate_name.ilike(f"%{search}%"),
+                Application.candidate_email.ilike(f"%{search}%")
+            )
+        )
+        
+    needs_job_join = (job_title and job_title != "all") or (current_user.role.lower() in ["hr", "staff"])
+    if needs_job_join:
         query = query.join(Application.job)
+        
+    if current_user.role.lower() in ["hr", "staff"]:
         query = query.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
+        
+    if job_title and job_title != "all":
+        query = query.filter(Job.title.ilike(f"%{job_title}%"))
+        
+    query = query.order_by(Application.id.desc())
     
     total = query.count()
     candidates = query.options(
