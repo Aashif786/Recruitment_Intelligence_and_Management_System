@@ -53,42 +53,39 @@ _TRANSITION_TABLE: Dict[Tuple[CandidateState, TransitionAction], CandidateState]
     (CandidateState.APPLIED, TransitionAction.MARK_SCREENED): CandidateState.SCREENED,
     (CandidateState.APPLIED, TransitionAction.REJECT): CandidateState.REJECTED,
 
-    # 2. screened -> interview/aptitude
-    (CandidateState.SCREENED, TransitionAction.APPROVE_FOR_INTERVIEW): CandidateState.INTERVIEW_SCHEDULED, # Dynamic resolution in code
+    # 2. screened -> interview_scheduled or rejected
+    (CandidateState.SCREENED, TransitionAction.APPROVE_FOR_INTERVIEW): CandidateState.INTERVIEW_SCHEDULED,
     (CandidateState.SCREENED, TransitionAction.REJECT): CandidateState.REJECTED,
 
-    # 3. aptitude/interview -> completed
-    (CandidateState.APTITUDE_ROUND, TransitionAction.SYSTEM_APTITUDE_COMPLETE): CandidateState.AI_INTERVIEW,
-    (CandidateState.AI_INTERVIEW, TransitionAction.SYSTEM_INTERVIEW_COMPLETE): CandidateState.INTERVIEW_COMPLETED,
+    # 3. interview_scheduled -> interview_completed (system action only)
+    (CandidateState.INTERVIEW_SCHEDULED, TransitionAction.SYSTEM_INTERVIEW_COMPLETE): CandidateState.INTERVIEW_COMPLETED,
     (CandidateState.INTERVIEW_SCHEDULED, TransitionAction.COMPLETE_INTERVIEW): CandidateState.INTERVIEW_COMPLETED,
-    (CandidateState.APTITUDE_ROUND, TransitionAction.REJECT): CandidateState.REJECTED,
-    (CandidateState.AI_INTERVIEW, TransitionAction.REJECT): CandidateState.REJECTED,
 
-    # 4. interview_completed -> hire/review/physical
+    # 4. interview_completed -> hire / physical_interview / review_later
+    #    NOTE: No reject from interview_completed per spec.
     (CandidateState.INTERVIEW_COMPLETED, TransitionAction.HIRE): CandidateState.HIRED,
     (CandidateState.INTERVIEW_COMPLETED, TransitionAction.REVIEW_LATER): CandidateState.REVIEW_LATER,
     (CandidateState.INTERVIEW_COMPLETED, TransitionAction.CALL_FOR_INTERVIEW): CandidateState.PHYSICAL_INTERVIEW,
-    (CandidateState.INTERVIEW_COMPLETED, TransitionAction.REJECT): CandidateState.REJECTED,
 
-    # 5. review_later -> interview/reject
+    # 5. review_later -> physical_interview / rejected
     (CandidateState.REVIEW_LATER, TransitionAction.CALL_FOR_INTERVIEW): CandidateState.PHYSICAL_INTERVIEW,
     (CandidateState.REVIEW_LATER, TransitionAction.REJECT): CandidateState.REJECTED,
 
-    # 6. physical_interview -> hire/reject
+    # 6. physical_interview -> hired / rejected
     (CandidateState.PHYSICAL_INTERVIEW, TransitionAction.HIRE): CandidateState.HIRED,
     (CandidateState.PHYSICAL_INTERVIEW, TransitionAction.REJECT): CandidateState.REJECTED,
 
-    # 7. hired -> pending_approval -> offer_sent
+    # 7. hired -> offer_sent (direct) or via pending_approval (legacy approval flow)
     (CandidateState.HIRED, TransitionAction.SEND_FOR_APPROVAL): CandidateState.PENDING_APPROVAL,
     (CandidateState.PENDING_APPROVAL, TransitionAction.SEND_OFFER): CandidateState.OFFER_SENT,
     (CandidateState.HIRED, TransitionAction.SEND_OFFER): CandidateState.OFFER_SENT,
     (CandidateState.PENDING_APPROVAL, TransitionAction.REJECT): CandidateState.REJECTED,
     (CandidateState.HIRED, TransitionAction.REJECT): CandidateState.REJECTED,
 
-    # 6. offer_sent -> accepted -> onboarded
+    # 8. offer_sent -> accepted -> onboarded  (candidate-driven)
     (CandidateState.OFFER_SENT, TransitionAction.ACCEPT_OFFER): CandidateState.ACCEPTED,
     (CandidateState.ACCEPTED, TransitionAction.SYSTEM_ONBOARD): CandidateState.ONBOARDED,
-    (CandidateState.OFFER_SENT, TransitionAction.REJECT): CandidateState.REJECTED,
+    (CandidateState.OFFER_SENT, TransitionAction.REJECT): CandidateState.REJECTED,   # offer declined
     (CandidateState.ACCEPTED, TransitionAction.REJECT): CandidateState.REJECTED,
 }
 
@@ -96,8 +93,6 @@ _TRANSITION_TABLE: Dict[Tuple[CandidateState, TransitionAction], CandidateState]
 EMAIL_TRIGGERS: Dict[Tuple[TransitionAction, CandidateState], str] = {
     (TransitionAction.SYSTEM_PARSING_COMPLETE, CandidateState.SCREENED): "screened",
     (TransitionAction.MARK_SCREENED, CandidateState.SCREENED): "screened",
-    (TransitionAction.APPROVE_FOR_INTERVIEW, CandidateState.APTITUDE_ROUND): "approved_for_interview",
-    (TransitionAction.APPROVE_FOR_INTERVIEW, CandidateState.AI_INTERVIEW): "approved_for_interview",
     (TransitionAction.APPROVE_FOR_INTERVIEW, CandidateState.INTERVIEW_SCHEDULED): "approved_for_interview",
     (TransitionAction.REJECT, CandidateState.REJECTED): "rejected",
     (TransitionAction.CALL_FOR_INTERVIEW, CandidateState.PHYSICAL_INTERVIEW): "call_for_interview",
@@ -131,17 +126,20 @@ class DuplicateTransitionError(Exception):
 STATE_DISPLAY_NAMES = {
     "applied": "Applied",
     "screened": "Screened",
-    "aptitude_round": "Aptitude Assessment",
-    "ai_interview": "AI Interview",
-    "interview_completed": "Interviews Completed",
-    "review_later": "Under Review",
+    "interview_scheduled": "Interview Scheduled",
+    "interview_completed": "Interview Completed",
+    "review_later": "Review Later",
+    "physical_interview": "Physical Interview",
     "hired": "Hired",
     "rejected": "Rejected",
-    "offer_sent": "Offer Letter Released",
-    "pending_approval": "Offer Staged for Approval",
+    # Onboarding sub-stages
+    "offer_sent": "Offer Sent",
+    "pending_approval": "Pending Approval",
     "accepted": "Offer Accepted",
     "onboarded": "Onboarded",
-    "physical_interview": "Physical Interview",
+    # Legacy / internal
+    "aptitude_round": "Aptitude Assessment",
+    "ai_interview": "AI Interview",
     "permanent_failure": "Disqualified",
 }
 
@@ -379,12 +377,13 @@ class CandidateStateMachine:
             logger.error(f"Error triggering automated report: {e}")
 
     def _check_preconditions(
-        self, 
-        application: Application, 
-        action: TransitionAction, 
+        self,
+        application: Application,
+        action: TransitionAction,
         notes: Optional[str] = None
     ):
         """Action-specific guard logic."""
+        # Precondition: APPROVE_FOR_INTERVIEW from APPLIED requires resume parsing to be done.
         if action == TransitionAction.APPROVE_FOR_INTERVIEW:
             try:
                 cur = CandidateState(application.status)
@@ -392,7 +391,6 @@ class CandidateStateMachine:
                 cur = None
             if cur == CandidateState.APPLIED:
                 rs = getattr(application, "resume_status", None) or "pending"
-                # Allow proceeding if parsed, or if it failed but HR wants to bypass, or if score exists
                 if rs not in ("parsed", "failed") and not getattr(application, "resume_score", 0):
                     raise InvalidTransitionError(
                         application.status,
@@ -400,35 +398,17 @@ class CandidateStateMachine:
                         "Resume analysis must complete successfully before approving for interview.",
                     )
 
-        # Precondition: To HIRE, the first level interview MUST be completed.
+        # Precondition: To HIRE, the interview must be completed.
         if action == TransitionAction.HIRE:
             if not application.interview or not application.interview.first_level_completed:
                 raise InvalidTransitionError(
                     application.status, action.value,
-                    "Cannot hire candidate: First-level interview is not completed."
+                    "Cannot hire candidate: The interview has not been completed."
                 )
-        
-        # Precondition: To CALL_FOR_INTERVIEW (Physical), the AI interview should be completed.
-        if action == TransitionAction.CALL_FOR_INTERVIEW:
-            if not application.interview or not application.interview.first_level_completed:
-                # Require notes if bypassing AI interview
-                if not notes:
-                    raise InvalidTransitionError(
-                        application.status, action.value,
-                        "Bypassing AI interview requires providing justification in notes."
-                    )
-                logger.warning(f"HR bypassed AI interview for application {application.id}")
-                
-    def _resolve_approve_target(self, application: Application) -> CandidateState:
-        """Determine target state for APPROVE based on job configuration."""
-        job = application.job
-        if not job:
-            # Load the job if not eagerly loaded
-            job = self.db.query(Job).filter(Job.id == application.job_id).first()
 
-        if job and job.aptitude_enabled:
-            return CandidateState.APTITUDE_ROUND
-        return CandidateState.AI_INTERVIEW
+    def _resolve_approve_target(self, application: Application) -> CandidateState:
+        """Always route approved candidates to interview_scheduled stage."""
+        return CandidateState.INTERVIEW_SCHEDULED
 
     def _log_transition(
         self,
@@ -497,53 +477,69 @@ class TransitionResult:
 
 def get_ui_buttons_for_state(state: str) -> List[Dict[str, str]]:
     """
-    Return the list of UI buttons that should be rendered for a given state.
+    Return the list of UI buttons for each pipeline state (spec-compliant).
+
+    Application Pipeline:
+      applied           → Mark as Screened, Reject
+      screened          → Approve for Interview, Reject
+      interview_scheduled → (no transition buttons — waiting state)
+      interview_completed → Hire, Call for Physical Interview, Review Later
+      review_later      → Call for Physical Interview, Reject
+      physical_interview → Hire, Reject
+      hired             → (no buttons in applications page; handled by onboarding)
+      rejected          → (terminal)
+
+    Onboarding Pipeline:
+      hired             → Issue Offer Letter
+      offer_sent        → (system/candidate driven)
+      accepted          → Finalize Join
+      onboarded         → Generate ID Card
     """
     buttons = []
 
     if state == CandidateState.APPLIED.value:
         buttons = [
             {"action": "mark_screened", "label": "Mark as Screened", "variant": "primary"},
-            {"action": "reject", "label": "Reject", "variant": "destructive"},
+            {"action": "reject", "label": "Reject Candidate", "variant": "destructive"},
         ]
     elif state == CandidateState.SCREENED.value:
         buttons = [
             {"action": "approve_for_interview", "label": "Approve for Interview", "variant": "primary"},
-            {"action": "reject", "label": "Reject", "variant": "destructive"},
+            {"action": "reject", "label": "Reject Candidate", "variant": "destructive"},
         ]
     elif state == CandidateState.INTERVIEW_SCHEDULED.value:
-        buttons = [
-            # In progress or scheduled
-            {"action": "view_status", "label": "In Progress", "variant": "outline"},
-            {"action": "reject", "label": "Reject", "variant": "destructive"},
-        ]
+        # Waiting state — no HR transition buttons
+        buttons = []
     elif state == CandidateState.INTERVIEW_COMPLETED.value:
         buttons = [
-            {"action": "hire", "label": "Hire", "variant": "success"},
-            {"action": "call_for_interview", "label": "Call for Interview", "variant": "primary"},
+            {"action": "hire", "label": "Hire Candidate", "variant": "success"},
+            {"action": "call_for_interview", "label": "Call for Physical Interview", "variant": "primary"},
             {"action": "review_later", "label": "Review Later", "variant": "secondary"},
-            {"action": "reject", "label": "Reject", "variant": "destructive"},
+        ]
+    elif state == CandidateState.REVIEW_LATER.value:
+        buttons = [
+            {"action": "call_for_interview", "label": "Call for Physical Interview", "variant": "primary"},
+            {"action": "reject", "label": "Reject Candidate", "variant": "destructive"},
         ]
     elif state == CandidateState.PHYSICAL_INTERVIEW.value:
         buttons = [
-            {"action": "hire", "label": "Hire", "variant": "success"},
-            {"action": "reject", "label": "Reject", "variant": "destructive"},
+            {"action": "hire", "label": "Hire Candidate", "variant": "success"},
+            {"action": "reject", "label": "Reject Candidate", "variant": "destructive"},
         ]
     elif state == CandidateState.HIRED.value:
-        buttons = [
-            {"action": "send_for_approval", "label": "Request Offer Approval", "variant": "primary"},
-        ]
+        # Terminal in applications page; onboarding page handles offer letter
+        buttons = []
     elif state == CandidateState.PENDING_APPROVAL.value:
-         # Buttons only for control-level shown later in API
-         pass
+        # Handled by onboarding page
+        buttons = []
     elif state == CandidateState.ACCEPTED.value:
-         buttons = [
+        buttons = [
             {"action": "capture_photo", "label": "Capture Photo", "variant": "primary"},
-         ]
+        ]
     elif state == CandidateState.ONBOARDED.value:
-         buttons = [
+        buttons = [
             {"action": "generate_id", "label": "Generate ID Card", "variant": "success"},
-         ]
+        ]
 
     buttons.append({"action": "view_report", "label": "View Report", "variant": "outline"})
 

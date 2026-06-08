@@ -212,12 +212,16 @@ export default function HRApplicationsPage() {
     notes?: string,
   ) => {
     setProcessingIds(prev => new Set(prev).add(applicationId));
-    let nextStatus = "applied";
-    if (action === "approve_for_interview") nextStatus = "ai_interview";
-    else if (action === "reject") nextStatus = "rejected";
-    else if (action === "call_for_interview") nextStatus = "physical_interview";
-    else if (action === "review_later") nextStatus = "review_later";
-    else if (action === "hire") nextStatus = "hired";
+    // Map action → optimistic status for immediate UI feedback
+    const ACTION_TO_STATUS: Record<string, string> = {
+      mark_screened: "screened",
+      approve_for_interview: "interview_scheduled",
+      reject: "rejected",
+      call_for_interview: "physical_interview",
+      review_later: "review_later",
+      hire: "hired",
+    };
+    const nextStatus = ACTION_TO_STATUS[action] ?? "applied";
 
     const actionFn = () => APIClient.put(`/api/applications/${applicationId}/status`, {
       action,
@@ -243,9 +247,9 @@ export default function HRApplicationsPage() {
               )
             };
           },
-          successMessage: action === "hire" 
-            ? "Candidate hired! Visit Onboarding to issue offer letter." 
-            : `Status updated to ${nextStatus}`,
+          successMessage: action === "hire"
+            ? "Candidate hired! Visit Onboarding to issue offer letter."
+            : `Status updated to ${nextStatus.replace(/_/g, " ")}`,
           invalidateKeys: ["/api/analytics/dashboard", "/api/search/candidates"]
         }
       );
@@ -371,8 +375,10 @@ export default function HRApplicationsPage() {
               <option value="all">All Statuses</option>
               <option value="applied">Applied</option>
               <option value="screened">Screened</option>
+              <option value="interview_scheduled">Interview Scheduled</option>
               <option value="interview_completed">Interview Completed</option>
               <option value="review_later">Review Later</option>
+              <option value="physical_interview">Physical Interview</option>
               <option value="hired">Hired</option>
               <option value="offer_sent">Offer Sent</option>
               <option value="onboarded">Onboarded</option>
@@ -571,31 +577,95 @@ export default function HRApplicationsPage() {
                 {/* Actions */}
                 <div className="col-span-1 xl:col-span-2 text-left lg:text-center mt-4 lg:mt-0 pt-4 lg:pt-0 border-t border-border lg:border-t-0" onClick={(e) => e.stopPropagation()}>
                   <div className="flex flex-wrap lg:justify-end gap-2 lg:gap-3">
-                    {/* Primary Actions based on status */}
+
+                    {/* ── Applied: Mark as Screened ── */}
                     {app.status === "applied" && (
                       <Button
                         size="sm"
                         variant="ghost"
                         disabled={processingIds.has(app.id)}
                         className="h-10 w-10 p-0 text-primary hover:bg-primary/10 rounded-xl transition-colors shadow-none"
+                        title="Mark as Screened"
+                        onClick={() => handleTransition(app.id, "mark_screened")}
+                      >
+                        <FileCheck className="h-5 w-5" />
+                      </Button>
+                    )}
+
+                    {/* ── Screened: Approve for Interview ── */}
+                    {app.status === "screened" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={processingIds.has(app.id)}
+                        className="h-10 w-10 p-0 text-indigo-600 hover:bg-indigo-500/10 rounded-xl transition-colors shadow-none"
                         title="Approve for Interview"
                         onClick={() => handleTransition(app.id, "approve_for_interview")}
                       >
                         <FileCheck className="h-5 w-5" />
                       </Button>
                     )}
-                    {['interview_completed', 'review_later'].includes(app.status) && (
+
+                    {/* ── Interview Scheduled: no transition buttons (waiting state) ── */}
+
+                    {/* ── Interview Completed: Hire ── */}
+                    {app.status === "interview_completed" && (
                       <Button
                         size="sm"
                         variant="ghost"
+                        disabled={processingIds.has(app.id)}
+                        className="h-10 w-10 p-0 text-emerald-600 hover:bg-emerald-500/10 rounded-xl transition-colors shadow-none"
+                        title="Hire Candidate"
+                        onClick={() => handleTransition(app.id, "hire")}
+                      >
+                        <CheckCircle2 className="h-5 w-5" />
+                      </Button>
+                    )}
+
+                    {/* ── Interview Completed: Call for Physical Interview ── */}
+                    {app.status === "interview_completed" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={processingIds.has(app.id)}
                         className="h-10 w-10 p-0 text-teal-600 hover:bg-teal-500/10 rounded-xl transition-colors shadow-none"
-                        title="Call for Interview"
+                        title="Call for Physical Interview"
                         onClick={() => handleTransition(app.id, "call_for_interview")}
                       >
                         <User className="h-5 w-5" />
                       </Button>
                     )}
-                    {app.status === 'physical_interview' && (
+
+                    {/* ── Interview Completed: Review Later ── */}
+                    {app.status === "interview_completed" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={processingIds.has(app.id)}
+                        className="h-10 w-10 p-0 text-amber-600 hover:bg-amber-500/10 rounded-xl transition-colors shadow-none"
+                        title="Review Later"
+                        onClick={() => handleTransition(app.id, "review_later")}
+                      >
+                        <History className="h-5 w-5" />
+                      </Button>
+                    )}
+
+                    {/* ── Review Later: Call for Physical Interview ── */}
+                    {app.status === "review_later" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={processingIds.has(app.id)}
+                        className="h-10 w-10 p-0 text-teal-600 hover:bg-teal-500/10 rounded-xl transition-colors shadow-none"
+                        title="Call for Physical Interview"
+                        onClick={() => handleTransition(app.id, "call_for_interview")}
+                      >
+                        <User className="h-5 w-5" />
+                      </Button>
+                    )}
+
+                    {/* ── Physical Interview: Hire ── */}
+                    {app.status === "physical_interview" && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -606,9 +676,9 @@ export default function HRApplicationsPage() {
                         <CheckCircle2 className="h-5 w-5" />
                       </Button>
                     )}
-                    
-                    {/* Reject Button (Always available if not terminal) */}
-                    {!['hired', 'rejected'].includes(app.status) && (
+
+                    {/* ── Reject Button: only for states where spec allows rejection ── */}
+                    {["applied", "screened", "review_later", "physical_interview"].includes(app.status) && (
                       <RejectDialog
                         candidateName={app.candidate_name}
                         onConfirm={(reason, notes) =>

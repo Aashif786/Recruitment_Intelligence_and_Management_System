@@ -404,7 +404,6 @@ export default function OnboardingPage() {
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl">
                                         <SelectItem value="all" className="font-bold">All Statuses</SelectItem>
-                                        <SelectItem value="pending_approval" className="font-bold">Approval Pending</SelectItem>
                                         <SelectItem value="offer_sent" className="font-bold">Offer Sent</SelectItem>
                                         <SelectItem value="accepted" className="font-bold">Accepted</SelectItem>
                                         <SelectItem value="onboarded" className="font-bold">Onboarded</SelectItem>
