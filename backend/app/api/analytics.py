@@ -80,14 +80,11 @@ def _build_reports_query(
             query = query.filter(and_(eff_score > 4, eff_score <= 6))
         elif status_lower == "reject":
             query = query.filter(eff_score <= 4)
-        elif status_lower == "not completed":
+        elif status_lower in ("not completed", "incomplete"):
             query = query.filter(
                 or_(
                     Interview.id.is_(None),
-                    and_(
-                        Interview.status != "completed",
-                        Interview.status != "terminated",
-                    )
+                    Interview.status.notin_(["completed", "terminated", "expired"])
                 )
             )
         elif status_lower == "terminated":
@@ -820,7 +817,6 @@ def get_interview_reports(
                 "hold": m_hold,
                 "rejected": m_rejected,
                 "terminated": m_terminated,
-                "incomplete": m_incomplete,
                 "avg_score": m_avg_score,
                 "avg_questions": m_avg_questions,
                 "total_applied": m_total_applied,
@@ -844,7 +840,6 @@ def get_interview_reports(
                 "hold": 0,
                 "rejected": 0,
                 "terminated": 0,
-                "incomplete": 0,
                 "avg_score": 0.0,
                 "avg_questions": 0.0,
                 "total_applied": 0,

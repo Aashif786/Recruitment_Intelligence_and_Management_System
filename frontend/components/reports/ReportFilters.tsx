@@ -289,7 +289,6 @@ export const ReportFilters = React.memo(function ReportFilters({
                   <SelectItem value="Consider">On Hold (4-6)</SelectItem>
                   <SelectItem value="Reject">Rejected (&lt;4)</SelectItem>
                   <SelectItem value="Terminated">Terminated</SelectItem>
-                  <SelectItem value="Not Completed">Incomplete</SelectItem>
                 </SelectContent>
               </Select>
             </div>

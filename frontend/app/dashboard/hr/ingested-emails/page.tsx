@@ -404,10 +404,10 @@ export default function IngestedEmailsPage() {
             {/* Credentials Card */}
             {showCredentials && (
                 <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
-                    <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-6">
+                    <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 -mx-6 -mt-6 px-12 pt-8 pb-6 rounded-t-[2rem]">
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
-                                <CardTitle className="text-lg font-black flex items-center gap-2">
+                                <CardTitle className="flex items-center gap-2 text-base font-bold">
                                     <Settings className="h-5 w-5 text-primary" />
                                     Mailbox Configuration
                                 </CardTitle>

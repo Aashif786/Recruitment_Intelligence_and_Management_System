@@ -372,6 +372,7 @@ export default function HRApplicationsPage() {
               <option value="applied">Applied</option>
               <option value="screened">Screened</option>
               <option value="interview_completed">Interview Completed</option>
+              <option value="review_later">Review Later</option>
               <option value="hired">Hired</option>
               <option value="offer_sent">Offer Sent</option>
               <option value="onboarded">Onboarded</option>
@@ -444,7 +445,7 @@ export default function HRApplicationsPage() {
             <div className="col-span-2">Skills Match</div>
             <div className="col-span-2">Scores</div>
             <div className="col-span-2 text-center">Status</div>
-            <div className="col-span-1 xl:col-span-2">Actions</div>
+            <div className="col-span-1 text-right ml-3">Actions</div>
           </div>
 
           <div className="bg-transparent divide-y divide-border/40">
