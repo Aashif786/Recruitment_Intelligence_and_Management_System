@@ -1060,5 +1060,9 @@ class OfferResponseRequest(BaseModel):
     token: str
     response_type: str  # 'accept' or 'reject'
 
+class BulkDeleteEmailsRequest(BaseModel):
+    ids: List[int]
+
 # Rebuild model to resolve forward references
 ApplicationDetailResponse.model_rebuild()
+

@@ -34,14 +34,11 @@ const SidebarSection = ({ title, count, current, startIndex, completed, incorrec
                         bgColor = "bg-muted/40 border-border/50 text-muted-foreground/30 opacity-40 cursor-not-allowed";
                     } else if (isCurrent) {
                         bgColor = "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20";
-                    } else if (isIncorrect) {
-                        bgColor = "bg-red-500 border-red-500 text-white";
                     } else if (isCompleted) {
                         bgColor = "bg-green-500 border-green-500 text-white font-bold";
                     } else if (isSkipped) {
                         bgColor = "bg-amber-500 border-amber-500 text-white font-bold";
                     }
-
                     return (
                         <button
                             key={i}

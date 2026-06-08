@@ -35,6 +35,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+
 import {
     Mail,
     Inbox,
@@ -51,6 +52,8 @@ import {
     Save,
     Zap,
     WifiOff,
+    Trash2,
+    Check,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/app/dashboard/lib/auth-context'
@@ -76,7 +79,6 @@ interface PaginatedResponse {
     size: number
     pages: number
 }
-
 export default function IngestedEmailsPage() {
     const router = useRouter()
     const [page, setPage] = useState(1)
@@ -87,8 +89,7 @@ export default function IngestedEmailsPage() {
     const [isSyncing, setIsSyncing] = useState(false)
     const [isAssigning, setIsAssigning] = useState(false)
     const [isSavingSettings, setIsSavingSettings] = useState(false)
-    
-    // IMAP Sync credentials (write-only — password is never read back from server)
+    const [selectedIds, setSelectedIds] = useState<number[]>([])
     const [imapUser, setImapUser] = useState('')
     const [imapPass, setImapPass] = useState('') // write-only, never populated from server
     const [imapConfigured, setImapConfigured] = useState(false)
@@ -329,6 +330,80 @@ export default function IngestedEmailsPage() {
             setIsAssigning(false)
         }
     }
+    const handleDeleteEmail = async (id: number) => {
+        if (!confirm('Are you sure you want to remove this ingested email record?')) {
+            return
+        }
+
+        const toastId = toast.loading('Deleting ingested email...')
+        try {
+            await APIClient.delete(`/api/applications/ingested-emails/${id}`)
+            toast.success('Ingested email deleted successfully', { id: toastId })
+            setSelectedIds(prev => prev.filter(selectedId => selectedId !== id))
+            mutate()
+        } catch (err: any) {
+            console.error('Delete error:', err)
+            toast.error(err.message || 'Could not delete the ingested email. Please try again.', { id: toastId })
+        }
+    }
+
+    const selectableItems = React.useMemo(() => {
+        return filteredItems.filter(item => !item.application_id)
+    }, [filteredItems])
+
+    const isAllSelected = React.useMemo(() => {
+        if (selectableItems.length === 0) return false
+        return selectableItems.every(item => selectedIds.includes(item.id))
+    }, [selectableItems, selectedIds])
+
+    const handleSelectAllToggle = () => {
+        if (isAllSelected) {
+            const selectableIds = selectableItems.map(item => item.id)
+            setSelectedIds(prev => prev.filter(id => !selectableIds.includes(id)))
+        } else {
+            const selectableIds = selectableItems.map(item => item.id)
+            setSelectedIds(prev => {
+                const newIds = [...prev]
+                selectableIds.forEach(id => {
+                    if (!newIds.includes(id)) {
+                        newIds.push(id)
+                    }
+                })
+                return newIds
+            })
+        }
+    }
+
+    const handleRowSelectToggle = (id: number) => {
+        setSelectedIds(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(item => item !== id)
+            } else {
+                return [...prev, id]
+            }
+        })
+    }
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return
+
+        if (!confirm(`Are you sure you want to delete the ${selectedIds.length} selected ingested email records?`)) {
+            return
+        }
+
+        const toastId = toast.loading(`Deleting ${selectedIds.length} ingested emails...`)
+        try {
+            await APIClient.post('/api/applications/ingested-emails/bulk-delete', {
+                ids: selectedIds
+            })
+            toast.success('Selected emails deleted successfully', { id: toastId })
+            setSelectedIds([])
+            mutate()
+        } catch (err: any) {
+            console.error('Bulk delete error:', err)
+            toast.error(err.message || 'Could not delete the selected emails. Please try again.', { id: toastId })
+        }
+    }
 
     const getInitials = (sender: string) => {
         const cleaned = sender.split('<')[0].trim()
@@ -360,6 +435,15 @@ export default function IngestedEmailsPage() {
                         </Badge>
                     )}
                     <div className="flex gap-3">
+                        {selectedIds.length > 0 && (user?.role === 'super_admin' || user?.role === 'hr') && (
+                            <Button
+                                onClick={handleBulkDelete}
+                                className="gap-2 bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 rounded-xl h-11 font-semibold active:scale-[0.98] transition-all duration-200"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Delete Selected ({selectedIds.length})
+                            </Button>
+                        )}
                         <Button
                             variant="outline"
                             onClick={() => setShowCredentials(!showCredentials)}
@@ -589,6 +673,24 @@ export default function IngestedEmailsPage() {
                     <Table>
                         <TableHeader className="bg-muted/30 border-b border-border/40">
                             <TableRow>
+                                {(user?.role === 'super_admin' || user?.role === 'hr') && (
+                                    <TableHead className="w-[50px] pl-6">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleSelectAllToggle();
+                                            }}
+                                            disabled={selectableItems.length === 0}
+                                            className={`w-4 h-4 rounded border transition-all flex items-center justify-center shrink-0 ${
+                                                selectableItems.length === 0 ? 'opacity-30 cursor-not-allowed bg-slate-100 border-slate-200' :
+                                                isAllSelected ? 'bg-primary border-primary text-primary-foreground' : 'bg-background border-slate-400 dark:border-slate-600 hover:border-primary/50'
+                                            }`}
+                                        >
+                                            {isAllSelected && <Check className="w-3 h-3 text-primary-foreground stroke-[4px]" />}
+                                        </button>
+                                    </TableHead>
+                                )}
                                 <TableHead className="w-[280px]">Sender / Candidate</TableHead>
                                 <TableHead>Email Subject</TableHead>
                                 <TableHead className="w-[180px]">Received Date</TableHead>
@@ -606,6 +708,24 @@ export default function IngestedEmailsPage() {
 
                                 return (
                                     <TableRow key={item.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 cursor-pointer group">
+                                        {(user?.role === 'super_admin' || user?.role === 'hr') && (
+                                            <TableCell className="w-[50px] pl-6" onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    type="button"
+                                                    disabled={!!item.application_id}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleRowSelectToggle(item.id);
+                                                    }}
+                                                    className={`w-4 h-4 rounded border transition-all flex items-center justify-center shrink-0 ${
+                                                        item.application_id ? 'opacity-30 cursor-not-allowed bg-slate-100 border-slate-200' :
+                                                        selectedIds.includes(item.id) ? 'bg-primary border-primary text-primary-foreground' : 'bg-background border-slate-400 dark:border-slate-600 hover:border-primary/50'
+                                                    }`}
+                                                >
+                                                    {selectedIds.includes(item.id) && <Check className="w-3 h-3 text-primary-foreground stroke-[4px]" />}
+                                                </button>
+                                            </TableCell>
+                                        )}
                                         <TableCell className="font-semibold">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/25 flex items-center justify-center text-xs font-bold text-primary shrink-0 shadow-inner">
@@ -670,7 +790,7 @@ export default function IngestedEmailsPage() {
                                             )}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex justify-end w-full">
+                                            <div className="flex justify-end items-center gap-2 w-full">
                                                 {item.application_id ? (
                                                     <Button
                                                         size="sm"
@@ -681,27 +801,41 @@ export default function IngestedEmailsPage() {
                                                         View Candidate
                                                     </Button>
                                                 ) : (
-                                                    // SEC-1 Fix: Backend /assign requires super_admin.
-                                                    // Hide button for regular HR to avoid confusing 403 errors.
-                                                    !item.file_url ? (
-                                                        <Badge className="bg-rose-50 text-rose-400 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/25 text-[10px] font-semibold px-2 py-0.5 flex items-center gap-1 w-max">
-                                                            <AlertTriangle className="h-3 w-3" />
-                                                            No Resume
-                                                        </Badge>
-                                                    ) : (user?.role === 'super_admin' || user?.role === 'hr') ? (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => setSelectedResume(item)}
-                                                            className="h-9 px-3 text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-500/10 border-amber-500/30 rounded-xl shadow-none"
-                                                        >
-                                                            Assign to Job
-                                                        </Button>
-                                                    ) : (
-                                                        <Badge className="bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-semibold px-2 py-0.5">
-                                                            Unassigned
-                                                        </Badge>
-                                                    )
+                                                    <>
+                                                        {!item.file_url ? (
+                                                            <Badge className="bg-rose-50 text-rose-400 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/25 text-[10px] font-semibold px-2 py-0.5 flex items-center gap-1 w-max">
+                                                                <AlertTriangle className="h-3 w-3" />
+                                                                No Resume
+                                                            </Badge>
+                                                        ) : (user?.role === 'super_admin' || user?.role === 'hr') ? (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => setSelectedResume(item)}
+                                                                className="h-9 px-3 text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-500/10 border-amber-500/30 rounded-xl shadow-none"
+                                                            >
+                                                                Assign to Job
+                                                            </Button>
+                                                        ) : (
+                                                            <Badge className="bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-semibold px-2 py-0.5">
+                                                                Unassigned
+                                                            </Badge>
+                                                        )}
+                                                        {(user?.role === 'super_admin' || user?.role === 'hr') && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteEmail(item.id);
+                                                                }}
+                                                                className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                                                                title="Delete Ingested Email"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         </TableCell>
