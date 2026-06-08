@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from app.domain.models import AttachmentResume, Application, Job
 from app.core.config import get_settings
 import logging
+import requests
 import re
 
 
