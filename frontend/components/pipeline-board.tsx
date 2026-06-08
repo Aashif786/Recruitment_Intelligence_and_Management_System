@@ -33,19 +33,18 @@ type Application = {
     technical_skills_score?: number | null
 }
 
-// ─── FSM State Columns ─────────────────────────────────────────────────
+// ─── FSM State Columns ──────────────────────────────────────────────────
+// Columns match the 8 application pipeline stages from the spec.
+// interview_scheduled is a waiting state with no action buttons.
 const STATUS_COLUMNS = [
     { id: "applied", label: "Applied" },
     { id: "screened", label: "Screened" },
-    {
-        id: ["aptitude_round", "interview_scheduled", "physical_interview", "ai_interview"],
-        label: "Interview Scheduled"
-    },
+    { id: "interview_scheduled", label: "Interview Scheduled" },
     { id: "interview_completed", label: "Interview Completed" },
+    { id: "review_later", label: "Review Later" },
+    { id: "physical_interview", label: "Physical Interview" },
     { id: "hired", label: "Hired" },
     { id: "rejected", label: "Rejected" },
-    { id: "offer_sent", label: "Offer Sent" },
-    { id: "onboarded", label: "Onboarded" },
 ]
 
 const STATE_ACTIONS: Record<string, { action: string; label: string; variant: 'primary' | 'destructive' | 'secondary' | 'success' }[]> = {
@@ -55,13 +54,14 @@ const STATE_ACTIONS: Record<string, { action: string; label: string; variant: 'p
     screened: [
         { action: "approve_for_interview", label: "Approve", variant: "primary" },
     ],
+    // interview_scheduled: waiting state — no transition actions
     interview_completed: [
         { action: "hire", label: "Hire", variant: "success" },
-        { action: "call_for_interview", label: "Call", variant: "primary" },
+        { action: "call_for_interview", label: "Physical", variant: "primary" },
         { action: "review_later", label: "Review", variant: "secondary" },
     ],
     review_later: [
-        { action: "call_for_interview", label: "Call", variant: "primary" },
+        { action: "call_for_interview", label: "Physical", variant: "primary" },
     ],
     physical_interview: [
         { action: "hire", label: "Hire", variant: "success" },
@@ -236,9 +236,9 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
         return STATE_ACTIONS[status] || []
     }
 
-    // Check if reject is allowed for this state
+    // Check if reject is allowed for this state (per spec)
     const isRejectAllowed = (status: string) => {
-        return !['rejected', 'hired'].includes(status)
+        return ["applied", "screened", "review_later", "physical_interview"].includes(status)
     }
 
     return (

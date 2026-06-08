@@ -38,17 +38,16 @@ const FSM_BUTTONS: Record<string, { action: string; label: string; icon: React.R
         { action: "approve_for_interview", label: "APPROVE FOR INTERVIEW", icon: <CheckCircle2 className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
         { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
     ],
-    interview_scheduled: [
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
-    ],
+    // interview_scheduled: waiting state — no HR transition buttons
+    interview_scheduled: [],
     interview_completed: [
         { action: "hire", label: "HIRE CANDIDATE", icon: <Star className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
-        { action: "call_for_interview", label: "CALL FOR INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "call_for_interview", label: "CALL FOR PHYSICAL INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
         { action: "review_later", label: "REVIEW LATER", icon: <Clock className="h-4 w-4" />, className: "bg-amber-500 hover:bg-amber-600 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
+        // NOTE: No reject from interview_completed per spec
     ],
     review_later: [
-        { action: "call_for_interview", label: "CALL FOR INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "call_for_interview", label: "CALL FOR PHYSICAL INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
         { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
     ],
     physical_interview: [
@@ -71,10 +70,10 @@ const RESUME_STATUS_LABELS: Record<string, { label: string; color: string }> = {
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     applied: { label: "Applied", color: "bg-blue-100 text-blue-700 border-blue-200" },
     screened: { label: "Screened", color: "bg-indigo-100 text-primary/80 border-indigo-200" },
-    // interview_scheduled: { label: "Interview Scheduled", color: "bg-purple-100 text-purple-700 border-purple-200" },
+    interview_scheduled: { label: "Interview Scheduled", color: "bg-purple-100 text-purple-700 border-purple-200" },
     interview_completed: { label: "Interview Completed", color: "bg-cyan-100 text-cyan-700 border-cyan-200" },
     review_later: { label: "Review Later", color: "bg-amber-100 text-amber-700 border-amber-200" },
-    // physical_interview: { label: "Physical Interview", color: "bg-teal-100 text-teal-700 border-teal-200" },
+    physical_interview: { label: "Physical Interview", color: "bg-teal-100 text-teal-700 border-teal-200" },
     hired: { label: "Hired", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
     pending_approval: { label: "Pending Offer Approval", color: "bg-amber-100 text-amber-700 border-amber-200" },
     offer_sent: { label: "Offer Sent", color: "bg-blue-100 text-blue-700 border-blue-200" },
