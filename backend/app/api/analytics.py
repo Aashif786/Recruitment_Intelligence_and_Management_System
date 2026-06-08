@@ -81,7 +81,15 @@ def _build_reports_query(
         elif status_lower == "reject":
             query = query.filter(eff_score <= 4)
         elif status_lower == "not completed":
-            query = query.filter(or_(Interview.id.is_(None), Interview.status != "completed"))
+            query = query.filter(
+                or_(
+                    Interview.id.is_(None),
+                    and_(
+                        Interview.status != "completed",
+                        Interview.status != "terminated",
+                    )
+                )
+            )
         elif status_lower == "terminated":
             query = query.filter(
                 or_(
@@ -545,7 +553,7 @@ def get_interview_reports(
             for row in score_data:
                 s = float(row.score or 0)
                 m_total_score += s
-                if row.term_reason:
+                if row.term_reason or row.iv_status == 'terminated':
                     m_terminated += 1
                 elif row.iv_status != 'completed':
                     m_incomplete += 1
