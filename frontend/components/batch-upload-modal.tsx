@@ -564,7 +564,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent 
-        className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden relative border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl transition-all duration-300"
+        className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl transition-all duration-300"
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
