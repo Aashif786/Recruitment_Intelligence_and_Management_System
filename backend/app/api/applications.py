@@ -1886,13 +1886,14 @@ async def assign_ingested_email(
     resume_id: int,
     req: AssignResumeRequest,
     background_tasks: BackgroundTasks,
-    # BUG-014 Fix: Only super_admin can assign ingested resumes to prevent IDOR
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
     """
     Manually assign an unmapped email resume to a specific job (HR only)
     """
+    import re
+    from sqlalchemy import or_
     resume = db.query(AttachmentResume).filter(AttachmentResume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Ingested resume not found")
@@ -1903,10 +1904,63 @@ async def assign_ingested_email(
             status_code=400,
             detail="This email has no resume attachment. Only emails with attached resumes (PDF/DOCX) can be assigned to a job."
         )
+
+    # Check if the current user has access to the resume (standard HR visibility check to prevent IDOR)
+    if current_user.role not in ["super_admin", "admin"]:
+        # 1. Check if the resume was fetched by this HR manager
+        if resume.hr_id != current_user.id:
+            # 2. Check if the resume is already mapped to one of this HR manager's jobs or applications
+            path_id = _extract_storage_path_identifier(resume.file_url) if resume.file_url else None
+            sender_str = resume.sender_email or ""
+            match_email = re.search(r'<([^>]+)>', sender_str)
+            raw_email = match_email.group(1).lower().strip() if match_email else sender_str.lower().strip()
+            
+            is_mapped_to_hr = False
+            if path_id:
+                is_mapped_to_hr = db.query(Application).outerjoin(Job).filter(
+                    (Job.hr_id == current_user.id) | (Application.hr_id == current_user.id),
+                    (Application.resume_file_path == path_id) | (Application.resume_file_path.like(f"%{path_id}%"))
+                ).count() > 0
+            if not is_mapped_to_hr and raw_email:
+                is_mapped_to_hr = db.query(Application).outerjoin(Job).filter(
+                    (Job.hr_id == current_user.id) | (Application.hr_id == current_user.id),
+                    func.trim(func.lower(Application.candidate_email)) == raw_email,
+                    or_(Application.resume_file_path == None, Application.resume_file_path == "")
+                ).count() > 0
+            
+            # 3. Check if the resume is mapped globally to someone else
+            is_mapped_globally = False
+            if not is_mapped_to_hr:
+                if path_id:
+                    is_mapped_globally = db.query(Application).filter(
+                        (Application.resume_file_path == path_id) | (Application.resume_file_path.like(f"%{path_id}%"))
+                    ).count() > 0
+                if not is_mapped_globally and raw_email:
+                    is_mapped_globally = db.query(Application).filter(
+                        func.trim(func.lower(Application.candidate_email)) == raw_email,
+                        or_(Application.resume_file_path == None, Application.resume_file_path == "")
+                    ).count() > 0
+
+            # 4. Check if it targets this HR user's job code
+            is_target_job_owned = False
+            if not is_mapped_to_hr and not is_mapped_globally:
+                target_job_id = _get_target_job_id_from_subject(resume.subject, db)
+                if target_job_id:
+                    is_target_job_owned = db.query(Job).filter(
+                        Job.id == target_job_id,
+                        Job.hr_id == current_user.id
+                    ).count() > 0
+
+            if not is_mapped_to_hr and not is_target_job_owned:
+                raise HTTPException(status_code=403, detail="Forbidden: You do not have access to this ingested email")
         
     job = db.query(Job).filter(Job.id == req.job_id, Job.status == 'open').first()
     if not job:
         raise HTTPException(status_code=404, detail="Target open job not found")
+
+    # Validate target job ownership for standard HR managers to prevent IDOR
+    if current_user.role not in ["super_admin", "admin"] and job.hr_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this job")
         
     # ── Resolve candidate details ──────────────────────────────────
     sender_str = resume.sender_email or ""
@@ -1960,7 +2014,6 @@ async def assign_ingested_email(
             candidate_phone_hash = compute_phone_hash(norm_p)
 
     # ── Duplicate check ────────────────────────────────────────────
-    from sqlalchemy import or_
     filters = []
     if raw_email:
         filters.append(Application.candidate_email.ilike(raw_email))

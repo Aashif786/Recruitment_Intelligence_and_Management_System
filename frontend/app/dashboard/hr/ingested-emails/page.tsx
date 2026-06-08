@@ -683,13 +683,12 @@ export default function IngestedEmailsPage() {
                                                 ) : (
                                                     // SEC-1 Fix: Backend /assign requires super_admin.
                                                     // Hide button for regular HR to avoid confusing 403 errors.
-                                                    // FIX: Cannot assign to job without a resume attachment.
                                                     !item.file_url ? (
                                                         <Badge className="bg-rose-50 text-rose-400 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/25 text-[10px] font-semibold px-2 py-0.5 flex items-center gap-1 w-max">
                                                             <AlertTriangle className="h-3 w-3" />
                                                             No Resume
                                                         </Badge>
-                                                    ) : user?.role === 'super_admin' ? (
+                                                    ) : (user?.role === 'super_admin' || user?.role === 'hr') ? (
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
