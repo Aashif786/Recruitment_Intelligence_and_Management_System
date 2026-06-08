@@ -103,7 +103,7 @@ export default function IngestedEmailsPage() {
     // Load current settings on mount — use /sensitive endpoint so we get real IMAP values
     useEffect(() => {
         const loadSettings = async () => {
-            if (user?.role !== 'super_admin') return
+            if (!user) return
             try {
                 // BUG-A Fix: Must call /sensitive to get actual imap_email, imap_configured,
                 // and auto_sync_enabled. The public GET /api/settings strips all these fields.
@@ -360,36 +360,32 @@ export default function IngestedEmailsPage() {
                         </Badge>
                     )}
                     <div className="flex gap-3">
-                        {user?.role === 'super_admin' && (
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowCredentials(!showCredentials)}
-                                className={`gap-2 border-border shadow-sm rounded-xl h-11 active:scale-[0.98] transition-all duration-200 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
-                            >
-                                <Settings className="h-4 w-4" />
-                                Configure Mailbox
-                            </Button>
-                        )}
-                        {user?.role === 'super_admin' && (
-                          <Button
-                              onClick={handleSync}
-                              disabled={isSyncing}
-                              className="gap-2 bg-primary text-primary-foreground shadow-sm rounded-xl h-11 font-semibold active:scale-[0.98] hover:shadow-md transition-all duration-200"
-                          >
-                              {isSyncing ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                  <RefreshCw className="h-4 w-4" />
-                              )}
-                              Sync Emails
-                          </Button>
-                        )}
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowCredentials(!showCredentials)}
+                            className={`gap-2 border-border shadow-sm rounded-xl h-11 active:scale-[0.98] transition-all duration-200 ${showCredentials ? 'bg-primary/5 border-primary/20 text-primary' : ''}`}
+                        >
+                            <Settings className="h-4 w-4" />
+                            Configure Mailbox
+                        </Button>
+                        <Button
+                            onClick={handleSync}
+                            disabled={isSyncing}
+                            className="gap-2 bg-primary text-primary-foreground shadow-sm rounded-xl h-11 font-semibold active:scale-[0.98] hover:shadow-md transition-all duration-200"
+                        >
+                            {isSyncing ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-4 w-4" />
+                            )}
+                            Sync Emails
+                        </Button>
                     </div>
                 </div>
             </PageHeader>
 
             {/* Credentials Card */}
-            {showCredentials && user?.role === 'super_admin' && (
+            {showCredentials && (
                 <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-6">
                         <div className="flex items-center justify-between">
@@ -579,16 +575,12 @@ export default function IngestedEmailsPage() {
                         </h3>
                         <p className="text-sm text-muted-foreground mt-1 max-w-sm">
                             {statusFilter === 'mapped'
-                                ? (user?.role === 'super_admin'
-                                    ? 'No resumes have been automatically matched to an open job yet. Sync emails to trigger AI mapping.'
-                                    : 'No resumes have been automatically matched to an open job yet. Newly mapped resumes will appear here automatically.')
+                                ? 'No resumes have been automatically matched to an open job yet. Sync emails to trigger AI mapping.'
                                 : statusFilter === 'unmapped'
                                 ? 'All ingested resumes have been assigned — nothing pending.'
                                 : debouncedSearch
                                 ? `No emails match "${debouncedSearch}". Try a different search term.`
-                                : user?.role === 'super_admin'
-                                ? "Click 'Sync Emails' to connect to your configured recruiter mailbox and fetch applicant resumes."
-                                : "No ingested resumes found. Newly fetched candidate resumes will appear here automatically."}
+                                : "Click 'Sync Emails' to connect to your configured recruiter mailbox and fetch applicant resumes."}
                         </p>
                     </div>
                 </div>

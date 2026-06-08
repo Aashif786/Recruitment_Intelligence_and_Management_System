@@ -14,6 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 _REQUIRED_COLUMNS = [
+    ("users", "imap_email", "VARCHAR(255)"),
+    ("users", "imap_password", "TEXT"),
+    ("users", "auto_sync_enabled", "BOOLEAN DEFAULT FALSE"),
+    ("attachment_resumes", "hr_id", "INTEGER REFERENCES users(id) ON DELETE CASCADE"),
     ("jobs", "aptitude_questions_file", "VARCHAR(500)"),
     ("applications", "resume_file_path", "VARCHAR(500)"),
     ("jobs", "job_id", "VARCHAR(50)"),

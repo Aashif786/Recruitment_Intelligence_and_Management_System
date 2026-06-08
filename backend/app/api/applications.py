@@ -1324,23 +1324,16 @@ async def ingest_email_resumes(
     request: Request,
     req: EmailIngestRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
     """
     Trigger manual email ingestion via IMAP and map/analyze them immediately.
-    BUG-001 Fix: IMAP credentials are read server-side from GlobalSettings, never from the request body.
     """
-    # Read IMAP credentials from server-side settings (never from request body)
-    from app.domain.models import GlobalSettings
     from app.core.encryption import decrypt_field
-    settings_records = db.query(GlobalSettings).filter(
-        GlobalSettings.key.in_(["imap_email", "imap_password"])
-    ).all()
-    settings_dict = {s.key: s.value for s in settings_records}
 
-    imap_email = settings_dict.get("imap_email") or settings.imap_email or ""
-    enc_password = settings_dict.get("imap_password") or settings.imap_password or ""
+    imap_email = current_user.imap_email or ""
+    enc_password = current_user.imap_password or ""
     
     imap_password = decrypt_field(enc_password) if enc_password else ""
 
@@ -1351,7 +1344,7 @@ async def ingest_email_resumes(
         )
 
     # Phase 1: Rapid Fetch (Synchronous but optimized)
-    result = fetch_resume_attachments(db, imap_email, imap_password)
+    result = fetch_resume_attachments(db, imap_email, imap_password, hr_id=current_user.id)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
     
@@ -1360,7 +1353,7 @@ async def ingest_email_resumes(
     async def run_batch_in_background():
         bg_db = SessionLocal()
         try:
-            await run_batch_resume_processing(bg_db)
+            await run_batch_resume_processing(bg_db, hr_id=current_user.id)
         finally:
             bg_db.close()
             
@@ -1548,18 +1541,28 @@ def _is_email_visible_to_user(
         return True, is_mapped
 
     # Regular HR user
+    # 1. Visible if fetched by this HR manager
+    if getattr(item, 'hr_id', None) == current_user.id:
+        is_mapped = _resolve_resume_mapping_bool(
+            item, db, hr_app_paths, hr_app_emails_no_path, hr_app_emails_job
+        )
+        return True, is_mapped
+
+    # 2. Visible if mapped to this HR user's job or application
     is_mapped_to_hr = _resolve_resume_mapping_bool(
         item, db, hr_app_paths, hr_app_emails_no_path, hr_app_emails_job
     )
     if is_mapped_to_hr:
         return True, True
 
+    # 3. If mapped globally to another HR, hide it
     is_mapped_globally = _resolve_resume_mapping_bool(
         item, db, global_app_paths, global_app_emails_no_path, global_app_emails_job
     )
     if is_mapped_globally:
         return False, False
 
+    # 4. Visible if unmapped but targets this HR user's job code
     target_job_id = _get_target_job_id_from_subject(item.subject, db)
     if target_job_id and target_job_id in hr_job_ids:
         return True, False
