@@ -193,7 +193,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
 
       {/* Status Stats */}
       {!hideStats && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-200">
           <div className="bg-card/45 backdrop-blur-xl p-4 rounded-2xl border border-border/80 border-l-[3px] border-l-emerald-500 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-300">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">High Performers (&gt; 6)</p>
             <div className="text-emerald-500 font-black text-2xl tabular-nums">{metrics.selected}</div>
@@ -209,10 +209,6 @@ export const ReportDashboard = React.memo(function ReportDashboard({
           <div className="bg-card/45 backdrop-blur-xl p-4 rounded-2xl border border-border/80 border-l-[3px] border-l-slate-400 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-300">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Terminated</p>
             <div className="text-muted-foreground font-black text-2xl tabular-nums">{metrics.terminated}</div>
-          </div>
-          <div className="bg-card/45 backdrop-blur-xl p-4 rounded-2xl border border-border/80 border-l-[3px] border-l-orange-500 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-300">
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Incomplete</p>
-            <div className="text-orange-500 font-black text-2xl tabular-nums">{metrics.incomplete}</div>
           </div>
         </div>
       )}
@@ -413,8 +409,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
                       { name: 'Selected', value: metrics.selected, color: '#10b981' },
                       { name: 'Hold', value: metrics.hold, color: '#f59e0b' },
                       { name: 'Rejected', value: metrics.rejected, color: '#ef4444' },
-                      { name: 'Terminated', value: metrics.terminated, color: '#b91c1c' },
-                      { name: 'Incomplete', value: metrics.incomplete, color: '#f97316' }
+                      { name: 'Terminated', value: metrics.terminated, color: '#b91c1c' }
                     ].filter(d => d.value > 0)} />
                   </div>
 

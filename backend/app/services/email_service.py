@@ -877,7 +877,6 @@ async def send_interview_completed_email(application: Any):
         event_type="INTERVIEW_COMPLETED_NOTICE"
     )
 
-
 async def send_interview_terminated_email(application: Any, reason: str):
     """Notify candidate that their session was terminated due to policy violations."""
     subject = f"Urgent: Interview Session Terminated - {application.job.title}"
@@ -886,12 +885,17 @@ async def send_interview_terminated_email(application: Any, reason: str):
     if "misconduct" in reason.lower():
         reason_text = "inappropriate language or conduct detected during the session"
     
+    frontend_url = settings.frontend_base_url
+    support_url = f"{frontend_url}/support"
+    if application.candidate_email:
+        support_url += f"?{urlencode({'email': application.candidate_email})}"
+    
     body = f"""
     <html><body style="font-family:sans-serif; color:#333;">
       <h2 style="color:#ef4444;">Session Terminated</h2>
       <p>Hello {application.candidate_name},</p>
       <p>Your interview session for <strong>{html.escape(str(application.job.title))}</strong> has been automatically terminated due to <strong>{reason_text}</strong>.</p>
-      <p>If you believe this was a technical error, please reach out to our support team immediately via the support portal or reply to this email.</p>
+      <p>If you believe this was a technical error, please reach out to our support team immediately via the <a href="{html.escape(support_url)}" style="color:#2563eb; font-weight:bold; text-decoration:underline;">support portal</a> or reply to this email.</p>
       <p>Best Regards,<br>Recruitment Compliance Team</p>
     </body></html>
     """
