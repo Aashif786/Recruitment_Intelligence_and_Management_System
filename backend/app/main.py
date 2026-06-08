@@ -575,12 +575,17 @@ app.include_router(repository.router)
 @app.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: FastAPIRequest, exc: RequestValidationError):
     errs = exc.errors()
+    errors_list = []
+    for e in errs:
+        loc = e.get('loc', [])
+        field_name = loc[-1] if loc else "payload"
+        errors_list.append(f"{field_name}: {e['msg']}")
     response = JSONResponse(
         status_code=422,
         content={
             "success": False,
             "data": None,
-            "error": "Validation failed: " + "; ".join([f"{e['loc'][-1]}: {e['msg']}" for e in errs])
+            "error": "Validation failed: " + "; ".join(errors_list)
         }
     )
     origin = request.headers.get("origin")

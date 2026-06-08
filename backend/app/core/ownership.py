@@ -23,8 +23,9 @@ def validate_hr_ownership(resource, current_user, *, resource_name: str = "resou
     Centralized ownership guard for all non-admin users.
     Checks both direct assignment (hr_id) and job-level ownership.
     """
-    if current_user.role.lower() in ["super_admin", "admin", "hr"]:
+    if current_user.role.lower() in ["super_admin", "admin"]:
         return
+
 
     # Check Direct Ownership (Resource assigned to this HR)
     owner_id = getattr(resource, "hr_id", None)
@@ -44,6 +45,6 @@ def validate_hr_ownership(resource, current_user, *, resource_name: str = "resou
     # If all checks fail, DENY.
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail=f"Unauthorized access to {resource_name}",
+        detail=f"Access denied: You do not have permission to manage this {resource_name}.",
     )
 

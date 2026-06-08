@@ -1101,9 +1101,10 @@ def get_pending_applications_count(
         or_(func.trim(Application.file_status).in_(('active', 'missing')), Application.file_status == None)
     )
 
-    # Apply visibility isolation (Disabled: standard HR sees all applications by default)
-    # if current_user.role.lower() != "super_admin":
-    #     q = q.filter(Application.hr_id == current_user.id)
+    # Apply visibility isolation: Anyone not a super_admin is restricted to their own data
+    if current_user.role.lower() not in ["super_admin", "admin"]:
+        q = q.outerjoin(Job, Application.job_id == Job.id)
+        q = q.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
 
     count = q.scalar() or 0
     return {"count": count}
@@ -1219,11 +1220,10 @@ def get_hr_applications(
 
         # 3. Security
         # Apply visibility isolation: Anyone not a super_admin is restricted to their own apps
-        # (Disabled: standard HR sees all applications by default)
-        # if current_user.role.lower() not in ["super_admin", "admin"]:
-        #     # Standard HR sees jobs they own OR apps they are assigned to
-        #     # Note: Job is already joined via outerjoin at the start of the query
-        #     query = query.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
+        if current_user.role.lower() not in ["super_admin", "admin"]:
+            # Standard HR sees jobs they own OR apps they are assigned to
+            # Note: Job is already joined via outerjoin at the start of the query
+            query = query.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
         # Super Admin sees all.
 
         # 4. Retrieval

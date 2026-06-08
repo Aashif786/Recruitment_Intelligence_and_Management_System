@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 from datetime import datetime
@@ -223,8 +224,8 @@ def list_feedback(
         .join(Application, Interview.application_id == Application.id)
         .join(Job, Application.job_id == Job.id)
     )
-    if current_user.role.lower() == "hr":
-        query = query.filter(Application.hr_id == current_user.id)
+    if current_user.role.lower() not in ["super_admin", "admin"]:
+        query = query.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
 
     total = query.count()
     feedbacks = query.order_by(InterviewFeedback.created_at.desc(), InterviewFeedback.id.desc()).offset(skip).limit(limit).all()
