@@ -138,8 +138,6 @@ def list_question_sets(
         
         # Initialize the query object
         qs = db.query(QuestionSet)
-        if current_user.role != "super_admin":
-            qs = qs.filter(or_(QuestionSet.hr_id == current_user.id, QuestionSet.hr_id.is_(None)))
         
         if round_type:
             qs = qs.filter(QuestionSet.round_type == round_type)
@@ -196,8 +194,6 @@ def get_question_set(
 ):
     _ensure_question_sets_table(db)
     query = db.query(QuestionSet).filter(QuestionSet.id == set_id)
-    if current_user.role != "super_admin":
-        query = query.filter(or_(QuestionSet.hr_id == current_user.id, QuestionSet.hr_id.is_(None)))
     s = query.first()
     if not s:
         raise HTTPException(status_code=404, detail="Question set not found.")
@@ -272,11 +268,9 @@ def update_question_set(
     current_user=Depends(get_current_hr),
 ):
     query = db.query(QuestionSet).filter(QuestionSet.id == set_id)
-    if current_user.role != "super_admin":
-        query = query.filter(QuestionSet.hr_id == current_user.id)
     s = query.first()
     if not s:
-        raise HTTPException(status_code=404, detail="Question set not found or access denied.")
+        raise HTTPException(status_code=404, detail="Question set not found.")
     if payload.round_type not in ("aptitude", "technical", "behavioural"):
         raise HTTPException(status_code=400, detail="round_type must be aptitude, technical, or behavioural.")
 
@@ -321,10 +315,8 @@ def delete_question_set(
     current_user=Depends(get_current_hr),
 ):
     query = db.query(QuestionSet).filter(QuestionSet.id == set_id)
-    if current_user.role != "super_admin":
-        query = query.filter(QuestionSet.hr_id == current_user.id)
     s = query.first()
     if not s:
-        raise HTTPException(status_code=404, detail="Question set not found or access denied.")
+        raise HTTPException(status_code=404, detail="Question set not found.")
     db.delete(s)
     db.commit()
