@@ -23,6 +23,7 @@ from app.domain.schemas import (
     InterviewSummary,
     HasAppliedResponse,
     ApplicationListResponse,
+    BulkDeleteEmailsRequest,
 )
 from app.core.auth import get_current_hr, get_current_admin
 from app.core.ownership import validate_hr_ownership
@@ -2117,6 +2118,56 @@ async def assign_ingested_email(
         "application_id": new_application.id
     }
 
+def _get_hr_visibility_sets(current_user: User, db: Session):
+    applications_data = db.query(Application.resume_file_path, Application.candidate_email, Application.job_id).all()
+    
+    global_app_paths = set()
+    global_app_emails_no_path = set()
+    global_app_emails_job = set()
+    
+    for a in applications_data:
+        if a.candidate_email:
+            email_key = a.candidate_email.lower().strip()
+            if a.job_id:
+                global_app_emails_job.add((email_key, a.job_id))
+            path_id = _extract_storage_path_identifier(a.resume_file_path) if a.resume_file_path else None
+            if path_id:
+                global_app_paths.add(path_id)
+            else:
+                global_app_emails_no_path.add(email_key)
+
+    hr_app_paths = set()
+    hr_app_emails_no_path = set()
+    hr_app_emails_job = set()
+    hr_job_ids = set()
+    
+    if current_user.role not in ["super_admin", "admin"]:
+        hr_job_ids = {j.id for j in db.query(Job.id).filter(Job.hr_id == current_user.id).all()}
+        hr_applications_data = db.query(Application.resume_file_path, Application.candidate_email, Application.job_id).outerjoin(Job).filter(
+            (Job.hr_id == current_user.id) | (Application.hr_id == current_user.id)
+        ).all()
+        
+        for a in hr_applications_data:
+            if a.candidate_email:
+                email_key = a.candidate_email.lower().strip()
+                if a.job_id:
+                    hr_app_emails_job.add((email_key, a.job_id))
+                path_id = _extract_storage_path_identifier(a.resume_file_path) if a.resume_file_path else None
+                if path_id:
+                    hr_app_paths.add(path_id)
+                else:
+                    hr_app_emails_no_path.add(email_key)
+                    
+    return (
+        hr_app_paths,
+        hr_app_emails_no_path,
+        hr_app_emails_job,
+        global_app_paths,
+        global_app_emails_no_path,
+        global_app_emails_job,
+        hr_job_ids,
+    )
+
 @router.delete("/ingested-emails/{resume_id}")
 def delete_ingested_email(
     resume_id: int,
@@ -2126,16 +2177,96 @@ def delete_ingested_email(
     """
     Delete an ingested email record (HR / Admin only).
     """
+    if current_user.role not in ["super_admin", "admin", "hr"]:
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete ingested emails")
+
     item = db.query(AttachmentResume).filter(AttachmentResume.id == resume_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Ingested resume not found")
-        
-    if current_user.role not in ["super_admin", "admin", "hr"]:
-        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete ingested emails")
+
+    # Check if already assigned (mapped)
+    app_found, _ = _resolve_resume_mapping(item, db)
+    if app_found:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete an ingested email that is already assigned to a job."
+        )
+
+    # For non-admins, check visibility
+    if current_user.role not in ["super_admin", "admin"]:
+        hr_sets = _get_hr_visibility_sets(current_user, db)
+        is_visible, _ = _is_email_visible_to_user(
+            item, current_user, db,
+            *hr_sets
+        )
+        if not is_visible:
+            raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete this ingested email.")
         
     db.delete(item)
     db.commit()
     return {"status": "success", "message": "Ingested email deleted successfully."}
+
+@router.post("/ingested-emails/bulk-delete")
+def bulk_delete_ingested_emails(
+    payload: BulkDeleteEmailsRequest,
+    current_user: User = Depends(get_current_hr),
+    db: Session = Depends(get_db)
+):
+    """
+    Bulk delete ingested email records (HR / Admin only).
+    """
+    if current_user.role not in ["super_admin", "admin", "hr"]:
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete ingested emails")
+
+    if not payload.ids:
+        return {"status": "success", "message": "No IDs provided.", "deleted_count": 0}
+
+    # Fetch items
+    items = db.query(AttachmentResume).filter(AttachmentResume.id.in_(payload.ids)).all()
+    if len(items) != len(set(payload.ids)):
+        found_ids = {item.id for item in items}
+        missing_ids = set(payload.ids) - found_ids
+        if missing_ids:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Some ingested email records were not found: {list(missing_ids)}"
+            )
+
+    # Check mapping and visibility
+    hr_sets = None
+    if current_user.role not in ["super_admin", "admin"]:
+        hr_sets = _get_hr_visibility_sets(current_user, db)
+
+    for item in items:
+        # Check if already assigned (mapped)
+        app_found, _ = _resolve_resume_mapping(item, db)
+        if app_found:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete ingested email ID {item.id} because it is already assigned to a job."
+            )
+
+        # For non-admins, check visibility
+        if hr_sets:
+            is_visible, _ = _is_email_visible_to_user(
+                item, current_user, db,
+                *hr_sets
+            )
+            if not is_visible:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Forbidden: Insufficient permissions to delete ingested email ID {item.id}."
+                )
+
+    # All checks passed, perform deletion
+    deleted_count = 0
+    for item in items:
+        db.delete(item)
+        deleted_count += 1
+
+    db.commit()
+    return {"status": "success", "message": f"Successfully deleted {deleted_count} ingested emails.", "deleted_count": deleted_count}
+
 
 @router.get("/{application_id}", response_model=ApplicationDetailResponse)
 def get_application(
