@@ -165,17 +165,27 @@ async def _finalize_interview_and_report_internal(db: Session, interview_id: int
     interview.first_level_score = interview_score
     
     # 2.5 Update Application Status via State Machine
-    if interview.application:
+    if interview.application and interview.status == "completed":
         from app.services.state_machine import CandidateStateMachine, TransitionAction
-        fsm = CandidateStateMachine(db)
-        try:
-            # Ifすでに interview_completed ならスキップ
-            if interview.application.status != "interview_completed":
-                fsm.transition(interview.application, TransitionAction.SYSTEM_INTERVIEW_COMPLETE)
-        except Exception as e:
-            logger.warning(f"FSM transition failed for interview {interview_id}: {e}")
-            interview.application.status = "interview_completed"
-            interview.application.email_status = "pending"
+        from app.domain.constants import CandidateState
+        
+        active_states = {
+            "applied",
+            "screened",
+            "aptitude_round",
+            "ai_interview",
+            "interview_scheduled"
+        }
+        if interview.application.status in active_states:
+            fsm = CandidateStateMachine(db)
+            try:
+                action = TransitionAction.SYSTEM_INTERVIEW_COMPLETE
+                if interview.application.status == "interview_scheduled":
+                    action = TransitionAction.COMPLETE_INTERVIEW
+                fsm.transition(interview.application, action)
+            except Exception as e:
+                logger.warning(f"FSM transition failed for interview {interview_id}: {e}")
+
             
         # ── Phase 6: Critical Audit Logging ──
         from app.services.candidate_service import CandidateService

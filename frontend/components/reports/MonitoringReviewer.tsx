@@ -40,11 +40,32 @@ interface MonitoringEvent {
   id: number
   interview_id: number
   event_type: 'focus_lost' | 'multiple_faces' | 'no_face' | 'normal'
+  original_event_type?: string
   timestamp: string
   confidence_score?: number
   frame_image_path?: string
   frame_image_url?: string
   video_reference?: string
+}
+
+const normalizeEventType = (type: string): 'focus_lost' | 'multiple_faces' | 'no_face' | 'normal' => {
+  if (!type) return 'normal'
+  const t = type.toLowerCase()
+  if (t.includes('multiple_people') || t.includes('multiple_faces')) {
+    return 'multiple_faces'
+  }
+  if (t.includes('no_face') || t.includes('face_not_detected') || t.includes('not_in_frame') || t.includes('face_missing')) {
+    return 'no_face'
+  }
+  if (
+    t.includes('focus_lost') ||
+    t.includes('tab_switched') ||
+    t.includes('window_focus') ||
+    t.includes('fullscreen')
+  ) {
+    return 'focus_lost'
+  }
+  return 'normal'
 }
 
 interface MonitoringReviewerProps {
@@ -62,30 +83,39 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
   const [selectedEvent, setSelectedEvent] = useState<MonitoringEvent | null>(null)
   const [isPlayingVideo, setIsPlayingVideo] = useState(false)
 
-  const filteredEvents = useMemo(() => {
+  const normalizedEvents = useMemo(() => {
     if (!Array.isArray(events)) return []
-    if (filter === 'all') return events
+    return events.map((ev) => ({
+      ...ev,
+      original_event_type: ev.event_type,
+      event_type: normalizeEventType(ev.event_type),
+    }))
+  }, [events])
+
+  const filteredEvents = useMemo(() => {
+    if (!Array.isArray(normalizedEvents)) return []
+    if (filter === 'all') return normalizedEvents
     if (filter === 'warnings') {
-      return events.filter((ev) => ['focus_lost', 'multiple_faces', 'no_face'].includes(ev.event_type))
+      return normalizedEvents.filter((ev) => ['focus_lost', 'multiple_faces', 'no_face'].includes(ev.event_type))
     }
-    return events.filter((ev) => ev.event_type === filter)
-  }, [events, filter])
+    return normalizedEvents.filter((ev) => ev.event_type === filter)
+  }, [normalizedEvents, filter])
 
   const warningCount = useMemo(() => {
-    if (!Array.isArray(events)) return 0
-    return events.filter((ev) => ['focus_lost', 'multiple_faces', 'no_face'].includes(ev.event_type)).length
-  }, [events])
+    if (!Array.isArray(normalizedEvents)) return 0
+    return normalizedEvents.filter((ev) => ['focus_lost', 'multiple_faces', 'no_face'].includes(ev.event_type)).length
+  }, [normalizedEvents])
 
   const counts = useMemo(() => {
     const res = { focus_lost: 0, multiple_faces: 0, no_face: 0, normal: 0 }
-    if (!Array.isArray(events)) return res
-    for (const ev of events) {
+    if (!Array.isArray(normalizedEvents)) return res
+    for (const ev of normalizedEvents) {
       if (ev.event_type in res) {
         res[ev.event_type as keyof typeof res]++
       }
     }
     return res
-  }, [events])
+  }, [normalizedEvents])
 
   const formatTimeOffset = (videoRef?: string, timestamp?: string) => {
     if (videoRef && videoRef.startsWith('offset_')) {
@@ -312,9 +342,9 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
                   </div>
                 </div>
 
-                <div className="p-3 flex items-center justify-center bg-card/45 backdrop-blur-xl border-t border-border">
+                <div className="p-3 flex items-center justify-center bg-card/45 backdrop-blur-xl border-t border-border text-center">
                   <span className="text-xs font-bold text-foreground capitalize tracking-wide">
-                    {ev.event_type.replace('_', ' ')}
+                    {ev.original_event_type ? ev.original_event_type.replace(/_/g, ' ') : ev.event_type.replace(/_/g, ' ')}
                   </span>
                 </div>
               </div>
@@ -346,6 +376,12 @@ export const MonitoringReviewer: React.FC<MonitoringReviewerProps> = ({ intervie
           </div>
 
           <div className="p-6 space-y-4">
+            {selectedEvent?.original_event_type && selectedEvent.event_type !== 'normal' && (
+              <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-destructive/5 dark:bg-destructive/10 border border-destructive/20 text-destructive text-sm font-bold capitalize animate-pulse">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Violation Detail: {selectedEvent.original_event_type.replace(/_/g, ' ')}</span>
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               <span className="text-xs font-extrabold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <Eye className="w-4 h-4 text-primary" /> Frame Snapshot
