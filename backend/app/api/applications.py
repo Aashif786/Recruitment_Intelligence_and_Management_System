@@ -2680,8 +2680,7 @@ async def update_hr_notes(
 @limiter.limit("5/minute")
 async def extract_basic_info(
     request: Request,
-    resume_file: UploadFile = File(...),
-    current_user: User = Depends(get_current_hr)
+    resume_file: UploadFile = File(...)
 ):
     """Fast endpoint to extract Name and Phone from an uploaded resume."""
     # 1. Extension Check

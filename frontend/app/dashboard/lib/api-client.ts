@@ -43,6 +43,7 @@ export class APIClient {
       normalized.startsWith('/api/onboarding/') ||
       normalized === '/api/applications/apply' ||
       normalized === '/api/applications/extract-basic-info' ||
+      normalized.startsWith('/api/applications/has-applied') ||
       normalized === '/api/support/ticket' ||
       normalized === '/api/settings/branding'
     )
@@ -219,6 +220,11 @@ export class APIClient {
         const cleanPath = currentPath.replace(/^\/calrims/, '') || '/'
         const isAuthPage = cleanPath.includes('/auth/') ||
           cleanPath.includes('/interview') ||
+          cleanPath.includes('/jobs') ||
+          cleanPath.includes('/support') ||
+          cleanPath.includes('/terms') ||
+          cleanPath.includes('/privacy') ||
+          cleanPath.includes('/company') ||
           cleanPath === '/'
         if (!isAuthPage) {
           // Debounce: only redirect once every 3s to prevent looping
