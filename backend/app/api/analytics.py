@@ -91,15 +91,7 @@ def _build_reports_query(
                 )
             )
         elif status_lower == "terminated":
-            query = query.filter(
-                or_(
-                    Interview.status == "terminated",
-                    and_(
-                        InterviewReport.termination_reason.isnot(None),
-                        InterviewReport.termination_reason != "",
-                    ),
-                )
-            )
+            query = query.filter(Interview.status == "terminated")
         elif status_lower != "default":
             query = query.filter(func.lower(Application.status) == status_lower)
 
@@ -553,7 +545,7 @@ def get_interview_reports(
             for row in score_data:
                 s = float(row.score or 0)
                 m_total_score += s
-                if row.term_reason or row.iv_status == 'terminated':
+                if row.iv_status == 'terminated':
                     m_terminated += 1
                 elif row.iv_status != 'completed':
                     m_incomplete += 1
