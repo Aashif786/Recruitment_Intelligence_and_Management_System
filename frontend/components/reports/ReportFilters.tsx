@@ -245,7 +245,7 @@ export const ReportFilters = React.memo(function ReportFilters({
           <div className="rounded-xl border border-border/60 bg-muted/30 space-y-1">
             <Label htmlFor="job-filter" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Filters</Label>
             <Select value={jobFilter} onValueChange={setJobFilter}>
-              <SelectTrigger id="job-filter" className="w-full h-9 text-sm rounded-lg bg-background/50 border-border/40">
+              <SelectTrigger id="job-filter" className="w-full h-9 text-sm rounded-xl bg-background/50 border-border/40 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200">
                 <SelectValue placeholder="JOBS" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
@@ -280,7 +280,7 @@ export const ReportFilters = React.memo(function ReportFilters({
             <div className="space-y-1  rounded-xl border border-border/50 bg-muted/25">
               {/* <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Suggestion</Label> */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full h-5 text-xs rounded-lg bg-background/40 border-border/30">
+                <SelectTrigger className="w-full h-9 text-xs rounded-xl bg-background/40 border-border/30 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200">
                   <SelectValue placeholder="Suggestion" />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
@@ -297,7 +297,7 @@ export const ReportFilters = React.memo(function ReportFilters({
             <div className="space-y-1  rounded-xl border border-border/50 bg-muted/25">
               {/* <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Skills</Label> */}
               <Select value={skillFilter} onValueChange={setSkillFilter}>
-                <SelectTrigger className="w-full h-9 text-xs rounded-lg bg-background/40 border-border/30">
+                <SelectTrigger className="w-full h-9 text-xs rounded-xl bg-background/40 border-border/30 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200">
                   <SelectValue placeholder="DOMAIN" />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg max-h-[300px]">
