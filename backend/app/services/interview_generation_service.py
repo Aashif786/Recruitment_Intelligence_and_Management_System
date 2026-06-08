@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -10,6 +10,7 @@ import logging
 import tempfile
 from app.core.config import get_settings
 from app.domain.models import Interview, Application, InterviewQuestion, Job
+from app.core.rate_limiter import limiter
 from app.services.ai_service import (
     generate_behavioral_question,
     generate_custom_domain_questions_with_meta,

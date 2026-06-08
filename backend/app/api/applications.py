@@ -1111,7 +1111,7 @@ def get_pending_applications_count(
 
 @router.get("", response_model=ApplicationListResponse, response_class=ORJSONResponse)
 def get_hr_applications(
-    job_id: int = None,
+    job_id: str = None,
     from_date: str = None,
     to_date: str = None,
     status: str = None,
@@ -1149,8 +1149,12 @@ def get_hr_applications(
         )
 
         # 2. Filters
-        if job_id:
-            query = query.filter(Application.job_id == job_id)
+        if job_id and str(job_id).strip() not in ("all", "All"):
+            job_id_str = str(job_id).strip()
+            if job_id_str.isdigit():
+                query = query.filter(Application.job_id == int(job_id_str))
+            else:
+                query = query.filter(Job.job_id == job_id_str)
 
         if status and status != 'all':
             if status == "applied":
@@ -1162,7 +1166,8 @@ def get_hr_applications(
             term = f"%{search}%"
             query = query.filter(or_(
                 Application.candidate_name.ilike(term),
-                Job.title.ilike(term)
+                Job.title.ilike(term),
+                Job.job_id.ilike(term)
             ))
 
         def parse_date(date_str):

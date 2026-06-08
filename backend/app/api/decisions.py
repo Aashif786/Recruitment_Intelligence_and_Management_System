@@ -284,7 +284,7 @@ def get_application_decision(
 @limiter.limit("60/minute")
 def get_hiring_pipeline(
     request: Request, status_filter: str = None,
-    job_id: int = None,
+    job_id: str = None,
     current_user: User = Depends(get_current_hr),
     db: Session = Depends(get_db)
 ):
@@ -299,8 +299,12 @@ def get_hiring_pipeline(
         load_only(Application.id, Application.candidate_name, Application.status, Application.applied_at, Application.job_id, Application.hr_id)
     )
     
-    if job_id:
-        query = query.filter(Application.job_id == job_id)
+    if job_id and str(job_id).lower() != "all":
+        job_id_str = str(job_id).strip()
+        if job_id_str.isdigit():
+            query = query.filter(Application.job_id == int(job_id_str))
+        else:
+            query = query.filter(Job.job_id == job_id_str)
     
     if status_filter:
         query = query.filter(Application.status == status_filter)
