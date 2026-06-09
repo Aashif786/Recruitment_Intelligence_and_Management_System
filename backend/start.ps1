@@ -44,7 +44,7 @@ function Clear-Port {
         Start-Sleep -Seconds 1
         $waited++
         if ($waited % 5 -eq 0) {
-            Write-Host "  Waiting for port $PORT to free... ($waited/30 s)" -ForegroundColor Yellow
+            Write-Host "  Waiting for port $PORT to free... ($waited/20 s)" -ForegroundColor Yellow
         }
     }
 
