@@ -287,7 +287,7 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                                     <Card 
                                         key={app.id} 
                                         style={{ animationDelay: `${index * 50}ms` }} 
-                                        className={`relative cursor-pointer transition-all duration-300 bg-card/45 backdrop-blur-xl border rounded-xl group animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both hover:-translate-y-1.5 hover:shadow-[0_12px_30px_-6px_rgba(0,0,0,0.06)] hover:border-primary/40 active:scale-[0.99] ${selectedApps.includes(app.id) ? 'border-primary shadow-[0_8px_30px_rgb(0,0,0,0.02)] bg-primary/5' : 'border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)]'}`}
+                                        className={`relative cursor-pointer bg-card/45 backdrop-blur-xl border rounded-xl group animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both hover-premium-lift active:scale-[0.98] ${selectedApps.includes(app.id) ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/80'}`}
                                         onClick={() => router.push(`/dashboard/hr/applications/${app.id}`)}
                                     >
                                         {/* Right side controls */}

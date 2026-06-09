@@ -181,7 +181,7 @@ export default function PublicJobsPage() {
                                 <Link href={`/jobs/${job.id}`} key={job.id} className="group block outline-none">
                                     <div className="relative h-full transition-all duration-500 animate-in fade-in slide-in-from-bottom-8 fill-mode-both" style={{ animationDelay: `${idx * 50}ms` }}>
                                         <div className="absolute -inset-0.5 bg-gradient-to-br from-primary to-accent rounded-[2rem] blur opacity-0 group-hover:opacity-20 transition duration-500 group-hover:duration-200"></div>
-                                        <Card className="relative h-full flex flex-col bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] group-hover:border-primary/30 group-hover:-translate-y-1 active:scale-[0.99] transition-all duration-300 rounded-2xl overflow-hidden">
+                                        <Card className="relative h-full flex flex-col bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift active:scale-[0.99] rounded-2xl overflow-hidden">
                                             <div className={`absolute top-0 right-0 w-32 h-32 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-125 duration-500 ${job.status === 'closed' ? 'bg-red-500/10' : 'bg-primary/10'}`}></div>
 
                                             <CardHeader className="pb-4 relative z-10">

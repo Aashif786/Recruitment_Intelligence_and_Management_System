@@ -806,7 +806,7 @@ export default function RepositoryPage() {
                             </TableHeader>
                             <TableBody>
                                 {paginatedSets.map((set) => (
-                                    <TableRow key={set.id} className="hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200 group">
+                                    <TableRow key={set.id} className="premium-table-row cursor-pointer border-b border-border/10 last:border-b-0 group">
                                         <TableCell className="py-4">
                                             <div className="flex flex-col gap-1.5">
                                                 <span className="font-bold text-foreground uppercase tracking-tight">{set.title}</span>
