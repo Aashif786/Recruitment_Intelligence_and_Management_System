@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import { getApiBaseUrl } from "@/lib/config";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useApplicationsMutate } from "./hooks/use-applications-mutate";
 import { PageHeader } from "@/components/page-header";
 import {
@@ -582,101 +583,129 @@ export default function HRApplicationsPage() {
 
                     {/* ── Applied: Mark as Screened ── */}
                     {app.status === "applied" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={processingIds.has(app.id)}
-                        className="h-10 w-10 p-0 text-primary hover:bg-primary/10 rounded-xl transition-colors shadow-none"
-                        title="Mark as Screened"
-                        onClick={() => handleTransition(app.id, "mark_screened")}
-                      >
-                        <FileCheck className="h-5 w-5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={processingIds.has(app.id)}
+                            className="h-10 w-10 p-0 text-primary hover:bg-primary/10 rounded-xl transition-colors shadow-none"
+                            onClick={() => handleTransition(app.id, "mark_screened")}
+                          >
+                            <FileCheck className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Mark as Screened</TooltipContent>
+                      </Tooltip>
                     )}
 
                     {/* ── Screened: Approve for Interview ── */}
                     {app.status === "screened" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={processingIds.has(app.id)}
-                        className="h-10 w-10 p-0 text-indigo-600 hover:bg-indigo-500/10 rounded-xl transition-colors shadow-none"
-                        title="Approve for Interview"
-                        onClick={() => handleTransition(app.id, "approve_for_interview")}
-                      >
-                        <FileCheck className="h-5 w-5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={processingIds.has(app.id)}
+                            className="h-10 w-10 p-0 text-indigo-600 hover:bg-indigo-500/10 rounded-xl transition-colors shadow-none"
+                            onClick={() => handleTransition(app.id, "approve_for_interview")}
+                          >
+                            <FileCheck className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Approve for Interview</TooltipContent>
+                      </Tooltip>
                     )}
 
                     {/* ── Interview Scheduled: no transition buttons (waiting state) ── */}
 
                     {/* ── Interview Completed: Hire ── */}
                     {app.status === "interview_completed" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={processingIds.has(app.id)}
-                        className="h-10 w-10 p-0 text-emerald-600 hover:bg-emerald-500/10 rounded-xl transition-colors shadow-none"
-                        title="Hire Candidate"
-                        onClick={() => handleTransition(app.id, "hire")}
-                      >
-                        <CheckCircle2 className="h-5 w-5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={processingIds.has(app.id)}
+                            className="h-10 w-10 p-0 text-emerald-600 hover:bg-emerald-500/10 rounded-xl transition-colors shadow-none"
+                            onClick={() => handleTransition(app.id, "hire")}
+                          >
+                            <CheckCircle2 className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Hire Candidate</TooltipContent>
+                      </Tooltip>
                     )}
 
                     {/* ── Interview Completed: Call for Physical Interview ── */}
                     {app.status === "interview_completed" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={processingIds.has(app.id)}
-                        className="h-10 w-10 p-0 text-teal-600 hover:bg-teal-500/10 rounded-xl transition-colors shadow-none"
-                        title="Call for Physical Interview"
-                        onClick={() => handleTransition(app.id, "call_for_interview")}
-                      >
-                        <User className="h-5 w-5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={processingIds.has(app.id)}
+                            className="h-10 w-10 p-0 text-teal-600 hover:bg-teal-500/10 rounded-xl transition-colors shadow-none"
+                            onClick={() => handleTransition(app.id, "call_for_interview")}
+                          >
+                            <User className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Call for Physical Interview</TooltipContent>
+                      </Tooltip>
                     )}
 
                     {/* ── Interview Completed: Review Later ── */}
                     {app.status === "interview_completed" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={processingIds.has(app.id)}
-                        className="h-10 w-10 p-0 text-amber-600 hover:bg-amber-500/10 rounded-xl transition-colors shadow-none"
-                        title="Review Later"
-                        onClick={() => handleTransition(app.id, "review_later")}
-                      >
-                        <History className="h-5 w-5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={processingIds.has(app.id)}
+                            className="h-10 w-10 p-0 text-amber-600 hover:bg-amber-500/10 rounded-xl transition-colors shadow-none"
+                            onClick={() => handleTransition(app.id, "review_later")}
+                          >
+                            <History className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Review Later</TooltipContent>
+                      </Tooltip>
                     )}
 
                     {/* ── Review Later: Call for Physical Interview ── */}
                     {app.status === "review_later" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={processingIds.has(app.id)}
-                        className="h-10 w-10 p-0 text-teal-600 hover:bg-teal-500/10 rounded-xl transition-colors shadow-none"
-                        title="Call for Physical Interview"
-                        onClick={() => handleTransition(app.id, "call_for_interview")}
-                      >
-                        <User className="h-5 w-5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={processingIds.has(app.id)}
+                            className="h-10 w-10 p-0 text-teal-600 hover:bg-teal-500/10 rounded-xl transition-colors shadow-none"
+                            onClick={() => handleTransition(app.id, "call_for_interview")}
+                          >
+                            <User className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Call for Physical Interview</TooltipContent>
+                      </Tooltip>
                     )}
 
                     {/* ── Physical Interview: Hire ── */}
                     {app.status === "physical_interview" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-10 w-10 p-0 text-emerald-600 hover:bg-emerald-500/10 rounded-xl transition-colors shadow-none"
-                        title="Hire Candidate"
-                        onClick={() => handleTransition(app.id, "hire")}
-                      >
-                        <CheckCircle2 className="h-5 w-5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-10 w-10 p-0 text-emerald-600 hover:bg-emerald-500/10 rounded-xl transition-colors shadow-none"
+                            onClick={() => handleTransition(app.id, "hire")}
+                          >
+                            <CheckCircle2 className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Hire Candidate</TooltipContent>
+                      </Tooltip>
                     )}
 
                     {/* ── Reject Button: only for states where spec allows rejection ── */}
@@ -687,14 +716,20 @@ export default function HRApplicationsPage() {
                           handleTransition(app.id, "reject", `Reason: ${reason}${notes ? `\nNotes: ${notes}` : ''}`)
                         }
                         trigger={
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-10 w-10 p-0 text-destructive hover:bg-destructive/10 rounded-xl transition-colors shadow-none"
-                            title="Reject"
-                          >
-                            <XCircle className="h-5 w-5" />
-                          </Button>
+                          <div className="inline-block">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-10 w-10 p-0 text-destructive hover:bg-destructive/10 rounded-xl transition-colors shadow-none"
+                                >
+                                  <XCircle className="h-5 w-5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Reject Candidate</TooltipContent>
+                            </Tooltip>
+                          </div>
                         }
                       />
                     )}

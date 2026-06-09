@@ -535,12 +535,13 @@ export default function HRApplicationDetailPage() {
                                         )}
                                         {application.resume_file_path && (
                                             <div className="pt-2">
-                                                <button 
+                                                <Button 
+                                                    variant="link"
                                                     onClick={() => handleDownloadResume(application.resume_file_path)}
-                                                    className="text-primary hover:underline text-xs font-bold flex items-center gap-1 bg-transparent border-none p-0 cursor-pointer"
+                                                    className="text-primary text-xs font-bold flex items-center gap-1 h-auto p-0"
                                                 >
                                                     <FileText className="h-3 w-3" /> Download Original Resume
-                                                </button>
+                                                </Button>
                                             </div>
                                         )}
                                     </>

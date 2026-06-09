@@ -136,7 +136,7 @@ export default function InterviewSidebar({
                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block">Question Status Guide</span>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-bold text-muted-foreground">
                     <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm shadow-primary/20" />
                         <span>Active</span>
                     </div>
                     <div className="flex items-center gap-2">
