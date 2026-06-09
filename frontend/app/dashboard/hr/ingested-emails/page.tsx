@@ -557,7 +557,10 @@ export default function IngestedEmailsPage() {
 
             {/* Quick Metrics — always show real counts from global_stats regardless of active filter */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 group hover:-translate-y-1 rounded-2xl overflow-hidden">
+                <Card 
+                    onClick={() => setStatusFilter('all')}
+                    className={`bg-card/45 backdrop-blur-xl border shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 rounded-2xl overflow-hidden hover-premium-lift cursor-pointer active:scale-[0.98] ${statusFilter === 'all' ? 'border-primary/60 ring-2 ring-primary/10 bg-primary/[0.03]' : 'border-border/80'}`}
+                >
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
                             <Inbox className="h-6 w-6 text-primary" />
@@ -571,7 +574,10 @@ export default function IngestedEmailsPage() {
                     </CardContent>
                 </Card>
                 
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 group hover:-translate-y-1 rounded-2xl overflow-hidden">
+                <Card 
+                    onClick={() => setStatusFilter('mapped')}
+                    className={`bg-card/45 backdrop-blur-xl border shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 rounded-2xl overflow-hidden hover-premium-lift cursor-pointer active:scale-[0.98] ${statusFilter === 'mapped' ? 'border-emerald-500/60 ring-2 ring-emerald-500/10 bg-emerald-500/[0.03]' : 'border-border/80'}`}
+                >
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
                             <CheckCircle2 className="h-6 w-6 text-emerald-600" />
@@ -585,7 +591,10 @@ export default function IngestedEmailsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 group hover:-translate-y-1 rounded-2xl overflow-hidden">
+                <Card 
+                    onClick={() => setStatusFilter('unmapped')}
+                    className={`bg-card/45 backdrop-blur-xl border shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 rounded-2xl overflow-hidden hover-premium-lift cursor-pointer active:scale-[0.98] ${statusFilter === 'unmapped' ? 'border-amber-500/60 ring-2 ring-amber-500/10 bg-amber-500/[0.03]' : 'border-border/80'}`}
+                >
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
                             <AlertTriangle className="h-6 w-6 text-amber-500" />
