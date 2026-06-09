@@ -4,6 +4,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from email.utils import formataddr
 import os
 import asyncio
 import base64
@@ -105,7 +106,16 @@ def _send_via_smtp(to_email: str, subject: str, html_body: str, attachments: lis
     try:
         msg = MIMEMultipart()
         msg["Subject"] = subject
-        msg["From"] = settings.smtp_from or settings.smtp_user
+        
+        # Add automated email headers to suppress autoreplies and clarify message nature
+        msg["Auto-Submitted"] = "auto-generated"
+        msg["X-Auto-Response-Suppress"] = "All"
+        
+        # Set professional Display Name based on branding settings
+        branding = get_branding_dict()
+        display_name = branding.get("product_name") or branding.get("company_name") or "Recruitment System"
+        from_addr = settings.smtp_from or settings.smtp_user
+        msg["From"] = formataddr((display_name, from_addr))
         msg["To"] = to_email
 
         msg.attach(MIMEText(html_body, "html"))
@@ -174,8 +184,12 @@ async def _send_via_resend(to_email: str, subject: str, html_body: str) -> dict:
         if not from_email:
             return {"success": False, "error": "RESEND_FROM not configured (Resend disabled)"}
 
+        branding = get_branding_dict()
+        display_name = branding.get("product_name") or branding.get("company_name") or "Recruitment System"
+        from_formatted = f"{display_name} <{from_email}>"
+
         payload = {
-            "from": from_email,
+            "from": from_formatted,
             "to": to_email,
             "subject": subject,
             "html": html_body,
@@ -394,38 +408,167 @@ async def execute_email_with_retries(
     logger.error(f"[EMAIL][PERMANENT_FAILURE] (Event: {event_id}) Failed after {max_retries} attempts for {_safe_email_target(to_email)}")
     return False
 
+def get_branding_dict() -> dict:
+    try:
+        from app.infrastructure.database import SessionLocal
+        from app.core.branding import get_all_branding
+        with SessionLocal() as db:
+            return get_all_branding(db)
+    except Exception as e:
+        logger.warning(f"Could not load branding settings from DB: {e}")
+        try:
+            from app.core.branding import BRANDING_DEFAULTS
+            return BRANDING_DEFAULTS.copy()
+        except Exception:
+            return {
+                "company_name": "Caldim Engineering",
+                "product_name": "CAL-RIMS",
+                "theme_color": "#2563eb",
+                "support_email": "support@caldimproducts.com",
+                "footer_text": "Powered by Caldim Engineering. Built for teams who care about who they hire."
+            }
+
+def get_templated_email(content_html: str, title: str) -> str:
+    branding = get_branding_dict()
+    company_name = branding.get("company_name", "Caldim Engineering")
+    product_name = branding.get("product_name", "CAL-RIMS")
+    theme_color = branding.get("theme_color", "#2563eb")
+    support_email = branding.get("support_email", "support@caldimproducts.com")
+    footer_text = branding.get("footer_text", "Powered by Caldim Engineering. Built for teams who care about who they hire.")
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{html.escape(title)}</title>
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }}
+    .email-container {{
+      max-width: 580px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }}
+    .header {{
+      text-align: center;
+      padding-bottom: 24px;
+    }}
+    .logo-text {{
+      font-size: 24px;
+      font-weight: 800;
+      color: {theme_color};
+      letter-spacing: -0.5px;
+      margin: 0;
+    }}
+    .card {{
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 32px 40px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }}
+    .footer {{
+      text-align: center;
+      padding-top: 24px;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }}
+    .footer a {{
+      color: {theme_color};
+      text-decoration: none;
+    }}
+    .divider {{
+      border: 0;
+      border-top: 1px solid #e2e8f0;
+      margin: 24px 0;
+    }}
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1 class="logo-text">{html.escape(product_name)}</h1>
+    </div>
+    <div class="card">
+      {content_html}
+    </div>
+    <div class="footer">
+      <p>{html.escape(footer_text)}</p>
+      <p>
+        Need help? Contact our support at <a href="mailto:{html.escape(support_email)}">{html.escape(support_email)}</a>
+      </p>
+      <p style="margin-top: 16px; font-size: 11px; color: #94a3b8;">
+        This email was automatically generated. If you did not initiate this request, please ignore this email or contact support.
+      </p>
+      <p style="margin-top: 8px; font-size: 11px; color: #94a3b8;">
+        © {datetime.utcnow().year} {html.escape(company_name)}. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
 # --- Email Templates ---
 
 async def send_otp_email(to_email: str, otp: str):
     subject = "Verify your account for the Recruitment System"
-    body = f"""
-    <html><body>
-      <h2>Account Verification</h2>
-      <p>Use the OTP below to verify your account. Expires in 30 minutes.</p>
-      <h3 style="background:#f4f4f4; padding:10px; display:inline-block; letter-spacing:5px;">{html.escape(str(otp))}</h3>
-    </body></html>
+    branding = get_branding_dict()
+    company_name = branding.get("company_name", "Caldim Engineering")
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700; text-align:center;">Account Verification</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        Thank you for joining <strong>{html.escape(company_name)}</strong>! Please use the verification code below to complete your account setup. This code will expire in 30 minutes.
+      </p>
+      <div style="text-align:center; margin:32px 0;">
+        <span style="display:inline-block; background:#f1f5f9; color:#0f172a; font-size:28px; font-weight:700; font-family:monospace; padding:12px 28px; border-radius:8px; border:1px solid #e2e8f0; letter-spacing:6px; padding-left:34px;">{html.escape(str(otp))}</span>
+      </div>
+      <p style="font-size:13px; line-height:1.5; color:#64748b; text-align:center; margin-top:24px;">
+        If you did not request this verification code, please ignore this message. Your account remains secure.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     return await execute_email_with_retries(to_email, subject, body, event_type="OTP_VERIFICATION")
 
 async def send_password_reset_email(to_email: str, otp: str):
     subject = "Password Reset Request"
+    branding = get_branding_dict()
+    theme_color = branding.get("theme_color", "#2563eb")
     frontend_url = settings.frontend_base_url
     reset_link = f"{frontend_url}/auth/reset-password?email={to_email}&otp={otp}"
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333;">
-      <h2>Password Reset</h2>
-      <p>We received a request to reset your password. Use the OTP below to proceed, or click the button to go directly to the reset page. This OTP will expire in 30 minutes.</p>
-      <div style="margin: 20px 0; text-align: center;">
-        <h3 style="background:#f4f4f4; padding:15px; display:inline-block; letter-spacing:5px; border-radius:5px; border:1px solid #ddd;">{html.escape(str(otp))}</h3>
+    
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700; text-align:center;">Reset Your Password</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        We received a request to reset the password for your account. Use the verification code below or click the button to set a new password. This link and code will expire in 30 minutes.
+      </p>
+      <div style="text-align:center; margin:32px 0;">
+        <span style="display:inline-block; background:#f1f5f9; color:#0f172a; font-size:28px; font-weight:700; font-family:monospace; padding:12px 28px; border-radius:8px; border:1px solid #e2e8f0; letter-spacing:6px; padding-left:34px;">{html.escape(str(otp))}</span>
       </div>
-      <div style="margin: 20px 0; text-align: center;">
-        <a href="{reset_link}" style="background-color: #2563eb; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
+      <div style="text-align:center; margin:32px 0;">
+        <a href="{reset_link}" style="background-color:{theme_color}; color:#ffffff; padding:12px 28px; text-decoration:none; border-radius:8px; font-weight:700; font-size:15px; display:inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">Reset Password</a>
       </div>
-      <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-      <p><a href="{reset_link}">{reset_link}</a></p>
-      <p>If you did not request this, please ignore this email.</p>
-    </body></html>
+      <div class="divider"></div>
+      <p style="font-size:13px; line-height:1.5; color:#64748b; margin-top:24px;">
+        If the button above does not work, copy and paste this link into your browser:
+      </p>
+      <p style="font-size:13px; word-break:break-all; line-height:1.5; color:#64748b;">
+        <a href="{reset_link}" style="color:{theme_color}; text-decoration:underline;">{reset_link}</a>
+      </p>
+      <p style="font-size:13px; line-height:1.5; color:#64748b; margin-top:24px;">
+        If you did not request a password reset, please ignore this email. Your password will remain unchanged.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     return await execute_email_with_retries(to_email, subject, body, event_type="PASSWORD_RESET")
 
 async def send_application_received_email(to_email_or_app: Any, job_title: str = None):
@@ -436,13 +579,16 @@ async def send_application_received_email(to_email_or_app: Any, job_title: str =
         to_email = to_email_or_app
         
     subject = f"Application Received: {job_title}"
-    body = f"""
-    <html><body>
-      <h2>Thank You for Applying!</h2>
-      <p>We received your application for <strong>{html.escape(str(job_title))}</strong>.</p>
-      <p>Our team will review your profile shortly!</p>
-    </body></html>
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700; text-align:center;">Thank You for Applying!</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        We have successfully received your application for the position of <strong>{html.escape(str(job_title))}</strong>.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center;">
+        Our hiring team will review your profile shortly and get back to you with updates on the next steps.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     return await execute_email_with_retries(
         to_email, subject, body, 
         application=to_email_or_app if hasattr(to_email_or_app, 'id') else None,
@@ -460,32 +606,39 @@ async def send_interview_invitation_email(application: Any, raw_access_key: str 
     # Production refinement: pass the whole application object for persistence
     # This matches the execute_email_with_retries signature
     subject = f"Congratulations! You're invited to interview for {application.job.title}"
+    branding = get_branding_dict()
+    theme_color = branding.get("theme_color", "#2563eb")
     frontend_url = settings.frontend_base_url
     access_url = f"{frontend_url}/interview/access?email={application.candidate_email}&key={raw_access_key}"
     support_url = f"{frontend_url}/support?{urlencode({'email': application.candidate_email, 'access_key': raw_access_key})}"
     
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333; line-height:1.6;">
-      <h2 style="color:#2563eb;">Interview Invitation</h2>
-      <p>Your application for <strong>{html.escape(str(application.job.title))}</strong> has been approved!</p>
-      <p>Please use the secure link below to access the interview portal. This link is unique to you.</p>
-      <div style="margin: 20px 0; text-align: center;">
-        <a href="{html.escape(str(access_url))}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Begin Interview</a>
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700; text-align:center;">Interview Invitation</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        Great news! Your application for <strong>{html.escape(str(application.job.title))}</strong> has been approved.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        Please use the secure link below to access the interview portal. This link is unique to you.
+      </p>
+      <div style="text-align:center; margin:32px 0;">
+        <a href="{html.escape(str(access_url))}" style="background-color:{theme_color}; color:#ffffff; padding:14px 28px; text-decoration:none; border-radius:8px; font-weight:700; font-size:16px; display:inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">Begin Interview</a>
       </div>
-      <p>If the button doesn't work, copy and paste this link into your browser:</p>
-      <p><a href="{html.escape(str(access_url))}" style="color:#2563eb; word-break:break-all;">{html.escape(str(access_url))}</a></p>
-      <hr style="border:none; border-top:1px solid #eee; margin: 24px 0;"/>
-      <div style="background:#f8fafc; border-left:4px solid #f59e0b; padding:16px; border-radius:4px; margin-bottom:16px;">
-        <p style="margin:0 0 8px 0; font-weight:700; color:#92400e;">&#128197; Need to Reschedule?</p>
-        <p style="margin:0 0 8px 0; color:#555;">If you are unable to attend the interview at this time or encountered a technical issue, please contact us via the Support Portal below.</p>
-        <p style="margin:0;">
-          👉 <a href="{html.escape(str(support_url))}" style="color:#2563eb; font-weight:700;">Support Portal &amp; Reschedule Request</a>
+      <p style="font-size:13px; line-height:1.5; color:#64748b;">
+        If the button above does not work, copy and paste this link into your browser:
+      </p>
+      <p style="font-size:13px; word-break:break-all; line-height:1.5; color:#64748b; margin-bottom:24px;">
+        <a href="{html.escape(str(access_url))}" style="color:{theme_color}; text-decoration:underline;">{html.escape(str(access_url))}</a>
+      </p>
+      <div class="divider"></div>
+      <div style="background:#f8fafc; border-left:4px solid #f59e0b; padding:16px; border-radius:6px; margin:24px 0; text-align:left;">
+        <p style="margin:0 0 8px 0; font-weight:700; color:#92400e; font-size:14px;">📅 Need to Reschedule?</p>
+        <p style="margin:0 0 8px 0; color:#555; font-size:13px; line-height:1.5;">If you are unable to attend the interview at this time or encountered a technical issue, please contact us via the Support Portal below.</p>
+        <p style="margin:0; font-size:13px;">
+          👉 <a href="{html.escape(str(support_url))}" style="color:{theme_color}; font-weight:700; text-decoration:underline;">Support Portal &amp; Reschedule Request</a>
         </p>
       </div>
-      <p style="font-size:0.9em; color:#888;">If you did not apply for this role, please disregard this email.</p>
-    </body></html>
     """
-    
+    body = get_templated_email(content_html, subject)
     return await execute_email_with_retries(
         application.candidate_email, 
         subject, 
@@ -496,6 +649,8 @@ async def send_interview_invitation_email(application: Any, raw_access_key: str 
 
 async def send_approved_for_interview_email(to_email: str, job_title: str, raw_access_key: str = ""):
     subject = f"Congratulations! You're invited to interview for {job_title}"
+    branding = get_branding_dict()
+    theme_color = branding.get("theme_color", "#2563eb")
     frontend_url = settings.frontend_base_url
     try:
         parsed = urlparse(frontend_url)
@@ -505,42 +660,53 @@ async def send_approved_for_interview_email(to_email: str, job_title: str, raw_a
         pass
     access_url = f"{frontend_url}/interview/access?email={to_email}&key={raw_access_key}"
     support_url = f"{frontend_url}/support?{urlencode({'email': to_email, 'access_key': raw_access_key})}"
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333;">
-      <h2>Interview Invitation</h2>
-      <p>Your application for <strong>{html.escape(str(job_title))}</strong> has been approved!</p>
-      <p>Please use the secure link below to access the interview portal. This link is unique to you and expires in 10 days.</p>
-      <div style="margin: 20px 0; text-align: center;">
-        <a href="{html.escape(str(access_url))}" style="background-color: #2563eb; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Begin Interview</a>
-      </div>
-      <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-      <p><a href="{html.escape(str(access_url))}" style="color:#2563eb;">{html.escape(str(access_url))}</a></p>
-      <hr style="border:none; border-top:1px solid #eee; margin: 20px 0;"/>
-      <p style="margin: 0 0 6px 0; font-weight:600;">Need help with your interview experience?</p>
-      <p style="margin: 0 0 8px 0;">If you faced a technical issue, unexpected termination, or need to raise a grievance, use the Support Portal:</p>
-      <p style="margin: 0 0 12px 0;">
-         <a href="{html.escape(str(support_url))}" style="color:#2563eb; font-weight:700;">Support Portal Link</a>
+    
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700; text-align:center;">Interview Invitation</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        Your application for <strong>{html.escape(str(job_title))}</strong> has been approved!
       </p>
-      <p style="margin: 0; font-size:0.95em; color:#555;">Our HR team will review your request promptly and reach out if more details are needed.</p>
-      <hr style="border:none; border-top:1px solid #eee; margin: 20px 0;"/>
-      <p style="font-size:0.9em; color:#666;">If you did not apply for this role, please disregard this email.</p>
-    </body></html>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        Please use the secure link below to access the interview portal. This link is unique to you and expires in 10 days.
+      </p>
+      <div style="text-align:center; margin:32px 0;">
+        <a href="{html.escape(str(access_url))}" style="background-color:{theme_color}; color:#ffffff; padding:14px 28px; text-decoration:none; border-radius:8px; font-weight:700; font-size:16px; display:inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">Begin Interview</a>
+      </div>
+      <p style="font-size:13px; line-height:1.5; color:#64748b;">
+        If the button above does not work, copy and paste this link into your browser:
+      </p>
+      <p style="font-size:13px; word-break:break-all; line-height:1.5; color:#64748b; margin-bottom:24px;">
+        <a href="{html.escape(str(access_url))}" style="color:{theme_color}; text-decoration:underline;">{html.escape(str(access_url))}</a>
+      </p>
+      <div class="divider"></div>
+      <div style="background:#f8fafc; border-left:4px solid #f59e0b; padding:16px; border-radius:6px; margin:24px 0; text-align:left;">
+        <p style="margin: 0 0 6px 0; font-weight:700; color:#92400e; font-size:14px;">Need help with your interview experience?</p>
+        <p style="margin: 0 0 12px 0; color:#555; font-size:13px; line-height:1.5;">If you faced a technical issue, unexpected termination, or need to raise a grievance, use the Support Portal:</p>
+        <p style="margin: 0; font-size:13px;">
+          👉 <a href="{html.escape(str(support_url))}" style="color:{theme_color}; font-weight:700; text-decoration:underline;">Support Portal Link</a>
+        </p>
+      </div>
     """
-    # Note: We need the Application object for persistence, but this function only takes email.
-    # We rely on send_interview_invitation_email wrapper to pass the application object.
+    body = get_templated_email(content_html, subject)
     return await execute_email_with_retries(to_email, subject, body, event_type="INTERVIEW_INVITE")
 
 async def send_hired_email(to_email: str, job_title: str, interview=None, offer_letter_path: str = None, application: Any = None):
     subject = "Congratulations! You have been selected"
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333;">
-      <h2 style="color:#10b981;">Congratulations!</h2>
-      <p>You have been selected for the <strong>{html.escape(str(job_title))}</strong> position!</p>
-      <p>Please find your Offer Letter attached.</p>
-      <p>Our HR team will contact you within 24-48 hours for onboarding.</p>
-      <br><p>Best Regards,<br>The Recruitment Team</p>
-    </body></html>
+    branding = get_branding_dict()
+    company_name = branding.get("company_name", "Caldim Engineering")
+    content_html = f"""
+      <h2 style="margin-top:0; color:#10b981; font-size:20px; font-weight:700; text-align:center;">Congratulations!</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        We are thrilled to inform you that you have been selected for the position of <strong>{html.escape(str(job_title))}</strong> at <strong>{html.escape(company_name)}</strong>!
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        Please find your Offer Letter attached to this email.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center;">
+        Our HR team will reach out to you within 24-48 hours to guide you through the next steps of the onboarding process.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     attachments = []
     if offer_letter_path:
         # 1. Try local disk (legacy support for manual uploads)
@@ -585,7 +751,12 @@ async def send_hired_email(to_email: str, job_title: str, interview=None, offer_
 
 async def send_simple_email(to_email: str, subject: str, message: str):
     """Utility for sending internal/simple notification emails."""
-    body = f"<html><body><p>{html.escape(str(message))}</p></body></html>"
+    content_html = f"""
+      <p style="font-size:15px; line-height:1.6; color:#334155;">
+        {html.escape(str(message))}
+      </p>
+    """
+    body = get_templated_email(content_html, subject)
     result = await send_email_async(to_email, subject, body)
     return result["success"]
 
@@ -595,26 +766,34 @@ async def send_offer_letter_email(to_email: str, candidate_name: str, company_na
     Supports both local paths and cloud URLs (will download before attaching).
     """
     subject = f"Offer Letter - {company_name}"
-    
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333; line-height: 1.6;">
-      <h2 style="color: #2563eb;">Hello {html.escape(str(candidate_name))},</h2>
-      <p>Congratulations! We are pleased to offer you a position at <strong>{html.escape(str(company_name))}</strong>.</p>
-      <p>Please find the attached offer letter for your review. We are excited about the possibility of you joining our team!</p>
+    branding = get_branding_dict()
+    theme_color = branding.get("theme_color", "#2563eb")
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700;">Hello {html.escape(str(candidate_name))},</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:24px;">
+        Congratulations! We are pleased to offer you a position at <strong>{html.escape(str(company_name))}</strong>.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:24px;">
+        Please find the attached offer letter for your review. We are excited about the possibility of you joining our team!
+      </p>
       
-      <div style="margin: 30px 0; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
-        <h4 style="margin-top: 0;">Please respond to this offer:</h4>
-        <a href="{html.escape(str(accept_link))}" style="background-color: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-right: 15px; display: inline-block;">Accept Offer</a>
-        <a href="{html.escape(str(reject_link))}" style="background-color: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reject Offer</a>
+      <div style="margin: 32px 0; padding: 24px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
+        <h4 style="margin-top: 0; color:#0f172a; margin-bottom: 16px;">Please respond to this offer:</h4>
+        <a href="{html.escape(str(accept_link))}" style="background-color: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 15px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">Accept Offer</a>
+        <a href="{html.escape(str(reject_link))}" style="background-color: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">Reject Offer</a>
       </div>
 
-      <p>If the buttons above do not work, use these links:</p>
-      <p>Accept: <a href="{html.escape(str(accept_link))}">{html.escape(str(accept_link))}</a></p>
-      <p>Reject: <a href="{html.escape(str(reject_link))}">{html.escape(str(reject_link))}</a></p>
+      <p style="font-size:13px; line-height:1.5; color:#64748b;">If the buttons above do not work, use these links:</p>
+      <p style="font-size:13px; word-break:break-all; line-height:1.5; color:#64748b;">
+        Accept: <a href="{html.escape(str(accept_link))}" style="color:{theme_color}; text-decoration:underline;">{html.escape(str(accept_link))}</a>
+      </p>
+      <p style="font-size:13px; word-break:break-all; line-height:1.5; color:#64748b; margin-bottom:24px;">
+        Reject: <a href="{html.escape(str(reject_link))}" style="color:{theme_color}; text-decoration:underline;">{html.escape(str(reject_link))}</a>
+      </p>
       
       <br><p>Best Regards,<br>HR Team, {html.escape(str(company_name))}</p>
-    </body></html>
     """
+    body = get_templated_email(content_html, subject)
     attachments = []
     if offer_letter_url:
         try:
@@ -651,38 +830,48 @@ async def send_offer_letter_email(to_email: str, candidate_name: str, company_na
 
 async def send_screened_email(to_email: str, job_title: str, application: Any = None):
     subject = "Update on Your Application"
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333;">
-      <h2>Application Update</h2>
-      <p>We are writing to let you know that your application for the <strong>{html.escape(str(job_title))}</strong> position has been successfully screened by our team.</p>
-      <p>Your profile is currently under review, and we will get back to you with the next steps soon.</p>
-      <br><p>Best Regards,<br>The Recruitment Team</p>
-    </body></html>
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700; text-align:center;">Application Update</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        We are writing to let you know that your application for the <strong>{html.escape(str(job_title))}</strong> position has been successfully screened by our team.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center;">
+        Your profile is currently under review, and we will get back to you with the next steps soon.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     return await execute_email_with_retries(to_email, subject, body, event_type="APP_SCREENED")
 
 async def send_rejected_email(to_email: str, job_title: str, is_ai_auto_reject: bool = False, application: Any = None):
     subject = f"Update on your application for {job_title}"
     reason = "we found that your resume did not align closely enough with the job requirements." if is_ai_auto_reject else "we have decided to move forward with other candidates at this time."
-    body = f"""
-    <html><body>
-      <h2>Application Update</h2>
-      <p>Thank you for applying to <strong>{html.escape(str(job_title))}</strong>.</p>
-      <p>Unfortunately, {html.escape(str(reason))}</p>
-      <p>We encourage you to apply for future roles that match your skills!</p>
-    </body></html>
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700; text-align:center;">Application Update</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        Thank you for your interest in the <strong>{html.escape(str(job_title))}</strong> position and for taking the time to apply.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        Unfortunately, {html.escape(str(reason))}
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center;">
+        We encourage you to apply for future roles that align with your background and skills. We wish you the best in your career search.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     return await execute_email_with_retries(to_email, subject, body, application=application, event_type="REJECTED_NOTICE")
 
 async def send_call_for_interview_email(to_email: str, job_title: str):
     subject = f"Interview Invitation — {job_title}"
-    body = f"""
-    <html><body>
-      <h2>You're Invited for an Interview!</h2>
-      <p>Based on your AI assessment, you're invited for an interview for <strong>{html.escape(str(job_title))}</strong>.</p>
-      <p>Our HR team will contact you shortly to schedule it.</p>
-    </body></html>
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700; text-align:center;">You're Invited for an Interview!</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
+        Based on your AI assessment, you have been invited to schedule an interview for the <strong>{html.escape(str(job_title))}</strong> role.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center;">
+        Our HR team will contact you shortly to coordinate the scheduling details.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     result = await send_email_async(to_email, subject, body)
     if not result["success"]:
         logger.warning(f"Call for Interview Email failed for {_safe_email_target(to_email)}: {result['error']}")
@@ -690,29 +879,34 @@ async def send_call_for_interview_email(to_email: str, job_title: str):
 
 async def send_ticket_resolved_email(to_email: str, issue_type: str, hr_response: str, job_title: str = "your applied position"):
     subject = f"Support Ticket Update - {job_title}"
+    branding = get_branding_dict()
+    theme_color = branding.get("theme_color", "#2563eb")
     
     # Contextual link: if it was a technical issue or interruption, they probably need to go back to the interview
     link_html = ""
     if issue_type in ["technical", "interruption", "reschedule"]:
         access_url = f"{settings.frontend_base_url}/interview/access?email={to_email}"
         link_html = f"""
-        <div style="margin: 20px 0;">
-            <a href="{access_url}" style="background-color: #2563eb; color: white; padding: 10px 18px; text-decoration: none; border-radius: 4px; font-weight: bold;">Return to Interview Portal</a>
+        <div style="text-align:center; margin:32px 0;">
+            <a href="{access_url}" style="background-color:{theme_color}; color:#ffffff; padding:12px 25px; text-decoration:none; border-radius:6px; font-weight:bold; display:inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">Return to Interview Portal</a>
         </div>
         """
 
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333;">
-      <h2 style="color:#2563eb;">Support Ticket Update</h2>
-      <p>Your support ticket regarding <strong>{html.escape(str(issue_type.replace('_', ' ')))}</strong> for the <strong>{html.escape(str(job_title))}</strong> position has been reviewed.</p>
-      <div style="background:#f9f9f9; padding:15px; border-left:4px solid #3b82f6; margin:10px 0;">
-        <strong>Resolution:</strong><br/>
-        {html.escape(str(hr_response))}
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700;">Support Ticket Update</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:24px;">
+        Your support ticket regarding <strong>{html.escape(str(issue_type.replace('_', ' ')))}</strong> for the <strong>{html.escape(str(job_title))}</strong> position has been reviewed.
+      </p>
+      <div style="background:#f8fafc; padding:20px; border-left:4px solid #3b82f6; border-radius:6px; margin:24px 0;">
+        <strong style="color:#0f172a; font-size:14px; display:block; margin-bottom:8px;">Resolution Details:</strong>
+        <p style="margin:0; font-size:14px; line-height:1.5; color:#334155;">{html.escape(str(hr_response))}</p>
       </div>
       {link_html}
-      <p>Thank you for your patience.</p>
-    </body></html>
+      <p style="font-size:15px; line-height:1.6; color:#334155;">
+        Thank you for your patience during this process.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     result = await send_email_async(to_email, subject, body)
     if not result["success"]:
         logger.warning(f"Ticket Resolved Email failed for {_safe_email_target(to_email)}: {result['error']}")
@@ -720,20 +914,33 @@ async def send_ticket_resolved_email(to_email: str, issue_type: str, hr_response
 
 async def send_key_reissued_email(to_email: str, job_title: str, new_key: str, hr_response: str):
     subject = f"Re: Congratulations! You're invited to interview for {job_title}"
+    branding = get_branding_dict()
+    theme_color = branding.get("theme_color", "#2563eb")
     frontend_url = settings.frontend_base_url
     access_url = f"{frontend_url}/interview/access?email={to_email}&key={new_key}"
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333; line-height:1.6;">
-      <h2 style="color:#2563eb;">Access Key Re-issued</h2>
-      <p>Your request for <strong>{html.escape(str(job_title))}</strong> has been approved.</p>
-      <div style="background:#f9f9f9; padding:15px; border-left:4px solid #10b981; margin:10px 0;">{html.escape(str(hr_response))}</div>
-      <p><strong>New Access Key:</strong> <span style="background:#f4f4f4; padding:8px 12px; font-family:monospace; font-weight:bold;">{html.escape(str(new_key))}</span></p>
-      <div style="margin: 25px 0; text-align: center;">
-        <a href="{html.escape(str(access_url))}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Resume Interview</a>
+    
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700;">Access Key Re-issued</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:24px;">
+        Your request for the <strong>{html.escape(str(job_title))}</strong> position has been approved.
+      </p>
+      <div style="background:#f8fafc; padding:20px; border-left:4px solid #10b981; border-radius:6px; margin:24px 0;">
+        <p style="margin:0; font-size:14px; line-height:1.5; color:#334155;">{html.escape(str(hr_response))}</p>
       </div>
-      <p style="font-size: 0.85em; color: #777;">If the button above doesn't work, copy and paste this link: {html.escape(str(access_url))}</p>
-    </body></html>
+      <p style="font-size:15px; line-height:1.6; color:#334155;">
+        <strong>New Access Key:</strong> <span style="background:#f1f5f9; padding:6px 12px; font-family:monospace; font-weight:bold; border-radius:4px; border:1px solid #e2e8f0; font-size:15px;">{html.escape(str(new_key))}</span>
+      </p>
+      <div style="text-align:center; margin:32px 0;">
+        <a href="{html.escape(str(access_url))}" style="background-color:{theme_color}; color:#ffffff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:bold; display:inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">Resume Interview</a>
+      </div>
+      <p style="font-size:13px; line-height:1.5; color:#64748b;">
+        If the button above does not work, copy and paste this link:
+      </p>
+      <p style="font-size:13px; word-break:break-all; line-height:1.5; color:#64748b;">
+        <a href="{html.escape(str(access_url))}" style="color:{theme_color}; text-decoration:underline;">{html.escape(str(access_url))}</a>
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     result = await send_email_async(to_email, subject, body)
     if not result["success"]:
         logger.warning(f"Key Reissued Email failed for {_safe_email_target(to_email)}: {result['error']}")
@@ -741,13 +948,16 @@ async def send_key_reissued_email(to_email: str, job_title: str, new_key: str, h
 
 async def send_onboarding_reminder_email(to_email: str, candidate_name: str, joining_date: str, job_title: str):
     subject = f"Upcoming Onboarding Reminder: {candidate_name}"
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333;">
-      <h2>Onboarding Reminder</h2>
-      <p>This is a reminder that <strong>{html.escape(str(candidate_name))}</strong> is scheduled to join the company in 7 days on <strong>{html.escape(str(joining_date))}</strong> for the <strong>{html.escape(str(job_title))}</strong> role.</p>
-      <p>Please ensure all necessary preparations (IT access, workspace setup) are completed ahead of time.</p>
-    </body></html>
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700;">Onboarding Reminder</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:24px;">
+        This is a reminder that <strong>{html.escape(str(candidate_name))}</strong> is scheduled to join the company in 7 days on <strong>{html.escape(str(joining_date))}</strong> for the <strong>{html.escape(str(job_title))}</strong> role.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155;">
+        Please ensure all necessary preparations (IT access, workspace setup, credentials) are completed ahead of time.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     return await execute_email_with_retries(to_email, subject, body, event_type="ONBOARDING_REMINDER")
 
 async def send_onboarding_summary_email(to_email: str, candidates_list: list):
@@ -818,13 +1028,16 @@ async def send_onboarding_summary_email(to_email: str, candidates_list: list):
 
 async def send_joining_confirmation_email(to_email: str, candidate_name: str, job_title: str, candidate_photo_url: str):
     subject = f"Joining Confirmation: {candidate_name}"
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333;">
-      <h2>Candidate Joined Today</h2>
-      <p>This is to confirm that <strong>{html.escape(str(candidate_name))}</strong> has officially joined the company today for the <strong>{html.escape(str(job_title))}</strong> role.</p>
-      <p>Please find the live photograph of the candidate attached.</p>
-    </body></html>
+    content_html = f"""
+      <h2 style="margin-top:0; color:#0f172a; font-size:20px; font-weight:700;">Candidate Joined Today</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:16px;">
+        This is to confirm that <strong>{html.escape(str(candidate_name))}</strong> has officially joined the company today for the <strong>{html.escape(str(job_title))}</strong> role.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155;">
+        Please find the live photograph of the candidate attached to this email.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     
     attachments = []
     if candidate_photo_url:
@@ -860,15 +1073,19 @@ async def send_joining_confirmation_email(to_email: str, candidate_name: str, jo
 async def send_interview_completed_email(application: Any):
     """Notify candidate that their interview session has been successfully saved."""
     subject = f"Interview Completed: {application.job.title}"
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333;">
-      <h2 style="color:#2563eb;">Interview Successfully Completed</h2>
-      <p>Hello {application.candidate_name},</p>
-      <p>Thank you for completing your interview for the <strong>{html.escape(str(application.job.title))}</strong> position.</p>
-      <p>Your responses and technical assessment have been successfully recorded. Our HR team will review your report and get back to you with the next steps.</p>
-      <p>Best Regards,<br>The Recruitment Team</p>
-    </body></html>
+    content_html = f"""
+      <h2 style="margin-top:0; color:#2563eb; font-size:20px; font-weight:700; text-align:center;">Interview Successfully Completed</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-top:24px; margin-bottom:16px;">
+        Hello {html.escape(str(application.candidate_name))},
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:16px;">
+        Thank you for completing your interview for the <strong>{html.escape(str(application.job.title))}</strong> position.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155;">
+        Your responses and technical assessment have been successfully recorded. Our HR team will review your report and get back to you with the next steps.
+      </p>
     """
+    body = get_templated_email(content_html, subject)
     return await execute_email_with_retries(
         application.candidate_email, 
         subject, 
@@ -880,6 +1097,8 @@ async def send_interview_completed_email(application: Any):
 async def send_interview_terminated_email(application: Any, reason: str):
     """Notify candidate that their session was terminated due to policy violations."""
     subject = f"Urgent: Interview Session Terminated - {application.job.title}"
+    branding = get_branding_dict()
+    theme_color = branding.get("theme_color", "#2563eb")
     
     reason_text = "policy violations (such as multiple tab switches or loss of camera focus)"
     if "misconduct" in reason.lower():
@@ -890,15 +1109,22 @@ async def send_interview_terminated_email(application: Any, reason: str):
     if application.candidate_email:
         support_url += f"?{urlencode({'email': application.candidate_email})}"
     
-    body = f"""
-    <html><body style="font-family:sans-serif; color:#333;">
-      <h2 style="color:#ef4444;">Session Terminated</h2>
-      <p>Hello {application.candidate_name},</p>
-      <p>Your interview session for <strong>{html.escape(str(application.job.title))}</strong> has been automatically terminated due to <strong>{reason_text}</strong>.</p>
-      <p>If you believe this was a technical error, please reach out to our support team immediately via the <a href="{html.escape(support_url)}" style="color:#2563eb; font-weight:bold; text-decoration:underline;">support portal</a> or reply to this email.</p>
-      <p>Best Regards,<br>Recruitment Compliance Team</p>
-    </body></html>
+    content_html = f"""
+      <h2 style="margin-top:0; color:#ef4444; font-size:20px; font-weight:700; text-align:center;">Session Terminated</h2>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-top:24px; margin-bottom:16px;">
+        Hello {html.escape(str(application.candidate_name))},
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:16px;">
+        Your interview session for <strong>{html.escape(str(application.job.title))}</strong> has been automatically terminated due to <strong>{reason_text}</strong>.
+      </p>
+      <p style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:24px;">
+        If you believe this was a technical error or happened under unexpected circumstances, please reach out to our compliance and support team immediately via the support portal or by replying to this email.
+      </p>
+      <div style="text-align:center; margin:32px 0;">
+        <a href="{html.escape(support_url)}" style="background-color:#ef4444; color:#ffffff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:bold; display:inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">Access Support Portal</a>
+      </div>
     """
+    body = get_templated_email(content_html, subject)
     return await execute_email_with_retries(
         application.candidate_email, 
         subject, 
