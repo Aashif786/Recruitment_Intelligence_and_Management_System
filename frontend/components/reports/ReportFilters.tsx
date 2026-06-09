@@ -167,7 +167,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full hover:scale-105 active:scale-95 transition-all duration-200"
                           onClick={onClearFilters}
                         >
                           <RotateCcw className="h-3.5 w-3.5" />
@@ -184,7 +184,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-full animate-in zoom-in spin-in-90 duration-300 shadow-sm border border-emerald-100"
+                        className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-full animate-in zoom-in spin-in-90 hover:scale-105 active:scale-95 transition-all duration-300 shadow-sm border border-emerald-100"
                         onClick={handleApply}
                       >
                         <CheckCircle2 className="h-4 w-4" />
