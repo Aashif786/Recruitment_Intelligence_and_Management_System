@@ -707,7 +707,7 @@ export default function IngestedEmailsPage() {
                                     : item.sender_email.trim()
 
                                 return (
-                                    <TableRow key={item.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 cursor-pointer group">
+                                    <TableRow key={item.id} className="border-b border-border/20 last:border-b-0 cursor-pointer group premium-table-row">
                                         {(user?.role === 'super_admin' || user?.role === 'hr') && (
                                             <TableCell className="w-[50px] pl-6" onClick={(e) => e.stopPropagation()}>
                                                 <button

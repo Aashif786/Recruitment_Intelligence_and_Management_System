@@ -148,7 +148,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                     variant="ghost"
                                     size="icon"
                                     onClick={toggleSidebar}
-                                    className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl transition-all duration-200"
+                                    className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl hover:scale-110 active:scale-95 transition-all duration-200"
                                 >
                                     <PanelRight className="h-4 w-4" />
                                 </Button>
@@ -162,7 +162,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             variant="ghost"
                             size="icon"
                             onClick={toggleSidebar}
-                            className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl transition-all duration-200"
+                            className="h-8 w-8 text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-xl hover:scale-110 active:scale-95 transition-all duration-200"
                         >
                             <PanelLeft className="h-4 w-4 group-data-[collapsible=icon]:hidden" />
                             <PanelRight className="h-4 w-4 hidden group-data-[collapsible=icon]:block" />
@@ -275,7 +275,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                         variant="ghost"
                                         size="icon"
                                         onClick={logout}
-                                        className="h-9 w-9 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all active:scale-95 duration-200"
+                                        className="h-9 w-9 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive hover:scale-110 active:scale-95 transition-all duration-200"
                                     >
                                         <LogOut className="h-4 w-4" />
                                     </Button>
@@ -289,7 +289,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 variant="ghost"
                                 size="icon"
                                 onClick={logout}
-                                className="h-9 w-9 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all active:scale-95 duration-200"
+                                className="h-9 w-9 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive hover:scale-110 active:scale-95 transition-all duration-200"
                             >
                                 <LogOut className="h-4 w-4" />
                             </Button>
@@ -302,7 +302,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         size="icon"
                         onClick={logout}
                         title="Sign Out"
-                        className="h-8 w-8 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all active:scale-95 duration-200 group-data-[collapsible=icon]:hidden shrink-0"
+                        className="h-8 w-8 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 rounded-lg hover:scale-110 active:scale-95 transition-all duration-200 group-data-[collapsible=icon]:hidden shrink-0"
                     >
                         <LogOut className="h-4 w-4" />
                     </Button>

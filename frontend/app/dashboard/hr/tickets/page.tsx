@@ -281,7 +281,7 @@ export default function HRTicketsPage() {
                                 <TooltipTrigger asChild>
                                     <div 
                                         onClick={() => setSelectedFeedback(fb)}
-                                        className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200 cursor-pointer group relative"
+                                        className="grid grid-cols-12 gap-4 px-6 py-4 items-center border-b border-border/10 last:border-b-0 cursor-pointer group relative premium-table-row"
                                     >
                                         <div className="col-span-2 flex gap-0.5">
                                             {[1, 2, 3, 4, 5].map(star => (
@@ -328,7 +328,7 @@ export default function HRTicketsPage() {
                             <div
                                 key={ticket.id}
                                 onClick={() => { setSelectedTicket(ticket); setHrResponse(ticket.hr_response || '') }}
-                                className="flex flex-col md:grid md:grid-cols-12 gap-4 px-4 py-4 items-start md:items-center hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200 cursor-pointer group w-full"
+                                className="flex flex-col md:grid md:grid-cols-12 gap-4 px-4 py-4 items-start md:items-center border-b border-border/10 last:border-b-0 cursor-pointer group w-full premium-table-row"
                             >
                                 <div className="hidden md:flex col-span-1 justify-center text-sm font-bold text-muted-foreground">
                                     {ticket.id}
@@ -466,7 +466,7 @@ export default function HRTicketsPage() {
 
                     {selectedTicket && (
                         <>
-                            <div className="space-y-6 px-6 py-4 max-h-[70vh] overflow-y-auto min-w-0">
+                            <div className="space-y-6 px-6 py-4 max-h-[70vh] overflow-y-auto min-w-0 scrollbar-premium">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/50 p-6 rounded-2xl border border-border/50">
                                     {/* LEFT: Candidate Info */}
                                     <div className="space-y-2 min-w-0">

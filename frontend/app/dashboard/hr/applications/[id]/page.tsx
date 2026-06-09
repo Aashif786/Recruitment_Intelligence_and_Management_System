@@ -31,32 +31,32 @@ import { toast } from "sonner"
 // ─── FSM Button Config ──────────────────────────────────────────────────
 const FSM_BUTTONS: Record<string, { action: string; label: string; icon: React.ReactNode; className: string }[]> = {
     applied: [
-        { action: "mark_screened", label: "MARK AS SCREENED", icon: <CheckCircle2 className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "mark_screened", label: "MARK AS SCREENED", icon: <CheckCircle2 className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:scale-102 hover:shadow-primary/15 active:scale-[0.98] transition-all duration-300" },
+        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg hover:scale-102 hover:shadow-destructive/15 active:scale-[0.98] transition-all duration-300" },
     ],
     screened: [
-        { action: "approve_for_interview", label: "APPROVE FOR INTERVIEW", icon: <CheckCircle2 className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "approve_for_interview", label: "APPROVE FOR INTERVIEW", icon: <CheckCircle2 className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:scale-102 hover:shadow-primary/15 active:scale-[0.98] transition-all duration-300" },
+        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg hover:scale-102 hover:shadow-destructive/15 active:scale-[0.98] transition-all duration-300" },
     ],
     // interview_scheduled: waiting state — no HR transition buttons
     interview_scheduled: [],
     interview_completed: [
-        { action: "hire", label: "HIRE CANDIDATE", icon: <Star className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
-        { action: "call_for_interview", label: "CALL FOR PHYSICAL INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
-        { action: "review_later", label: "REVIEW LATER", icon: <Clock className="h-4 w-4" />, className: "bg-amber-500 hover:bg-amber-600 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "hire", label: "HIRE CANDIDATE", icon: <Star className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:scale-102 hover:shadow-emerald-600/15 active:scale-[0.98] transition-all duration-300" },
+        { action: "call_for_interview", label: "CALL FOR PHYSICAL INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:scale-102 hover:shadow-primary/15 active:scale-[0.98] transition-all duration-300" },
+        { action: "review_later", label: "REVIEW LATER", icon: <Clock className="h-4 w-4" />, className: "bg-amber-500 hover:bg-amber-600 text-white shadow-lg hover:scale-102 hover:shadow-amber-500/15 active:scale-[0.98] transition-all duration-300" },
         // NOTE: No reject from interview_completed per spec
     ],
     review_later: [
-        { action: "call_for_interview", label: "CALL FOR PHYSICAL INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-[0.98] transition-all duration-200" },
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "call_for_interview", label: "CALL FOR PHYSICAL INTERVIEW", icon: <PhoneCall className="h-4 w-4" />, className: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:scale-102 hover:shadow-primary/15 active:scale-[0.98] transition-all duration-300" },
+        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg hover:scale-102 hover:shadow-destructive/15 active:scale-[0.98] transition-all duration-300" },
     ],
     physical_interview: [
-        { action: "hire", label: "HIRE CANDIDATE", icon: <Star className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
-        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "hire", label: "HIRE CANDIDATE", icon: <Star className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:scale-102 hover:shadow-emerald-600/15 active:scale-[0.98] transition-all duration-300" },
+        { action: "reject", label: "REJECT CANDIDATE", icon: <XCircle className="h-4 w-4" />, className: "bg-destructive hover:bg-destructive/90 text-white shadow-lg hover:scale-102 hover:shadow-destructive/15 active:scale-[0.98] transition-all duration-300" },
     ],
     hired: [],
     accepted: [
-        { action: "onboard", label: "FINALIZE JOINING", icon: <UserPlus className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg active:scale-[0.98] transition-all duration-200" },
+        { action: "onboard", label: "FINALIZE JOINING", icon: <UserPlus className="h-4 w-4" />, className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:scale-102 hover:shadow-emerald-600/15 active:scale-[0.98] transition-all duration-300" },
     ],
 }
 
@@ -328,7 +328,7 @@ export default function HRApplicationDetailPage() {
                         <Button 
                             variant="ghost" 
                             onClick={() => router.back()} 
-                            className="gap-2 text-muted-foreground hover:text-foreground h-auto p-0 flex items-center transition-colors hover:bg-transparent group"
+                            className="gap-2 text-muted-foreground hover:text-foreground h-auto p-0 flex items-center transition-all hover:bg-transparent group hover:scale-[1.03] active:scale-95 duration-200"
                         >
                             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" /> 
                             <span className="text-sm font-bold">Back</span>
@@ -342,13 +342,13 @@ export default function HRApplicationDetailPage() {
                                 <img
                                     src={application.photo_url}
                                     alt={application.candidate_name}
-                                    className="w-24 h-24 rounded-2xl object-cover border-4 border-card shadow-xl ring-1 ring-border"
+                                    className="w-24 h-24 rounded-2xl object-cover border-4 border-card shadow-xl ring-1 ring-border group-hover:scale-105 transition-transform duration-300"
                                 />
                             </div>
                         ) : (
                             <div className="relative group shrink-0">
                                 <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-md -z-10 group-hover:bg-primary/20 transition-all" />
-                                <div className="w-24 h-24 rounded-2xl bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-inner">
+                                <div className="w-24 h-24 rounded-2xl bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-inner group-hover:scale-105 transition-transform duration-300">
                                     <span className="text-3xl font-bold text-primary">{application.candidate_name?.[0]}</span>
                                 </div>
                             </div>
@@ -497,7 +497,7 @@ export default function HRApplicationDetailPage() {
                                                                 View More <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                                                             </Button>
                                                         </DialogTrigger>
-                                                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] bg-background/90 backdrop-blur-xl border border-border/80 shadow-2xl rounded-3xl">
+                                                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] bg-background/90 backdrop-blur-xl border border-border/80 shadow-2xl rounded-3xl scrollbar-premium">
                                                             <DialogHeader>
                                                                 <DialogTitle className="flex items-center gap-2 text-xl font-bold">
                                                                     <FileText className="h-5 w-5 text-primary" />
@@ -521,7 +521,7 @@ export default function HRApplicationDetailPage() {
                                                                         <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Experience</p>
                                                                     </div>
                                                                 </div>
-                                                                <div className="bg-muted/30 p-4 rounded-xl border whitespace-pre-wrap text-sm text-foreground/80 overflow-y-auto" style={{ maxHeight: '60vh' }}>
+                                                                <div className="bg-muted/30 p-4 rounded-xl border whitespace-pre-wrap text-sm text-foreground/80 overflow-y-auto scrollbar-premium" style={{ maxHeight: '60vh' }}>
                                                                     {resumeExtraction.summary || resumeExtraction.extracted_text}
                                                                 </div>
                                                             </div>

@@ -372,7 +372,7 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                                                             key={btn.action}
                                                             variant={btn.variant === 'primary' ? 'default' : btn.variant === 'destructive' ? 'destructive' : 'outline'}
                                                             size="sm"
-                                                            className={`h-6 px-2 text-[10px] font-bold uppercase tracking-wider rounded-md active:scale-[0.99] transition-all duration-200 ${
+                                                            className={`h-6 px-2 text-[10px] font-bold uppercase tracking-wider rounded-md hover:scale-105 active:scale-[0.95] transition-all duration-200 ${
                                                                 btn.variant === 'success' 
                                                                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-sm' 
                                                                     : btn.variant === 'secondary'
@@ -399,7 +399,7 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                             <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="h-6 px-2 text-xs"
+                                className="h-6 px-2 text-xs hover:scale-105 active:scale-95 transition-all duration-200"
                                 disabled={pageNum === 0}
                                 onClick={() => setPages(p => ({ ...p, [colKey]: pageNum - 1 }))}
                             >
@@ -411,7 +411,7 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
                             <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="h-6 px-2 text-xs"
+                                className="h-6 px-2 text-xs hover:scale-105 active:scale-95 transition-all duration-200"
                                 disabled={(pageNum + 1) * APPLICATIONS_PER_PAGE >= colApps.length}
                                 onClick={() => setPages(p => ({ ...p, [colKey]: pageNum + 1 }))}
                             >

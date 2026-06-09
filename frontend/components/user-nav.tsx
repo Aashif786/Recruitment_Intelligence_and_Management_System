@@ -84,8 +84,8 @@ export function UserNav() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-slate-800/10 transition-all focus-visible:ring-offset-0 focus-visible:ring-0">
-                    <Avatar className="h-10 w-10 overflow-hidden">
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-slate-800/10 hover:scale-105 active:scale-95 transition-all duration-300 focus-visible:ring-offset-0 focus-visible:ring-0 group hover:shadow-md">
+                    <Avatar className="h-10 w-10 overflow-hidden border border-border group-hover:border-primary/50 transition-colors duration-300">
                         <AvatarImage 
                             src={avatarUrl} 
                             alt={user?.full_name || 'User'} 
@@ -115,14 +115,14 @@ export function UserNav() {
                 <DropdownMenuSeparator className="opacity-50 my-1" />
                 <DropdownMenuGroup className="p-1">
                     {user?.role === 'super_admin' && (
-                        <DropdownMenuItem className="cursor-pointer py-2.5 rounded-xl focus:bg-primary/5 gap-2.5" onClick={() => router.push('/dashboard/settings')}>
+                        <DropdownMenuItem className="cursor-pointer py-2.5 px-3 rounded-xl focus:bg-primary/5 focus:text-primary focus:pl-4 transition-all duration-200 gap-2.5" onClick={() => router.push('/dashboard/settings')}>
                             <Settings className="h-4 w-4 text-muted-foreground" />
                             <span>Settings</span>
                         </DropdownMenuItem>
                     )}
                     {user?.role === 'super_admin' && (
                         <DropdownMenuItem
-                            className="cursor-pointer py-2.5 rounded-xl focus:bg-primary/5 gap-2.5"
+                            className="cursor-pointer py-2.5 px-3 rounded-xl focus:bg-primary/5 focus:text-primary focus:pl-4 transition-all duration-200 gap-2.5"
                             onClick={() => {
                                 setLogoUrl(settings?.company_logo_url || '')
                                 setIsLogoDialogOpen(true)
@@ -132,7 +132,7 @@ export function UserNav() {
                             <span>Update Brand Logo</span>
                         </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem className="cursor-pointer py-2.5 rounded-xl focus:bg-primary/5 gap-2.5" onClick={() => router.push('/dashboard/repository')}>
+                    <DropdownMenuItem className="cursor-pointer py-2.5 px-3 rounded-xl focus:bg-primary/5 focus:text-primary focus:pl-4 transition-all duration-200 gap-2.5" onClick={() => router.push('/dashboard/repository')}>
                         <GitFork className="h-4 w-4 text-muted-foreground" />
                         <span>Repository</span>
                     </DropdownMenuItem>
@@ -141,7 +141,7 @@ export function UserNav() {
                 <div className="p-1">
                 <DropdownMenuItem
                     onClick={handleLogout}
-                    className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer py-2.5 rounded-xl gap-2.5"
+                    className="text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer py-2.5 px-3 rounded-xl focus:pl-4 transition-all duration-200 gap-2.5"
                 >
                     <LogOut className="h-4 w-4" />
                     <span>Log out</span>

@@ -289,7 +289,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
                   {filteredReports.map((report: Report) => (
                     <TableRow
                       key={report.id}
-                      className="cursor-pointer hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200"
+                      className="cursor-pointer border-b border-border/10 last:border-b-0 premium-table-row"
                       onClick={() => setViewingReport(report)}
                     >
                       <TableCell className="font-semibold text-foreground">
@@ -393,29 +393,29 @@ export const ReportDashboard = React.memo(function ReportDashboard({
                   </div>
 
                   <div className="w-full lg:w-1/2 grid grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:border-primary/20 transition-all duration-300 active:scale-[0.98]">
+                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover-premium-lift active:scale-[0.98]">
                       <div className="text-3xl font-black text-foreground tracking-tight">{metrics.avgScore}</div>
                       <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Avg Score</div>
                     </div>
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:border-primary/20 transition-all duration-300 active:scale-[0.98]">
+                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover-premium-lift active:scale-[0.98]">
                       <div className="text-3xl font-black text-foreground tracking-tight">{metrics.total}</div>
                       <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Interviews</div>
                     </div>
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:border-primary/20 transition-all duration-300 active:scale-[0.98]">
+                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover-premium-lift active:scale-[0.98]">
                       <div className="text-3xl font-black text-foreground tracking-tight">{metrics.avgQuestions}</div>
                       <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Avg Qs</div>
                     </div>
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:border-primary/20 transition-all duration-300 active:scale-[0.98]">
+                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover-premium-lift active:scale-[0.98]">
                       <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                         {metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%
                       </div>
                       <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Success Rate</div>
                     </div>
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:border-primary/20 transition-all duration-300 active:scale-[0.98]">
+                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover-premium-lift active:scale-[0.98]">
                       <div className="text-3xl font-black text-foreground tracking-tight">{metrics.totalApplied}</div>
                       <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Applied</div>
                     </div>
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] hover:border-primary/20 transition-all duration-300 active:scale-[0.98]">
+                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover-premium-lift active:scale-[0.98]">
                       <div className="text-3xl font-black text-foreground tracking-tight">{metrics.totalFinished}</div>
                       <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Finished</div>
                     </div>

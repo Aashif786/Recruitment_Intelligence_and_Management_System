@@ -458,7 +458,7 @@ export default function HRApplicationsPage() {
             {applications.map((app, index) => (
               <div
                 key={app.id}
-                className="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 px-4 sm:px-6 lg:px-6 py-4 lg:py-5 lg:items-center hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] active:scale-[0.99] border-b border-border/10 last:border-b-0 transition-all duration-300 cursor-pointer group"
+                className="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 px-4 sm:px-6 lg:px-6 py-4 lg:py-5 lg:items-center border-b border-border/10 last:border-b-0 cursor-pointer group premium-table-row"
                 onClick={() => router.push(`/dashboard/hr/applications/${app.id}`)}
               >
                 {/* Candidate Info */}

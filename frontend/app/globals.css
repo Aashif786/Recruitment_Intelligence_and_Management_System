@@ -514,9 +514,46 @@
   border-radius: 6px;
 }
 
-/* ── Premium input focus glow ──────────────────────────────────── */
+/* ── Premium input focus glow & hover transitions ──────────────── */
+input,
+textarea,
+select {
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+              background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 input:focus,
 textarea:focus,
 select:focus {
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 15%, transparent);
+  border-color: color-mix(in oklab, var(--primary) 60%, var(--border)) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 15%, transparent) !important;
 }
+
+/* ── Premium cards, items and row hover transformations ────────── */
+.hover-premium-lift {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
+}
+
+.hover-premium-lift:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--primary) 30%, var(--border));
+  box-shadow: 0 12px 30px -4px color-mix(in oklab, var(--primary) 12%, transparent),
+              0 4px 12px -2px color-mix(in oklab, var(--primary) 6%, transparent);
+}
+
+.premium-table-row {
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-table-row:hover {
+  background-color: color-mix(in oklab, var(--muted) 40%, transparent) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px color-mix(in oklab, var(--primary) 5%, transparent);
+}
+
