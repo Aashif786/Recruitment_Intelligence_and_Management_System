@@ -289,7 +289,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
                   {filteredReports.map((report: Report) => (
                     <TableRow
                       key={report.id}
-                      className="cursor-pointer hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200"
+                      className="cursor-pointer border-b border-border/10 last:border-b-0 premium-table-row"
                       onClick={() => setViewingReport(report)}
                     >
                       <TableCell className="font-semibold text-foreground">

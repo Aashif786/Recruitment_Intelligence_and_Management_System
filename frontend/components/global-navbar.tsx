@@ -43,17 +43,17 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
       {!isDashboard && (
         <div className="flex items-center gap-4 font-semibold text-sm">
           {!isHome && (
-            <Link href="/" prefetch={false} className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/" prefetch={false} className="text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all duration-200 block">
               Home
             </Link>
           )}
           {!isJobs && (
-            <Link href="/jobs" prefetch={false} className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/jobs" prefetch={false} className="text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all duration-200 block">
               Browse Roles
             </Link>
           )}
           {!isAuth && (
-            <Link href="/auth/login?role=hr" prefetch={false} className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/auth/login?role=hr" prefetch={false} className="text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all duration-200 block">
               HR Portal
             </Link>
           )}
@@ -106,7 +106,7 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
           <Button
             variant="ghost"
             size="icon"
-            className="text-foreground"
+            className="text-foreground hover:scale-105 active:scale-95 transition-all duration-200"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? (
