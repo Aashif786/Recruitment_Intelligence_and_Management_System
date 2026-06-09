@@ -109,7 +109,7 @@ export default function SupportPage() {
                     <CardFooter className="flex flex-col gap-3 p-12 pt-0">
                         <Button 
                              onClick={() => router.push('/')} 
-                             className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-lg shadow-xl"
+                             className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-lg shadow-xl hover-premium-lift active:scale-[0.985] transition-all"
                         >
                             RETURN TO PORTAL
                         </Button>
@@ -131,7 +131,7 @@ export default function SupportPage() {
                 <Button
                     variant="ghost"
                     onClick={() => router.back()}
-                    className="mb-8 hover:bg-background/80 text-muted-foreground group font-bold rounded-xl px-4"
+                    className="mb-8 hover:bg-background/80 text-muted-foreground group font-bold rounded-xl px-4 active:scale-[0.985] transition-all"
                 >
                     <ChevronLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" /> 
                     Back to Interview
@@ -204,9 +204,9 @@ export default function SupportPage() {
                                         { id: 'misconduct_appeal', label: 'Misconduct Appeal', desc: 'Appeal a proctoring warning' },
                                         { id: 'other', label: 'Other Issue', desc: 'Process or scheduling' }
                                     ].map((opt) => (
-                                        <label key={opt.id} htmlFor={opt.id} className={`relative flex flex-col p-5 rounded-2xl border transition-all cursor-pointer group active:scale-[0.99] ${issueType === opt.id
-                                            ? 'border-primary bg-primary/10 shadow-[0_8px_30px_rgb(0,0,0,0.02)]'
-                                            : 'border-border/80 hover:border-primary/40 hover:bg-muted/30 bg-card/45 backdrop-blur-md'
+                                        <label key={opt.id} htmlFor={opt.id} className={`relative flex flex-col p-5 rounded-2xl border hover-premium-lift cursor-pointer group active:scale-[0.985] ${issueType === opt.id
+                                            ? 'border-primary bg-primary/10'
+                                            : 'border-border/80 bg-card/45 backdrop-blur-md'
                                             }`}>
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className="font-black text-slate-900 dark:text-white">{opt.label}</span>
@@ -249,7 +249,7 @@ export default function SupportPage() {
 
                             <Button
                                 type="submit"
-                                className="w-full h-18 rounded-2xl bg-slate-950 hover:bg-slate-800 text-white font-black text-xl shadow-2xl transition-all active:scale-[0.99] disabled:opacity-50"
+                                className="w-full h-18 rounded-2xl bg-slate-950 hover:bg-slate-800 text-white font-black text-xl shadow-2xl hover-premium-lift active:scale-[0.98] disabled:opacity-50 transition-all"
                                 disabled={!canSubmit}
                             >
                                 {isSubmitting ? (

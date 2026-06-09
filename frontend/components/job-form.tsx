@@ -488,7 +488,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
 
     return (
         <div className="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto overflow-x-hidden">
-            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 rounded-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both w-full">
+            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both w-full">
                 <CardHeader className="space-y-4">
                     <div className="mb-2">
                         <Button

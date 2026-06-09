@@ -186,7 +186,7 @@ function SetCard({
     onDelete: (s: QuestionSet) => void
 }) {
     return (
-        <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300 group">
+        <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover-premium-lift cursor-pointer active:scale-[0.985] group">
             <CardContent className="p-5 space-y-3">
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-3">
