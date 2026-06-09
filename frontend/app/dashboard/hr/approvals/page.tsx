@@ -219,7 +219,7 @@ export default function ApprovalsPage() {
               </TableHeader>
               <TableBody>
                 {hrUsers.map((hrUser) => (
-                  <TableRow key={hrUser.id} className="hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200">
+                  <TableRow key={hrUser.id} className="border-b border-border/10 last:border-b-0 premium-table-row cursor-pointer">
                     <TableCell>{hrUser.id}</TableCell>
                     <TableCell>
                       <Button 

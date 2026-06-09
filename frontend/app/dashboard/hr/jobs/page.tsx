@@ -279,7 +279,7 @@ export default function HRJobsPage() {
                         {paginatedJobs.map((job, index) => (
                             <div
                                 key={job.id}
-                                className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200 cursor-pointer group"
+                                className="grid grid-cols-12 gap-4 px-6 py-4 items-center border-b border-border/10 last:border-b-0 cursor-pointer group premium-table-row"
                                 onClick={() => router.push(`/dashboard/hr/jobs/${job.id}/edit`)}
                             >
                                 {/* Job Title & ID */}
