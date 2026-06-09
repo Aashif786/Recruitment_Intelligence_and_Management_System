@@ -45,11 +45,14 @@ class AnalyticsService:
                 return q
 
             # Combine all core metrics into a single row fetch to minimize network round-trips
+            # Hired stages: hired, offer_sent, onboarded, offer_accepted, offer_rejected
+            HIRED_STATUSES = ['hired', 'offer_sent', 'onboarded', 'offer_accepted', 'offer_rejected']
+            CLOSED_STATUSES = ['hired', 'offer_sent', 'onboarded', 'offer_accepted', 'offer_rejected', 'rejected']
             metrics_query = db.query(
                 func.count(Application.id).label("total_apps"),
-                func.count(case((Application.status.in_(['accepted', 'hired', 'onboarded']), Application.id))).label("hired_apps"),
+                func.count(case((Application.status.in_(HIRED_STATUSES), Application.id))).label("hired_apps"),
                 func.count(case((and_(Offer.offer_sent == True, Application.status.in_(['hired', 'pending_approval', 'offer_sent', 'accepted', 'onboarded'])), Application.id))).label("offered_apps"),
-                func.count(case((Application.status.in_(['accepted', 'hired', 'onboarded', 'rejected']), Application.id))).label("closed_apps"),
+                func.count(case((Application.status.in_(CLOSED_STATUSES), Application.id))).label("closed_apps"),
                 func.avg(case((Application.composite_score > 0, Application.composite_score))).label("avg_score")
             ).outerjoin(Offer, Application.id == Offer.application_id)
             
@@ -74,8 +77,8 @@ class AnalyticsService:
             total_interviews = i_res.total_ints or 0
             completed_interviews = i_res.completed_ints or 0
             
-            # Task: Candidates 'pending' should not be calculated in success rate.
-            # Success Rate = Hired / Closed (Hired + Onboarded + Rejected)
+            # Success Rate = Hired (offer_sent/hired/onboarded/offer_accepted/offer_rejected) / Closed
+            # Closed = all hired stages + rejected (excludes pending/in-progress candidates)
             success_rate = (hired_count / closed_apps_count * 100) if closed_apps_count > 0 else 0
 
             result = {
@@ -122,7 +125,7 @@ class AnalyticsService:
             # Strict display order – exactly the 6 required stages
             CHART_ORDER = [ 
                 'Applied', 'Screened', 'Interview completed',
-                'Physical Interview', 'Hired','Onboarded', 'Offer Sent','Rejected' 
+                'Physical Interview', 'Rejected', 'Hired','Onboarded', 'Offer Sent'
             ]
             
             # Initialize with 0s so all bars always appear
@@ -165,14 +168,14 @@ class AnalyticsService:
             func.count(Application.id).label("total")
         ).outerjoin(Job, Application.job_id == Job.id)
         
-        # Interview Counts (Valid = not_started, in_progress, completed)
+        # Interview Counts 
         int_metrics = self.db.query(
             func.count(Interview.id).label("total"),
-            func.count(case((Interview.status == "completed", Interview.id))).label("completed")
+            func.count(case((Interview.status == "interview_completed", Interview.id))).label("completed")
         ).join(Application, Interview.application_id == Application.id).outerjoin(Job, Application.job_id == Job.id)
         
         # Hired Count and Offered Count
-        hired_metrics = self.db.query(func.count(Application.id)).filter(Application.status.in_(['accepted', 'hired', 'onboarded'])).outerjoin(Job, Application.job_id == Job.id)
+        hired_metrics = self.db.query(func.count(Application.id)).filter(Application.status.in_(['hired', 'offer_sent', 'onboarded','offer_accepted', 'offer_rejected'])).outerjoin(Job, Application.job_id == Job.id)
         offered_metrics = self.db.query(func.count(Application.id)).outerjoin(Offer, Application.id == Offer.application_id).filter(Offer.offer_sent == True).outerjoin(Job, Application.job_id == Job.id)
 
         if hr_id:
@@ -182,7 +185,7 @@ class AnalyticsService:
             offered_metrics = offered_metrics.filter(or_(Job.hr_id == hr_id, Application.hr_id == hr_id))
             
         total_applications = app_metrics.scalar() or 0
-        valid_int_result = int_metrics.filter(Interview.status.in_(['not_started', 'in_progress', 'completed'])).first()
+        valid_int_result = int_metrics.filter(Interview.status.in_(['interview_completed'])).first()
         valid_interviews = valid_int_result[0] if valid_int_result else 0
         completed_interviews = valid_int_result[1] if valid_int_result else 0
         hired_count = hired_metrics.scalar() or 0
