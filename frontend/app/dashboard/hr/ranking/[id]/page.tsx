@@ -126,7 +126,7 @@ export default function LeaderboardPage() {
                             {paginatedRanked.map((cand, index) => {
                                 const actualRank = (rankingPage - 1) * pageSize + index + 1
                                 return (
-                                    <TableRow key={cand.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 py-4 h-16">
+                                    <TableRow key={cand.id} className="premium-table-row border-b border-border/20 last:border-b-0 py-4 h-16">
                                         <TableCell className="font-medium align-middle">
                                             <div className="flex items-center gap-3 pl-2">
                                                 {getRankIcon(actualRank)}

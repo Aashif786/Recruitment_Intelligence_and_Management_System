@@ -176,7 +176,7 @@ export default function SettingsPage() {
             </PageHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift overflow-hidden rounded-2xl pt-0">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
@@ -246,7 +246,7 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden flex flex-col rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift overflow-hidden flex flex-col rounded-2xl pt-0">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
@@ -309,7 +309,7 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* White-Label Branding Config Card */}
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden md:col-span-2 rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift overflow-hidden md:col-span-2 rounded-2xl pt-0">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
@@ -443,7 +443,7 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* New Theme Preference Card */}
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden md:col-span-2 rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift overflow-hidden md:col-span-2 rounded-2xl pt-0">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <div className="flex items-center justify-between">
                             <div>
@@ -469,7 +469,7 @@ export default function SettingsPage() {
                 </Card>
             </div>
 
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift overflow-hidden rounded-2xl pt-0">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
