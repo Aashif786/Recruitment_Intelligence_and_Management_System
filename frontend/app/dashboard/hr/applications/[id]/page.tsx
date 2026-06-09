@@ -316,7 +316,7 @@ export default function HRApplicationDetailPage() {
     return (
         <div className=" space-y-5 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* ─── Candidate Info Card ───────────────────────────────── */}
-            <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] bg-gradient-to-br from-card/30 to-muted/10 relative overflow-hidden active:scale-[0.995] transition-all duration-300 hover-premium-lift cursor-pointer">
+            <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] bg-gradient-to-br from-card/30 to-muted/10 relative overflow-hidden">
                 <div className="absolute top-4 right-4 z-10 md:top-6 md:right-6">
                     <Badge className={`px-4 py-1.5 text-xs font-bold uppercase border shadow-sm whitespace-nowrap ${statusInfo.color}`}>
                         {statusInfo.label}
@@ -374,7 +374,7 @@ export default function HRApplicationDetailPage() {
                 <div className="xl:col-span-2 space-y-6">
                     <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6">
                         {/* ─── AI Resume Analysis ─── */}
-                        <Card className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 h-full flex flex-col pt-0 overflow-hidden hover-premium-lift">
+                        <Card className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] h-full flex flex-col pt-0 overflow-hidden">
                             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6 pb-4">
                                 <CardTitle className="text-lg flex flex-wrap items-center gap-2 font-bold text-foreground">
                                     <FileText className="h-5 w-5 text-primary" />
@@ -588,7 +588,7 @@ export default function HRApplicationDetailPage() {
                         </Card>
 
                         {/* ─── Interview Report ─── */}
-                        <Card className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 h-full flex flex-col pt-0 overflow-hidden hover-premium-lift">
+                        <Card className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] h-full flex flex-col pt-0 overflow-hidden">
                             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6 pb-4">
                                 <CardTitle className="text-lg flex items-center gap-2 font-bold text-foreground">
                                     <Star className="h-5 w-5 text-amber-500" />
@@ -696,7 +696,7 @@ export default function HRApplicationDetailPage() {
                 {/* ─── Sidebar (Right) ─── */}
                 <div className="space-y-6">
                     {!isTerminal && buttons.length > 0 && (
-                        <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] transition-all duration-300 overflow-hidden pt-0 hover-premium-lift">
+                        <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden pt-0">
                             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6 pb-4">
                                 <CardTitle className="text-lg font-bold">Pipeline Actions</CardTitle>
                             </CardHeader>
@@ -708,7 +708,7 @@ export default function HRApplicationDetailPage() {
                                             candidateName={application.candidate_name || 'Candidate'}
                                             onConfirm={handleReject}
                                             trigger={
-                                                <Button variant="ghost" className="w-full h-12 justify-start gap-3 font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl" disabled={actionLoading !== null}>
+                                                <Button variant="ghost" className="w-full h-12 justify-start gap-3 font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl active:scale-[0.985] transition-all" disabled={actionLoading !== null}>
                                                     <XCircle className="h-5 w-5" /> {actionLoading === 'reject' ? 'Rejecting...' : 'Reject Candidate'}
                                                 </Button>
                                             }
@@ -716,7 +716,7 @@ export default function HRApplicationDetailPage() {
                                     ) : (
                                         <Button
                                             key={idx}
-                                            className={`w-full h-12 justify-start gap-3 rounded-xl transition-all ${btn.className}`}
+                                            className={`w-full h-12 justify-start gap-3 rounded-xl transition-all active:scale-[0.985] ${btn.className}`}
                                             disabled={
                                                 actionLoading !== null ||
                                                 (btn.action === 'approve_for_interview' && !canApproveResume)
@@ -738,7 +738,7 @@ export default function HRApplicationDetailPage() {
                     )}
 
                     {/* ─── HR Notes ─── */}
-                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] transition-all duration-300 overflow-hidden pt-0 hover-premium-lift">
+                    <Card className="bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden pt-0">
                         <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-b border-border/40 pt-6 pb-4">
                             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">HR Notes</CardTitle>
                             {!isEditingNotes && <Button variant="ghost" size="sm" className="active:scale-[0.98]" onClick={() => setIsEditingNotes(true)}><Edit2 className="h-4 w-4" /></Button>}

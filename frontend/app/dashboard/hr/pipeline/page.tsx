@@ -104,7 +104,7 @@ export default function PipelineIndexPage() {
                 />
             </div>
 
-            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift rounded-2xl overflow-hidden">
+            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden">
                 <Table>
                     <TableHeader className="bg-muted/30 border-b border-border/40">
                         <TableRow className="hover:bg-transparent border-none">

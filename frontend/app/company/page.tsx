@@ -88,7 +88,7 @@ export default function CompanyPage() {
 
 function ValueCard({ icon: Icon, title, description, delay }: { icon: any, title: string, description: string, delay: string }) {
     return (
-        <Card style={{ animationDelay: `${delay}ms` }} className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl active:scale-[0.99] hover:border-primary/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom-8 fill-mode-both hover:shadow-md">
+        <Card style={{ animationDelay: `${delay}ms` }} className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl animate-in fade-in slide-in-from-bottom-8 fill-mode-both">
             <CardContent className="p-8">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
                     <Icon className="h-6 w-6 text-primary" />

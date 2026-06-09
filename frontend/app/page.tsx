@@ -954,7 +954,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-stretch">
             {/* Candidate Card */}
-            <div className="group relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5 rounded-3xl">
+            <div className="group relative hover-premium-lift cursor-pointer active:scale-[0.99] transition-all duration-300 rounded-3xl">
               <div
                 className="absolute inset-0 rounded-3xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.02)]"
               />
@@ -983,7 +983,7 @@ export default function Home() {
             </div>
 
             {/* HR Card */}
-            <div className="group relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5 rounded-3xl">
+            <div className="group relative hover-premium-lift cursor-pointer active:scale-[0.99] transition-all duration-300 rounded-3xl">
               <div
                 className="absolute inset-0 rounded-3xl border border-primary/30 bg-primary/20 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.02)]"
               />

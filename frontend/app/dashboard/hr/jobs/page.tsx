@@ -264,7 +264,7 @@ export default function HRJobsPage() {
                     <Button variant="outline" onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}>Clear Filters</Button>
                 </div>
             ) : (
-                <div className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in slide-in-from-bottom-4 duration-700">
                     {/* List Header */}
                     <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-muted/30 border-b border-border/40 text-xs uppercase tracking-widest font-black text-muted-foreground">
                         <div className="col-span-4">Job Title & Identification</div>
