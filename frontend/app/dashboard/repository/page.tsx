@@ -186,7 +186,7 @@ function SetCard({
     onDelete: (s: QuestionSet) => void
 }) {
     return (
-        <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover-premium-lift cursor-pointer active:scale-[0.985] group">
+        <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] group">
             <CardContent className="p-5 space-y-3">
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-3">
@@ -447,16 +447,21 @@ function SetFormModal({ open, onClose, onSaved, initial, sets }: SetFormProps) {
                     {/* Round Type */}
                     <div className="space-y-1.5">
                         <Label htmlFor="qs-round" className="text-sm font-semibold">Round Type *</Label>
-                        <select
-                            id="qs-round"
-                            value={roundType}
-                            onChange={e => setRoundType(e.target.value as typeof roundType)}
-                            className="w-full h-10 px-3 border border-input rounded-xl bg-background/50 text-foreground text-sm focus:outline-none hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
+                        <Select 
+                            value={roundType} 
+                            onValueChange={(val) => setRoundType(val as typeof roundType)}
                         >
-                            {ROUND_TYPE_OPTIONS.map(o => (
-                                <option key={o.value} value={o.value}>{o.label}</option>
-                            ))}
-                        </select>
+                            <SelectTrigger id="qs-round" className="w-full h-10 border border-input rounded-xl bg-background/50 text-foreground text-sm">
+                                <SelectValue placeholder="Select round type" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                                {ROUND_TYPE_OPTIONS.map(o => (
+                                    <SelectItem key={o.value} value={o.value}>
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* Job Roles */}
@@ -794,7 +799,7 @@ export default function RepositoryPage() {
                 </div>
             ) : (
                 <>
-                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                         <Table>
                             <TableHeader className="bg-muted/30 border-b border-border/40">
                                 <TableRow className="hover:bg-transparent border-none">
@@ -806,7 +811,7 @@ export default function RepositoryPage() {
                             </TableHeader>
                             <TableBody>
                                 {paginatedSets.map((set) => (
-                                    <TableRow key={set.id} className="premium-table-row cursor-pointer border-b border-border/10 last:border-b-0 group">
+                                    <TableRow key={set.id} className="premium-table-row border-b border-border/10 last:border-b-0 group">
                                         <TableCell className="py-4">
                                             <div className="flex flex-col gap-1.5">
                                                 <span className="font-bold text-foreground uppercase tracking-tight">{set.title}</span>

@@ -198,30 +198,32 @@ export default function HRJobsPage() {
                     {/* Status Filter */}
                     <div className="w-[180px]">
                         <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 px-1">Job Status</label>
-                        <select
-                            className="w-full px-4 h-11 bg-background border border-input rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-foreground cursor-pointer hover:border-primary/40"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                            <option value="all">All Statuses</option>
-                            <option value="open">Open</option>
-                            <option value="closed">Closed</option>
-                        </select>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-full h-11 bg-background border border-input rounded-xl text-base font-medium focus:ring-4 focus:ring-primary/10 transition-all text-foreground hover:border-primary/40">
+                                <SelectValue placeholder="All Statuses" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                <SelectItem value="open">Open</SelectItem>
+                                <SelectItem value="closed">Closed</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* Sort By Filter */}
                     <div className="w-[180px]">
                         <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 px-1">Sort Order</label>
-                        <select
-                            className="w-full px-4 h-11 bg-background border border-input rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-foreground cursor-pointer hover:border-primary/40"
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                        >
-                            <option value="newest">Newest First</option>
-                            <option value="oldest">Oldest First</option>
-                            <option value="job_id_asc">Job ID (A-Z)</option>
-                            <option value="job_id_desc">Job ID (Z-A)</option>
-                        </select>
+                        <Select value={sortBy} onValueChange={setSortBy}>
+                            <SelectTrigger className="w-full h-11 bg-background border border-input rounded-xl text-base font-medium focus:ring-4 focus:ring-primary/10 transition-all text-foreground hover:border-primary/40">
+                                <SelectValue placeholder="Newest First" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                                <SelectItem value="newest">Newest First</SelectItem>
+                                <SelectItem value="oldest">Oldest First</SelectItem>
+                                <SelectItem value="job_id_asc">Job ID (A-Z)</SelectItem>
+                                <SelectItem value="job_id_desc">Job ID (Z-A)</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* Clear Filters */}

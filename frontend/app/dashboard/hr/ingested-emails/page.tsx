@@ -35,6 +35,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 
 import {
     Mail,
@@ -684,20 +685,13 @@ export default function IngestedEmailsPage() {
                             <TableRow>
                                 {(user?.role === 'super_admin' || user?.role === 'hr') && (
                                     <TableHead className="w-[50px] pl-6">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleSelectAllToggle();
-                                            }}
+                                        <Checkbox
+                                            checked={isAllSelected}
+                                            onCheckedChange={handleSelectAllToggle}
                                             disabled={selectableItems.length === 0}
-                                            className={`w-4 h-4 rounded border transition-all flex items-center justify-center shrink-0 ${
-                                                selectableItems.length === 0 ? 'opacity-30 cursor-not-allowed bg-slate-100 border-slate-200' :
-                                                isAllSelected ? 'bg-primary border-primary text-primary-foreground' : 'bg-background border-slate-400 dark:border-slate-600 hover:border-primary/50'
-                                            }`}
-                                        >
-                                            {isAllSelected && <Check className="w-3 h-3 text-primary-foreground stroke-[4px]" />}
-                                        </button>
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="h-4 w-4 rounded border border-slate-400 dark:border-slate-600 transition-all data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                        />
                                     </TableHead>
                                 )}
                                 <TableHead className="w-[280px]">Sender / Candidate</TableHead>
@@ -719,20 +713,13 @@ export default function IngestedEmailsPage() {
                                     <TableRow key={item.id} className="border-b border-border/20 last:border-b-0 cursor-pointer group premium-table-row">
                                         {(user?.role === 'super_admin' || user?.role === 'hr') && (
                                             <TableCell className="w-[50px] pl-6" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    type="button"
+                                                <Checkbox
+                                                    checked={selectedIds.includes(item.id)}
+                                                    onCheckedChange={() => handleRowSelectToggle(item.id)}
                                                     disabled={!!item.application_id}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleRowSelectToggle(item.id);
-                                                    }}
-                                                    className={`w-4 h-4 rounded border transition-all flex items-center justify-center shrink-0 ${
-                                                        item.application_id ? 'opacity-30 cursor-not-allowed bg-slate-100 border-slate-200' :
-                                                        selectedIds.includes(item.id) ? 'bg-primary border-primary text-primary-foreground' : 'bg-background border-slate-400 dark:border-slate-600 hover:border-primary/50'
-                                                    }`}
-                                                >
-                                                    {selectedIds.includes(item.id) && <Check className="w-3 h-3 text-primary-foreground stroke-[4px]" />}
-                                                </button>
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="h-4 w-4 rounded border border-slate-400 dark:border-slate-600 transition-all data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                />
                                             </TableCell>
                                         )}
                                         <TableCell className="font-semibold">

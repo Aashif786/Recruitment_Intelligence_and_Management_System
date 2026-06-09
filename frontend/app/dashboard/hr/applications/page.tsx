@@ -367,40 +367,42 @@ export default function HRApplicationsPage() {
           {/* Status Filter */}
           <div className="w-full sm:w-[200px]">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">Status</label>
-            <select
-              className="w-full px-4 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-base font-medium text-foreground cursor-pointer"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Statuses</option>
-              <option value="applied">Applied</option>
-              <option value="screened">Screened</option>
-              <option value="interview_scheduled">Interview Scheduled</option>
-              <option value="interview_completed">Interview Completed</option>
-              <option value="review_later">Review Later</option>
-              <option value="physical_interview">Physical Interview</option>
-              <option value="hired">Hired</option>
-              <option value="offer_sent">Offer Sent</option>
-              <option value="onboarded">Onboarded</option>
-              <option value="rejected">Rejected</option>
-            </select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl text-base font-medium text-foreground">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="applied">Applied</SelectItem>
+                <SelectItem value="screened">Screened</SelectItem>
+                <SelectItem value="interview_scheduled">Interview Scheduled</SelectItem>
+                <SelectItem value="interview_completed">Interview Completed</SelectItem>
+                <SelectItem value="review_later">Review Later</SelectItem>
+                <SelectItem value="physical_interview">Physical Interview</SelectItem>
+                <SelectItem value="hired">Hired</SelectItem>
+                <SelectItem value="offer_sent">Offer Sent</SelectItem>
+                <SelectItem value="onboarded">Onboarded</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Job Filter */}
           <div className="w-full sm:w-[200px]">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">Filter by Job</label>
-            <select
-              className="w-full px-4 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-base font-medium text-foreground cursor-pointer"
-              value={jobIdFilter}
-              onChange={(e) => setJobIdFilter(e.target.value)}
-            >
-              <option value="all">All Jobs</option>
-              {jobs?.map((job) => (
-                <option key={job.id} value={job.id}>
-                  {job.title} ({job.job_id})
-                </option>
-              ))}
-            </select>
+            <Select value={jobIdFilter} onValueChange={setJobIdFilter}>
+              <SelectTrigger className="w-full h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl text-base font-medium text-foreground">
+                <SelectValue placeholder="All Jobs" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="all">All Jobs</SelectItem>
+                {jobs?.map((job) => (
+                  <SelectItem key={job.id} value={String(job.id)}>
+                    {job.title} ({job.job_id})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Clear Filters */}

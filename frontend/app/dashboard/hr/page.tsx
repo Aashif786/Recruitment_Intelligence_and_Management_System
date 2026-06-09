@@ -245,7 +245,7 @@ export default function HRDashboard() {
 
 
       {isSuperAdmin && pendingApprovals.length > 0 && (
-        <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl hover-premium-lift pt-0 overflow-hidden animate-in fade-in duration-300">
+        <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] pt-0 overflow-hidden animate-in fade-in duration-300">
           <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -281,6 +281,7 @@ export default function HRDashboard() {
             icon={Users}
             color="text-primary"
             bg="bg-primary/10"
+            isInteractive={true}
           />
         </Link>
         <StatsCard
@@ -311,7 +312,7 @@ export default function HRDashboard() {
 
         {/* Chart Section */}
         <div className="lg:col-span-2 animate-in fade-in duration-500 delay-300">
-          <Card className="h-full bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl hover-premium-lift pt-0 overflow-hidden">
+          <Card className="h-full bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] pt-0 overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -334,7 +335,7 @@ export default function HRDashboard() {
 
         {/* Recent Activity / Quick Actions */}
         <div className="space-y-6 animate-in fade-in duration-500 delay-500">
-          <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl hover-premium-lift pt-0 overflow-hidden">
+          <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] pt-0 overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
               <CardTitle >Quick Actions</CardTitle>
             </CardHeader>
@@ -354,9 +355,12 @@ export default function HRDashboard() {
   )
 }
 
-const StatsCard = React.memo(({ title, subtitle, value, icon: Icon, color, bg }: any) => {
+const StatsCard = React.memo(({ title, subtitle, value, icon: Icon, color, bg, isInteractive = false }: any) => {
   return (
-    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 group rounded-2xl overflow-hidden hover-premium-lift cursor-pointer active:scale-[0.98] transition-transform duration-200">
+    <Card className={cn(
+      "bg-card/45 backdrop-blur-xl border border-border/80 group rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)]",
+      isInteractive && "hover-premium-lift cursor-pointer active:scale-[0.98] transition-transform duration-200"
+    )}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <CardTitle className="text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wide">

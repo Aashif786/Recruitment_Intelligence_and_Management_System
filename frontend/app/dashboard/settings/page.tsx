@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { APIClient } from '@/app/dashboard/lib/api-client'
 import { toast } from "sonner"
-import { Loader2, Save, Building2, User, Mail, Phone, FileText, ShieldAlert, Settings, Image as ImageIcon } from 'lucide-react'
+import { Loader2, Save, Building2, User, Mail, Phone, FileText, ShieldAlert, Settings, Image as ImageIcon, Eye, UploadCloud, Palette } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth } from '@/app/dashboard/lib/auth-context'
 import { useRouter } from 'next/navigation'
@@ -176,7 +176,7 @@ export default function SettingsPage() {
             </PageHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift overflow-hidden rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden rounded-2xl pt-0">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
@@ -246,11 +246,11 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift overflow-hidden flex flex-col rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col rounded-2xl pt-0">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
-                                <ImageIcon className="h-4 w-4 text-primary" />
+                                <User className="h-4 w-4 text-primary" />
                             </div>
                             HR Details
                         </CardTitle>
@@ -309,7 +309,7 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* White-Label Branding Config Card */}
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift overflow-hidden md:col-span-2 rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden md:col-span-2 rounded-2xl pt-0">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
@@ -443,13 +443,13 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* New Theme Preference Card */}
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift overflow-hidden md:col-span-2 rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden md:col-span-2 rounded-2xl pt-0">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle className="flex items-center gap-2 text-base font-bold">
                                     <div className="p-1.5 bg-primary/10 rounded-lg">
-                                        <Settings className="h-4 w-4 text-primary" />
+                                        <Palette className="h-4 w-4 text-primary" />
                                     </div>
                                     Theme Preferences
                                 </CardTitle>
@@ -469,7 +469,7 @@ export default function SettingsPage() {
                 </Card>
             </div>
 
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 hover-premium-lift overflow-hidden rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden rounded-2xl pt-0">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -511,7 +511,7 @@ export default function SettingsPage() {
                                     input.click();
                                 }}
                             >
-                                <Building2 className="h-4 w-4" />
+                                <UploadCloud className="h-4 w-4" />
                                 Upload HTML
                             </Button>
                             <Button 
@@ -555,7 +555,7 @@ export default function SettingsPage() {
                                     }
                                 }}
                             >
-                                <ImageIcon className="h-4 w-4" />
+                                <Eye className="h-4 w-4" />
                                 Preview
                             </Button>
                         </div>
