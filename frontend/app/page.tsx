@@ -55,11 +55,11 @@ export default function Home() {
 
   return (
     <div
-      className="relative min-h-screen font-sans selection:bg-primary/10 selection:text-primary-foreground overflow-x-hidden bg-[#dde9f8]"
+      className="relative min-h-screen font-sans selection:bg-primary/10 selection:text-primary-foreground overflow-x-hidden bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-blue-50/30 dark:bg-none dark:bg-slate-950"
     >
       {/* Hero Section */}
       <div
-        className="relative min-h-screen flex items-center overflow-hidden bg-[#dde9f8]"
+        className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-blue-50/30 dark:bg-none dark:bg-slate-950"
       >
         {/* ── Background pattern at 50% opacity ── */}
         <div
@@ -606,7 +606,7 @@ export default function Home() {
 
               <h1 className="text-5xl md:text-7xl font-semibold tracking-tight leading-tight">
                 <span
-                  className="hero-title-stroke text-slate-950"
+                  className="hero-title-stroke text-slate-950 dark:text-white"
                 >
                   Hire with the same precision{" "}
                 </span>
@@ -614,7 +614,7 @@ export default function Home() {
                   you use to build products.
                 </span>
               </h1>
-              <p className="text-xl md:text-2xl text-slate-800 max-w-2xl">
+              <p className="text-xl md:text-2xl text-slate-800 dark:text-slate-300 max-w-2xl">
                 Our Product runs structured, bias-free interviews, scores
                 skills, and turns every conversation into decision-ready
                 analytics.
@@ -671,7 +671,7 @@ export default function Home() {
         </div>
 
         {/* ── Soft blend/blur from hero section ── */}
-        <div className="absolute top-0 inset-x-0 h-48 bg-gradient-to-b from-[#dde9f8] via-[#dde9f8]/60 to-transparent z-0 pointer-events-none" />
+        <div className="absolute top-0 inset-x-0 h-48 bg-gradient-to-b from-slate-50 dark:from-slate-950 via-slate-50/60 dark:via-slate-950/60 to-transparent z-0 pointer-events-none" />
 
         {/* ── Floating Dust Particles ── */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">

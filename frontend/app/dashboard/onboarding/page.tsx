@@ -447,7 +447,7 @@ export default function OnboardingPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="p-0 overflow-x-auto">
+                <CardContent className="p-0 overflow-x-auto scrollbar-premium">
                     <div className="min-w-[800px]">
                     <Table>
                         <TableHeader className="bg-muted/30 border-b border-border/40">
@@ -476,7 +476,7 @@ export default function OnboardingPage() {
                                 </TableRow>
                             ) : (
                                 paginatedCandidates?.map((candidate) => (
-                                    <TableRow key={candidate.id} className="hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200 group">
+                                    <TableRow key={candidate.id} className="border-b border-border/10 last:border-b-0 group premium-table-row">
                                         <TableCell className="py-4">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-9 w-9 shrink-0 border border-border">
@@ -786,7 +786,7 @@ export default function OnboardingPage() {
                         </div>
                     </DialogHeader>
                     
-                    <div className="flex-1 bg-muted/10 p-4 md:p-8 overflow-y-auto overflow-x-hidden flex justify-center items-start">
+                    <div className="flex-1 bg-muted/10 p-4 md:p-8 overflow-y-auto overflow-x-hidden flex justify-center items-start scrollbar-premium">
                         <div className="w-full flex justify-center origin-top transform scale-75 md:scale-85 lg:scale-90 transition-transform duration-300">
                             <Card className="w-[210mm] min-h-[297mm] bg-white shadow-2xl overflow-hidden border-none">
                                 {previewHtml ? (

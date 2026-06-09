@@ -592,7 +592,7 @@ export default function ReportsPage() {
 
       {/* Question Detail Modal */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && setSelectedQuestion(null)}>
-        <DialogContent className="w-full md:!max-w-[35vw] md:!w-[35vw] max-h-[90vh] overflow-y-auto bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-6 rounded-3xl">
+        <DialogContent className="w-full md:!max-w-[35vw] md:!w-[35vw] max-h-[90vh] overflow-y-auto bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-6 rounded-3xl scrollbar-premium">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Detailed Question Analysis</DialogTitle>
             <DialogDescription>In-depth review of the candidate's response.</DialogDescription>
@@ -805,7 +805,7 @@ export default function ReportsPage() {
 
               <Separator className="mb-2 shrink-0" />
 
-              <div className="flex-1 overflow-y-auto pr-2 space-y-6 pb-6 mt-4">
+              <div className="flex-1 overflow-y-auto pr-2 space-y-6 pb-6 mt-4 scrollbar-premium">
                 
                 {/* Skill Match Section */}
                 <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-500">

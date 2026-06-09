@@ -414,7 +414,7 @@ function SetFormModal({ open, onClose, onSaved, initial, sets }: SetFormProps) {
 
     return (
         <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-            <DialogContent className="w-[95vw] sm:max-w-[80vw] max-h-[90vh] overflow-y-auto bg-card/45 backdrop-blur-xl border border-border/80 shadow-2xl rounded-3xl p-6 md:p-8">
+            <DialogContent className="w-[95vw] sm:max-w-[80vw] max-h-[90vh] overflow-y-auto bg-card/45 backdrop-blur-xl border border-border/80 shadow-2xl rounded-3xl p-6 md:p-8 scrollbar-premium">
                 <DialogHeader>
                     <DialogTitle className="text-lg font-bold">
                         {isEdit ? 'Edit Question Set' : 'Create New Question Set'}
@@ -536,7 +536,7 @@ function SetFormModal({ open, onClose, onSaved, initial, sets }: SetFormProps) {
 
                         {/* Preview of imported questions */}
                         {questions.filter(q => q.question.trim()).length > 0 ? (
-                            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-64 overflow-y-auto pr-1 scrollbar-premium">
                                 {questions.filter(q => q.question.trim()).map((q, i) => (
                                     <div
                                         key={i}

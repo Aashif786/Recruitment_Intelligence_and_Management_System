@@ -497,7 +497,7 @@ export default function HRApplicationDetailPage() {
                                                                 View More <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                                                             </Button>
                                                         </DialogTrigger>
-                                                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] bg-background/90 backdrop-blur-xl border border-border/80 shadow-2xl rounded-3xl">
+                                                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] bg-background/90 backdrop-blur-xl border border-border/80 shadow-2xl rounded-3xl scrollbar-premium">
                                                             <DialogHeader>
                                                                 <DialogTitle className="flex items-center gap-2 text-xl font-bold">
                                                                     <FileText className="h-5 w-5 text-primary" />
@@ -521,7 +521,7 @@ export default function HRApplicationDetailPage() {
                                                                         <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Experience</p>
                                                                     </div>
                                                                 </div>
-                                                                <div className="bg-muted/30 p-4 rounded-xl border whitespace-pre-wrap text-sm text-foreground/80 overflow-y-auto" style={{ maxHeight: '60vh' }}>
+                                                                <div className="bg-muted/30 p-4 rounded-xl border whitespace-pre-wrap text-sm text-foreground/80 overflow-y-auto scrollbar-premium" style={{ maxHeight: '60vh' }}>
                                                                     {resumeExtraction.summary || resumeExtraction.extracted_text}
                                                                 </div>
                                                             </div>

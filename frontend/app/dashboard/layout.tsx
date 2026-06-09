@@ -143,7 +143,7 @@ export default function DashboardLayout({
             <div className="glow-blob w-96 h-96 top-[-6rem] right-[-4rem] opacity-[0.07]" />
             <div className="glow-blob w-72 h-72 bottom-[10%] left-[5%] opacity-[0.05]" style={{background: 'var(--chart-2)'}} />
             {/* Single scroll zone - this is the ONLY element that scrolls */}
-            <div className="flex-1 min-h-0 px-5 py-6 md:px-7 md:py-8 overflow-y-auto overflow-x-hidden">
+            <div className="flex-1 min-h-0 px-5 py-6 md:px-7 md:py-8 overflow-y-auto overflow-x-hidden scrollbar-premium">
               <div className="w-full max-w-[1600px] mx-auto">
                 {children}
               </div>

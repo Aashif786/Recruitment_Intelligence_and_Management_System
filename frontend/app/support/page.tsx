@@ -123,7 +123,7 @@ export default function SupportPage() {
     }
 
     return (
-        <div className="flex-1 min-h-full bg-muted/30 flex flex-col items-center justify-start p-4 py-12 md:py-20 relative overflow-y-auto">
+        <div className="flex-1 min-h-full bg-muted/30 flex flex-col items-center justify-start p-4 py-12 md:py-20 relative overflow-y-auto scrollbar-premium">
             {/* Background decorative elements */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-gradient-to-b from-blue-500/5 to-transparent blur-3xl pointer-events-none" />
 

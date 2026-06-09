@@ -466,7 +466,7 @@ export default function HRTicketsPage() {
 
                     {selectedTicket && (
                         <>
-                            <div className="space-y-6 px-6 py-4 max-h-[70vh] overflow-y-auto min-w-0">
+                            <div className="space-y-6 px-6 py-4 max-h-[70vh] overflow-y-auto min-w-0 scrollbar-premium">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/50 p-6 rounded-2xl border border-border/50">
                                     {/* LEFT: Candidate Info */}
                                     <div className="space-y-2 min-w-0">
