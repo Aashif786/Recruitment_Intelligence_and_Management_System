@@ -24,21 +24,30 @@ else
 fi
 
 # 0.5 Ensure INTERVIEW_JWT_SECRET and ENCRYPTION_KEY exist in backend/.env
+# IMPORTANT: We NEVER overwrite existing values to avoid decryption failures and
+# invalidating active interview sessions. Keys are only injected when absent.
 echo "🔧 Checking environment variables..."
 ENV_FILE="backend/.env"
 if [ -f "$ENV_FILE" ]; then
     if ! grep -q "INTERVIEW_JWT_SECRET" "$ENV_FILE"; then
-        echo "Adding INTERVIEW_JWT_SECRET to $ENV_FILE..."
-        RAND_SECRET=$(openssl rand -hex 32 2>/dev/null || echo "default_interview_secret_secure_random_key_12345")
-        echo "" >> "$ENV_FILE"
-        echo "INTERVIEW_JWT_SECRET=$RAND_SECRET" >> "$ENV_FILE"
-    fi
-    if grep -q "ENCRYPTION_KEY=" "$ENV_FILE"; then
-        echo "Updating ENCRYPTION_KEY in $ENV_FILE to align with localhost..."
-        sed -i 's|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=3gcctn9-UwjDXdYjmhslWwrF50FPayUTMWbGrMx02ck=|g' "$ENV_FILE"
+        echo "Adding missing INTERVIEW_JWT_SECRET to $ENV_FILE..."
+        RAND_SECRET=$(openssl rand -hex 32 2>/dev/null || python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/null || echo "")
+        if [ -z "$RAND_SECRET" ]; then
+            echo "⚠️ Warning: Could not generate INTERVIEW_JWT_SECRET. Please add it manually to $ENV_FILE."
+        else
+            echo "" >> "$ENV_FILE"
+            echo "INTERVIEW_JWT_SECRET=$RAND_SECRET" >> "$ENV_FILE"
+            echo "✅ INTERVIEW_JWT_SECRET added."
+        fi
     else
-        echo "Adding ENCRYPTION_KEY to $ENV_FILE..."
-        echo "ENCRYPTION_KEY=3gcctn9-UwjDXdYjmhslWwrF50FPayUTMWbGrMx02ck=" >> "$ENV_FILE"
+        echo "✅ INTERVIEW_JWT_SECRET already exists — not overwriting."
+    fi
+    if ! grep -q "^ENCRYPTION_KEY=" "$ENV_FILE"; then
+        echo "⚠️ ENCRYPTION_KEY is missing from $ENV_FILE!"
+        echo "   Please set it manually: openssl rand -base64 32"
+        echo "   Deployment will continue but encrypted data will be inaccessible."
+    else
+        echo "✅ ENCRYPTION_KEY already exists — not overwriting."
     fi
 else
     echo "⚠️ Warning: backend/.env file not found. Skipping auto-injection."
@@ -69,9 +78,10 @@ docker system prune -f --filter "until=24h" || true
 echo "🏗️ Building and starting $DEPLOY_ENV environment..."
 docker compose -f docker-compose.prod.yml up -d --build frontend_$DEPLOY_ENV backend_$DEPLOY_ENV
 
-# 3. Wait for Healthchecks (Wait up to 120 seconds)
-echo "⌛ Waiting for $DEPLOY_ENV to become healthy..."
-MAX_RETRIES=24
+# 3. Wait for Healthchecks (Wait up to 180 seconds)
+# Startup migrations can take up to 60s; 180s total gives sufficient margin.
+echo "⌛ Waiting for $DEPLOY_ENV to become healthy (up to 180s)..."
+MAX_RETRIES=36
 RETRY_COUNT=0
 BACKEND_HEALTH="starting"
 
