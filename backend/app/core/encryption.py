@@ -12,7 +12,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-ENFORCE_ENCRYPTION = False
+# Sentinel strings returned by decrypt_field when decryption is impossible.
+# Callers that receive these must NOT use the value as real data.
+_DECRYPTION_PLACEHOLDERS = frozenset({"[UNREADABLE]", "[DECRYPTION_ERROR]"})
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +109,8 @@ def decrypt_field(ciphertext: str) -> str:
     # Backward compatibility: if it doesn't look like a Fernet token, assume it's plain text
     if not is_encrypted(ciphertext):
         from app.core.config import get_settings
+        # Always read enforce_encryption from settings so the check is consistent
+        # across all gunicorn worker processes (module-level globals are per-process).
         if get_settings().enforce_encryption:
             logger.critical(
                 f"SECURITY CRITICAL: Unencrypted sensitive database column detected. "
