@@ -36,11 +36,6 @@ services:
       retries: 5
       start_period: 20s
     restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: "1G"
 
   backend_blue:
     build:
@@ -60,11 +55,6 @@ services:
       retries: 5
       start_period: 20s
     restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: "1G"
 
   # --- GREEN ENVIRONMENT ---
   frontend_green:
@@ -87,11 +77,6 @@ services:
       retries: 5
       start_period: 20s
     restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: "1G"
 
   backend_green:
     build:
@@ -111,8 +96,4 @@ services:
       retries: 5
       start_period: 20s
     restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: "1G"
+
