@@ -61,9 +61,14 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
+# Create nextjs user and group
+RUN addgroup --system nextjs && adduser --system --ingroup nextjs nextjs
+
+# Fix ownership of /app directory for the nextjs user
+RUN chown -R nextjs:nextjs /app
+
 EXPOSE 3000
 
-RUN addgroup --system nextjs && adduser --system --ingroup nextjs nextjs
 USER nextjs
 
 CMD ["node", "server.js"]
