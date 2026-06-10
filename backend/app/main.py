@@ -397,6 +397,15 @@ app = FastAPI(
     redoc_url="/redoc" if settings.env != "production" else None,
     openapi_url="/openapi.json" if settings.env != "production" else None,
 )
+
+if settings.sentry_dsn:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.env,
+        traces_sample_rate=0.1
+    )
+
 app.router.route_class = StandardizedAPIRoute
 
 # Force https scheme for request scope when behind an SSL-terminating reverse proxy

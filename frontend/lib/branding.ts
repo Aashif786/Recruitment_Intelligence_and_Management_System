@@ -39,7 +39,8 @@ export function getBranding(settings: any): BrandingConfig {
   const faviconUrl = !isInvalid(settings?.favicon_url) ? settings.favicon_url : (process.env.NEXT_PUBLIC_FAVICON_URL || BRANDING_DEFAULTS.faviconUrl);
   const footerText = !isInvalid(settings?.footer_text) ? settings.footer_text : (process.env.NEXT_PUBLIC_FOOTER_TEXT || BRANDING_DEFAULTS.footerText);
   const supportEmail = !isInvalid(settings?.support_email) ? settings.support_email : (process.env.NEXT_PUBLIC_SUPPORT_EMAIL || BRANDING_DEFAULTS.supportEmail);
-  const themeColor = !isInvalid(settings?.theme_color) ? settings.theme_color : (process.env.NEXT_PUBLIC_THEME_COLOR || BRANDING_DEFAULTS.themeColor);
+  const rawThemeColor = !isInvalid(settings?.theme_color) ? settings.theme_color : (process.env.NEXT_PUBLIC_THEME_COLOR || BRANDING_DEFAULTS.themeColor);
+  const themeColor = /^#[0-9A-Fa-f]{3,8}$/.test(rawThemeColor) ? rawThemeColor : BRANDING_DEFAULTS.themeColor;
   
   let termsUrl = !isInvalid(settings?.terms_url) ? settings.terms_url : (process.env.NEXT_PUBLIC_TERMS_URL || BRANDING_DEFAULTS.termsUrl);
   let privacyUrl = !isInvalid(settings?.privacy_url) ? settings.privacy_url : (process.env.NEXT_PUBLIC_PRIVACY_URL || BRANDING_DEFAULTS.privacyUrl);

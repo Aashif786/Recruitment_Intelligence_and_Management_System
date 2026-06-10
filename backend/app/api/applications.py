@@ -315,7 +315,11 @@ async def apply_for_job(
                 logger=logger,
             )
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            logger.warning(f"Email validation failed during application creation: {e}")
+            err_msg = str(e)
+            if any(keyword in err_msg.lower() for keyword in ["email", "disposable", "domain"]):
+                raise HTTPException(status_code=400, detail=err_msg)
+            raise HTTPException(status_code=400, detail="Invalid email format.")
     else:
         candidate_email = None
 
@@ -2050,6 +2054,27 @@ async def assign_ingested_email(
             
             # Fallback to direct HTTP if it looks like a full URL
             if not content and resume.file_url.startswith("http"):
+                from urllib.parse import urlparse
+                from app.core.config import get_settings
+                settings = get_settings()
+                parsed_url = urlparse(resume.file_url)
+                if not parsed_url.scheme or parsed_url.scheme.lower() != "https":
+                    raise HTTPException(status_code=400, detail="Only HTTPS scheme is allowed for safety.")
+                
+                # Check netloc/domain
+                allowed_domains = []
+                if settings.supabase_url:
+                    supabase_netloc = urlparse(settings.supabase_url).netloc
+                    if supabase_netloc:
+                        allowed_domains.append(supabase_netloc)
+                
+                netloc_lower = parsed_url.netloc.lower()
+                is_allowed = netloc_lower.endswith(".supabase.co") or netloc_lower == "supabase.co" or any(d == netloc_lower for d in allowed_domains)
+                
+                if not is_allowed:
+                    logger.error(f"SSRF Prevention: Blocked fetching URL '{resume.file_url}'")
+                    raise HTTPException(status_code=400, detail="Domain not allowed for file download.")
+                
                 import requests
                 resp = requests.get(resume.file_url, timeout=10)
                 if resp.status_code == 200:

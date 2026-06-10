@@ -57,7 +57,11 @@ def register(request: Request, user_data: UserRegister, background_tasks: Backgr
         from app.core.email_utils import validate_email_strict
         user_data.email = validate_email_strict(user_data.email)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning(f"Email validation failed during registration: {e}")
+        err_msg = str(e)
+        if any(keyword in err_msg.lower() for keyword in ["email", "disposable", "domain"]):
+            raise HTTPException(status_code=400, detail=err_msg)
+        raise HTTPException(status_code=400, detail="Invalid email format.")
 
     # M-08 check HR allowed domains
     if settings.hr_allowed_domains:

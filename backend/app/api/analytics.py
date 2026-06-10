@@ -176,7 +176,7 @@ from app.core.rate_limiter import limiter
 
 @router.get("/config/skills")
 @limiter.limit("60/minute")
-def get_skills_config(request: Request):
+def get_skills_config(request: Request, current_user: User = Depends(get_current_hr)):
     """Expose the canonical skill categories from the interview engine (Point 1)"""
     try:
         from interview_process.config import SKILL_CATEGORIES
