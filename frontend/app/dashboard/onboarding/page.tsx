@@ -38,13 +38,12 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { SendOfferDialog } from '@/components/send-offer-dialog'
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { CapturePhotoDialog } from '@/components/capture-photo-dialog'
 import { APIClient } from '@/app/dashboard/lib/api-client'
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { EyeOff } from 'lucide-react'
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { 
     Dialog, 
     DialogContent, 
