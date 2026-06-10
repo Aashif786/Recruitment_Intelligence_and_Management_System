@@ -145,8 +145,13 @@ async def evaluate_answer_task(
                 completeness_score = min(float(completeness_score or 0), technical_score)
                 depth_score = min(float(depth_score or 0), technical_score)
             elif question_type != "behavioral" and technical_score <= 2 and completeness_score <= 4 and depth_score <= 2:
+                technical_score = 0.0
                 answer_score = min(float(answer_score or 0), 1.0)
                 completeness_score = min(float(completeness_score or 0), 1.0)
+                depth_score = min(float(depth_score or 0), 1.0)
+                evaluation["technical_accuracy"] = 0.0
+                evaluation["overall"] = min(float(evaluation.get("overall", 0) or 0), 1.0)
+                answer_evaluation_json = json.dumps(evaluation)
         else:
             err = last_ai_error or Exception("unknown")
             logger.error(
@@ -234,5 +239,4 @@ async def evaluate_answer_task(
         db.rollback()
     finally:
         db.close()
-
 

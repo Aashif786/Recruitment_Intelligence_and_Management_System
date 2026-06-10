@@ -115,25 +115,25 @@ export default function InterviewSidebar({
     }, [groupedQuestions, completedQuestions, displayOrder]);
 
     return (
-        <div className="space-y-8 p-6 bg-sidebar/45 backdrop-blur-xl border-r border-border/80 h-full overflow-y-auto no-scrollbar shadow-[2px_0_20px_-4px_rgba(0,0,0,0.02)]">
+        <div className="space-y-8 p-6 bg-sidebar/45 backdrop-blur-xl border-r border-border/80 h-80% overflow-y-auto no-scrollbar shadow-[2px_0_20px_-4px_rgba(0,0,0,0.02)]">
             {/* Security Status Card */}
             <div className="p-4 bg-card/45 border border-border/80 rounded-2xl space-y-3 shadow-inner">
                 <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Security Monitor</span>
+                    <span className="text-md font-black text-muted-foreground uppercase tracking-tighter">Security Monitor</span>
                     <div className="flex gap-1">
                         {[1, 2, 3].map(s => (
                             <div key={s} className={`w-2 h-2 rounded-full ${strikes >= s ? 'bg-red-500 animate-pulse' : 'bg-muted-foreground/30'}`} />
                         ))}
                     </div>
                 </div>
-                <p className="text-[9px] font-medium text-muted-foreground leading-tight">
+                <p className="text-md font-medium text-muted-foreground leading-tight">
                     {strikes === 0 ? "No violations detected. Session secure." : strikes === 1 ? "1 violation recorded. Please stay focused." : strikes === 2 ? "2 violations recorded. Critical alert." : "3 violations recorded. One strike remaining!"}
                 </p>
             </div>
 
             {/* Question Status Legend */}
             <div className="p-4 bg-card/45 border border-border/80 rounded-2xl space-y-2.5 shadow-sm">
-                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block">Question Status Guide</span>
+                <span className="text-md font-black text-muted-foreground uppercase tracking-widest block">Question Status Guide</span>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-bold text-muted-foreground">
                     <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm shadow-primary/20" />

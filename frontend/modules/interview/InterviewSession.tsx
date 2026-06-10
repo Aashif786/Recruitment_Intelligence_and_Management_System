@@ -164,6 +164,8 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const [isFaceDetected, setIsFaceDetected] = useState(true);
   const [isFocusingOnMonitor, setIsFocusingOnMonitor] = useState(true);
   const detectorRef = useRef<any>(null);
+  const detectorLoadAttemptRef = useRef(0);
+  const detectorLoadingRef = useRef(false);
   const faceCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const sessionVideoRef = useRef<HTMLVideoElement>(null);  // pre-start preview
   const floatingVideoRef = useRef<HTMLVideoElement>(null); // in-session floating widget
@@ -191,9 +193,9 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   // ─── SECURITY VIOLATION ────────────────────────────────────────────────────
   const terminationSentRef = useRef(false);
 
-  const handleStrike = useCallback((reason: string) => {
+  const handleStrike = useCallback((reason: string, options?: { respectStartupGrace?: boolean }) => {
     if (!isStartedRef.current) return; // use ref — stable, no re-render dependency
-    if (Date.now() - sessionStartRef.current < 15000) return; // ignore first 15s
+    if (options?.respectStartupGrace !== false && Date.now() - sessionStartRef.current < 15000) return; // ignore first 15s
     if (Date.now() - lastStrikeTimeRef.current < 2000) {
       console.log('[Proctoring] Strike ignored due to 2s cooldown');
       return;
@@ -1058,6 +1060,20 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
 
     let checkCount = 0;
     const stream = activeStreamRef.current;
+    const postMonitoringEvent = (eventType: string, confidenceScore: number, video: HTMLVideoElement | null) => {
+      fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/monitoring-events`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          event_type: eventType,
+          confidence_score: confidenceScore,
+          frame_snapshot: captureFrame(video),
+        }),
+      }).catch(() => {});
+    };
 
     startSessionVideoRecording(stream);
 
@@ -1067,26 +1083,33 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       const video = floatingVideoRef.current;
       if (!video) return;
       if (!detectorRef.current) {
+        setIsFaceDetected(true);
+        if (!detectorLoadingRef.current && Date.now() - detectorLoadAttemptRef.current > 10000) {
+          detectorLoadAttemptRef.current = Date.now();
+          detectorLoadingRef.current = true;
+          blazeface.load()
+            .then((detector) => {
+              detectorRef.current = detector;
+              detectorLoadingRef.current = false;
+              console.info('[FaceCheck] Face detector loaded successfully.');
+              setIsFocusingOnMonitor(true);
+            })
+            .catch((err) => {
+              detectorLoadingRef.current = false;
+              console.warn('[FaceCheck] Face detector reload failed; will retry.', err);
+            });
+        }
         setIsFocusingOnMonitor(false);
         checkCount++;
         if (checkCount >= 5) {
           checkCount = 0;
-          fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/monitoring-events`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              event_type: 'face_not_visible',
-              confidence_score: 0,
-              frame_snapshot: captureFrame(video),
-            }),
-          }).catch(() => {});
+          postMonitoringEvent('face_not_visible', 0, video);
         }
         return;
       }
       if (video.readyState < 2 || video.videoWidth === 0) {
+        setIsFaceDetected(false);
+        setIsFocusingOnMonitor(false);
         // Ensure stream is still bound to the widget
         if (activeStreamRef.current && video.srcObject !== activeStreamRef.current) {
           video.srcObject = activeStreamRef.current;
@@ -1104,11 +1127,14 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         setIsFocusingOnMonitor(predictions.length === 1 && faceInFocus);
 
         if (predictions.length === 0) {
-          handleStrike('No face detected');
+          postMonitoringEvent('face_not_detected', 0, video);
+          handleStrike('No face detected', { respectStartupGrace: false });
         } else if (predictions.length > 1) {
-          handleStrike('Multiple people detected');
+          postMonitoringEvent('multiple_people', 0, video);
+          handleStrike('Multiple people detected', { respectStartupGrace: false });
         } else if (!faceInFocus) {
-          handleStrike('Face not in focus');
+          postMonitoringEvent('face_not_visible', faceQuality?.confidence ?? 0, video);
+          handleStrike('Face not in focus', { respectStartupGrace: false });
         }
 
         checkCount++;
@@ -1123,21 +1149,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                 : 'face_not_visible';
           const confidence = predictions.length === 1 ? (faceQuality?.confidence ?? 0) : 0.0;
           
-          // Capture secure frame snapshot periodically
-          const snapshot = captureFrame(video);
-
-          fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/monitoring-events`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              event_type: statusType,
-              confidence_score: confidence,
-              frame_snapshot: snapshot,
-            }),
-          }).catch(() => {});
+          postMonitoringEvent(statusType, confidence, video);
         }
       } catch (err) {
         console.error('Face check error:', err);

@@ -413,8 +413,10 @@ export default function HRApplicationDetailPage() {
                                                     <p className="text-2xl font-black text-primary/80 leading-none">
                                                         {((resumeExtraction.resume_score || 0) * 10).toFixed(1)}
                                                     </p>
+                                                    
+                                                    {/* THIS TOOLTIP below IS VERY ROUND MAKE IT SQUIRCLE */}
                                                     <TooltipProvider>
-                                                        <Tooltip>
+                                                        <Tooltip> 
                                                             <TooltipTrigger asChild>
                                                                 <div className="flex items-center gap-1 cursor-help mt-1">
                                                                     <p className="text-[10px] uppercase font-bold text-primary/70 tracking-wider">Score</p>

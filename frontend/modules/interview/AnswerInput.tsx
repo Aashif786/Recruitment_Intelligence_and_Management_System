@@ -174,14 +174,7 @@ export default function AnswerInput({
 
                         {!isSubmitted && (
                             <div className="flex items-center gap-2 lg:gap-4 w-full sm:w-auto">
-                                <Button 
-                                    type="button"
-                                    onClick={onPrev ? onPrev : undefined}
-                                    variant="ghost" 
-                                    className="flex-1 sm:flex-none h-10 lg:h-14 px-4 lg:px-8 rounded-xl lg:rounded-2xl bg-destructive/10 text-destructive font-black text-[10px] lg:text-xs uppercase tracking-widest hover:bg-destructive/20 border border-destructive/20 active:scale-[0.99] transition-all"
-                                >
-                                    End Early
-                                </Button>
+
                                 
                                 {!isMCQ && (
                                     <Button 
