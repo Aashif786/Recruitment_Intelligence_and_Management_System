@@ -166,7 +166,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Stats & Info */}
                 <div className="space-y-6">
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 overflow-hidden rounded-2xl">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden rounded-2xl">
                         <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground">Account Information</CardTitle>
                         </CardHeader>
@@ -180,7 +180,7 @@ export default function ProfilePage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 overflow-hidden rounded-2xl">
+                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden rounded-2xl">
                         <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-primary">Your Impact</CardTitle>
                         </CardHeader>
@@ -195,7 +195,7 @@ export default function ProfilePage() {
 
                 {/* Right Column: Narrative & Governance */}
                 <div className="lg:col-span-2 space-y-6">
-                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 overflow-hidden rounded-2xl h-full">
+                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden rounded-2xl h-full">
                         <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -278,7 +278,7 @@ function ImpactMetric({ icon: Icon, label, value, color }: any) {
 
 function FeatureBox({ title, description }: any) {
     return (
-        <div className="p-5 rounded-2xl bg-muted/30 border border-border/50 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md transition-all duration-200 group cursor-default">
+        <div className="p-5 rounded-2xl bg-muted/30 border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] group cursor-default">
             <h4 className="font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{title}</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
         </div>

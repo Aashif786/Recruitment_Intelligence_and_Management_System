@@ -198,30 +198,32 @@ export default function HRJobsPage() {
                     {/* Status Filter */}
                     <div className="w-[180px]">
                         <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 px-1">Job Status</label>
-                        <select
-                            className="w-full px-4 h-11 bg-background border border-input rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-foreground cursor-pointer hover:border-primary/40"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                            <option value="all">All Statuses</option>
-                            <option value="open">Open</option>
-                            <option value="closed">Closed</option>
-                        </select>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-full h-11 bg-background border border-input rounded-xl text-base font-medium focus:ring-4 focus:ring-primary/10 transition-all text-foreground hover:border-primary/40">
+                                <SelectValue placeholder="All Statuses" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                <SelectItem value="open">Open</SelectItem>
+                                <SelectItem value="closed">Closed</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* Sort By Filter */}
                     <div className="w-[180px]">
                         <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 px-1">Sort Order</label>
-                        <select
-                            className="w-full px-4 h-11 bg-background border border-input rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-foreground cursor-pointer hover:border-primary/40"
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                        >
-                            <option value="newest">Newest First</option>
-                            <option value="oldest">Oldest First</option>
-                            <option value="job_id_asc">Job ID (A-Z)</option>
-                            <option value="job_id_desc">Job ID (Z-A)</option>
-                        </select>
+                        <Select value={sortBy} onValueChange={setSortBy}>
+                            <SelectTrigger className="w-full h-11 bg-background border border-input rounded-xl text-base font-medium focus:ring-4 focus:ring-primary/10 transition-all text-foreground hover:border-primary/40">
+                                <SelectValue placeholder="Newest First" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                                <SelectItem value="newest">Newest First</SelectItem>
+                                <SelectItem value="oldest">Oldest First</SelectItem>
+                                <SelectItem value="job_id_asc">Job ID (A-Z)</SelectItem>
+                                <SelectItem value="job_id_desc">Job ID (Z-A)</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* Clear Filters */}
@@ -264,7 +266,7 @@ export default function HRJobsPage() {
                     <Button variant="outline" onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}>Clear Filters</Button>
                 </div>
             ) : (
-                <div className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in slide-in-from-bottom-4 duration-700">
                     {/* List Header */}
                     <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-muted/30 border-b border-border/40 text-xs uppercase tracking-widest font-black text-muted-foreground">
                         <div className="col-span-4">Job Title & Identification</div>
@@ -279,7 +281,7 @@ export default function HRJobsPage() {
                         {paginatedJobs.map((job, index) => (
                             <div
                                 key={job.id}
-                                className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-muted/30 border-b border-border/10 last:border-b-0 transition-all duration-200 cursor-pointer group"
+                                className="grid grid-cols-12 gap-4 px-6 py-4 items-center border-b border-border/10 last:border-b-0 cursor-pointer group premium-table-row"
                                 onClick={() => router.push(`/dashboard/hr/jobs/${job.id}/edit`)}
                             >
                                 {/* Job Title & ID */}

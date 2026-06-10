@@ -999,6 +999,16 @@ class GlobalSettingsUpdate(BaseModel):
     seo_title_default: Optional[str] = None
     seo_description_default: Optional[str] = None
 
+    @field_validator('theme_color')
+    @classmethod
+    def validate_theme_color(cls, v):
+        if v is None or v.strip() == '':
+            return v
+        v = v.strip()
+        if not re.match(r'^#[0-9A-Fa-f]{3,8}$', v):
+            raise ValueError('Invalid theme color format. Must be a valid hex color code (e.g. #2563eb).')
+        return v
+
     @field_validator('imap_email')
     @classmethod
     def validate_imap_email(cls, v):

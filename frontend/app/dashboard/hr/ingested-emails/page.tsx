@@ -35,6 +35,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 
 import {
     Mail,
@@ -470,7 +471,7 @@ export default function IngestedEmailsPage() {
 
             {/* Credentials Card */}
             {showCredentials && (
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden rounded-2xl animate-in zoom-in-95 slide-in-from-top-4 duration-300">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 -mx-6 -mt-6 px-12 pt-8 pb-6 rounded-t-[2rem]">
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
@@ -557,7 +558,10 @@ export default function IngestedEmailsPage() {
 
             {/* Quick Metrics — always show real counts from global_stats regardless of active filter */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 group hover:-translate-y-1 rounded-2xl overflow-hidden">
+                <Card 
+                    onClick={() => setStatusFilter('all')}
+                    className={`bg-card/45 backdrop-blur-xl border shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 rounded-2xl overflow-hidden hover-premium-lift cursor-pointer active:scale-[0.98] ${statusFilter === 'all' ? 'border-primary/60 ring-2 ring-primary/10 bg-primary/[0.03]' : 'border-border/80'}`}
+                >
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
                             <Inbox className="h-6 w-6 text-primary" />
@@ -571,7 +575,10 @@ export default function IngestedEmailsPage() {
                     </CardContent>
                 </Card>
                 
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 group hover:-translate-y-1 rounded-2xl overflow-hidden">
+                <Card 
+                    onClick={() => setStatusFilter('mapped')}
+                    className={`bg-card/45 backdrop-blur-xl border shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 rounded-2xl overflow-hidden hover-premium-lift cursor-pointer active:scale-[0.98] ${statusFilter === 'mapped' ? 'border-emerald-500/60 ring-2 ring-emerald-500/10 bg-emerald-500/[0.03]' : 'border-border/80'}`}
+                >
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
                             <CheckCircle2 className="h-6 w-6 text-emerald-600" />
@@ -585,7 +592,10 @@ export default function IngestedEmailsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 group hover:-translate-y-1 rounded-2xl overflow-hidden">
+                <Card 
+                    onClick={() => setStatusFilter('unmapped')}
+                    className={`bg-card/45 backdrop-blur-xl border shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 rounded-2xl overflow-hidden hover-premium-lift cursor-pointer active:scale-[0.98] ${statusFilter === 'unmapped' ? 'border-amber-500/60 ring-2 ring-amber-500/10 bg-amber-500/[0.03]' : 'border-border/80'}`}
+                >
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
                             <AlertTriangle className="h-6 w-6 text-amber-500" />
@@ -669,26 +679,19 @@ export default function IngestedEmailsPage() {
                     </div>
                 </div>
             ) : (
-                <div className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 rounded-2xl overflow-hidden">
+                <div className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden">
                     <Table>
                         <TableHeader className="bg-muted/30 border-b border-border/40">
                             <TableRow>
                                 {(user?.role === 'super_admin' || user?.role === 'hr') && (
                                     <TableHead className="w-[50px] pl-6">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleSelectAllToggle();
-                                            }}
+                                        <Checkbox
+                                            checked={isAllSelected}
+                                            onCheckedChange={handleSelectAllToggle}
                                             disabled={selectableItems.length === 0}
-                                            className={`w-4 h-4 rounded border transition-all flex items-center justify-center shrink-0 ${
-                                                selectableItems.length === 0 ? 'opacity-30 cursor-not-allowed bg-slate-100 border-slate-200' :
-                                                isAllSelected ? 'bg-primary border-primary text-primary-foreground' : 'bg-background border-slate-400 dark:border-slate-600 hover:border-primary/50'
-                                            }`}
-                                        >
-                                            {isAllSelected && <Check className="w-3 h-3 text-primary-foreground stroke-[4px]" />}
-                                        </button>
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="h-4 w-4 rounded border border-slate-400 dark:border-slate-600 transition-all data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                        />
                                     </TableHead>
                                 )}
                                 <TableHead className="w-[280px]">Sender / Candidate</TableHead>
@@ -710,20 +713,13 @@ export default function IngestedEmailsPage() {
                                     <TableRow key={item.id} className="border-b border-border/20 last:border-b-0 cursor-pointer group premium-table-row">
                                         {(user?.role === 'super_admin' || user?.role === 'hr') && (
                                             <TableCell className="w-[50px] pl-6" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    type="button"
+                                                <Checkbox
+                                                    checked={selectedIds.includes(item.id)}
+                                                    onCheckedChange={() => handleRowSelectToggle(item.id)}
                                                     disabled={!!item.application_id}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleRowSelectToggle(item.id);
-                                                    }}
-                                                    className={`w-4 h-4 rounded border transition-all flex items-center justify-center shrink-0 ${
-                                                        item.application_id ? 'opacity-30 cursor-not-allowed bg-slate-100 border-slate-200' :
-                                                        selectedIds.includes(item.id) ? 'bg-primary border-primary text-primary-foreground' : 'bg-background border-slate-400 dark:border-slate-600 hover:border-primary/50'
-                                                    }`}
-                                                >
-                                                    {selectedIds.includes(item.id) && <Check className="w-3 h-3 text-primary-foreground stroke-[4px]" />}
-                                                </button>
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="h-4 w-4 rounded border border-slate-400 dark:border-slate-600 transition-all data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                />
                                             </TableCell>
                                         )}
                                         <TableCell className="font-semibold">

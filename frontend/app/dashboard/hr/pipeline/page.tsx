@@ -104,7 +104,7 @@ export default function PipelineIndexPage() {
                 />
             </div>
 
-            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 rounded-2xl overflow-hidden">
+            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden">
                 <Table>
                     <TableHeader className="bg-muted/30 border-b border-border/40">
                         <TableRow className="hover:bg-transparent border-none">
@@ -118,7 +118,7 @@ export default function PipelineIndexPage() {
                         {paginatedJobs.map((job) => (
                             <TableRow 
                                 key={job.id} 
-                                className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 cursor-pointer group"
+                                className="premium-table-row border-b border-border/20 last:border-b-0 cursor-pointer group"
                                 onClick={() => router.push(`/dashboard/hr/pipelines/${job.id}`)}
                             >
                                 <TableCell className="py-4">

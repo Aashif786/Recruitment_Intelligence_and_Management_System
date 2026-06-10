@@ -120,6 +120,7 @@ if os.environ.get("WORKER_ID", "0") == "0":
             run_startup_migrations(engine)
             validate_required_columns(engine)
         except RuntimeError as e:
+            logger.critical(f"STARTUP FAILED — database migration/validation error: {e}")
             sys.exit(1)
 
 from app.infrastructure.database import SessionLocal
@@ -187,13 +188,14 @@ async def _sweep_stuck_applications(db):
     increment retry count and trigger background re-parse, or mark as permanent failure.
     """
     try:
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         from app.domain.models import Application
         from app.api.applications import process_application_background
         from app.services.state_machine import CandidateState
         from sqlalchemy import or_, and_
 
-        cutoff = datetime.utcnow() - timedelta(minutes=15)
+        now_utc = datetime.now(timezone.utc)
+        cutoff = now_utc - timedelta(minutes=15)
         stuck_apps = db.query(Application).filter(
             Application.resume_status.in_(["parsing", "pending"]),
             or_(
@@ -212,7 +214,7 @@ async def _sweep_stuck_applications(db):
             if retries < 3:
                 logger.warning(f"[SWEEPER] Application #{app.id} is stuck. Resetting and retrying background parsing (attempt {retries + 1}).")
                 app.resume_status = "parsing"
-                app.parsing_started_at = datetime.utcnow()
+                app.parsing_started_at = datetime.now(timezone.utc)
                 app.retry_count = retries + 1
                 db.commit()
 
@@ -338,6 +340,16 @@ async def _imap_polling_loop():
                 for target in sync_targets:
                     try:
                         imap_password = decrypt_field(target["password_enc"]).strip()
+                        # Guard: skip if decryption produced a placeholder error string.
+                        # Passing "[UNREADABLE]" or "[DECRYPTION_ERROR]" as a real password
+                        # causes confusing IMAP auth failures and should never reach the server.
+                        if not imap_password or imap_password.startswith("["):
+                            logger.error(
+                                f"Auto-sync skipped for user {target['id']}: IMAP password could not be "
+                                f"decrypted (got placeholder '{imap_password[:30]}'). "
+                                "Check ENCRYPTION_KEY matches the one used when the password was stored."
+                            )
+                            continue
                         logger.info(f"Running auto-sync for user ID {target['id']} ({target['email']})")
                         fetch_resume_attachments(None, target["email"], imap_password, hr_id=target["id"])
                         await run_batch_resume_processing(None, hr_id=target["id"])
@@ -351,6 +363,9 @@ async def _imap_polling_loop():
             app.state.imap_last_error = None
             _consecutive_failures = 0
             sleep_seconds = _base_sleep_seconds
+        except asyncio.CancelledError:
+            # Propagate cancellation so the lifespan shutdown handler works correctly.
+            raise
         except Exception as e:
             _consecutive_failures += 1
             logger.error(f"IMAP Polling Error (failure #{_consecutive_failures}): {e}")
@@ -426,6 +441,15 @@ app = FastAPI(
     redoc_url="/redoc" if settings.env != "production" else None,
     openapi_url="/openapi.json" if settings.env != "production" else None,
 )
+
+if settings.sentry_dsn:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.env,
+        traces_sample_rate=0.1
+    )
+
 app.router.route_class = StandardizedAPIRoute
 
 # Force https scheme for request scope when behind an SSL-terminating reverse proxy

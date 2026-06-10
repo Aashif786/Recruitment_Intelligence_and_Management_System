@@ -142,7 +142,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
                     {/* Collapse Button - shown in both states */}
                     {state === 'collapsed' ? (
-                        <Tooltip side="right" align="center">
+                        <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="ghost"
@@ -230,7 +230,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         return (
                             <SidebarMenuItem key={link.href}>
                                 {isCollapsed ? (
-                                    <Tooltip side="right" align="center">
+                                    <Tooltip>
                                         <TooltipTrigger asChild>
                                             {buttonContent}
                                         </TooltipTrigger>
@@ -269,7 +269,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     {/* Collapsed Avatar / Sign Out trigger */}
                     <div className="hidden group-data-[collapsible=icon]:flex">
                         {state === 'collapsed' ? (
-                            <Tooltip side="right" align="center">
+                            <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button
                                         variant="ghost"

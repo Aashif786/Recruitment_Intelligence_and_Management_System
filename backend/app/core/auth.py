@@ -85,8 +85,8 @@ def verify_token(token: str, secret: Optional[str] = None) -> dict:
             token,
             verify_secret,
             algorithms=[settings.jwt_algorithm],
-            # Explicitly validate expiration.
-            options={"verify_exp": True},
+            # Explicitly validate expiration and algorithm.
+            options={"verify_exp": True, "verify_alg": True, "require_exp": True},
         )
         return payload
     except JWTError as e:

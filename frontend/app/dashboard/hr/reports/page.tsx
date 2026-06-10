@@ -1062,7 +1062,7 @@ export default function ReportsPage() {
                           </thead>
                           <tbody className="divide-y">
                             {(viewingReport.aptitude_question_evaluations ?? []).map((q, i) => (
-                              <tr key={i} className="hover:bg-muted/20 border-b border-border/10 last:border-b-0 transition-colors duration-200">
+                              <tr key={i} className="premium-table-row border-b border-border/10 last:border-b-0">
                                 <td className="px-4 py-4 text-center font-medium text-muted-foreground">{i + 1}</td>
                                 <td className="px-4 py-4">{cleanQuestionText(q.question)}</td>
                                 <td className="px-4 py-4 text-muted-foreground">{q.answer || <span className="italic text-muted-foreground/50">No answer provided</span>}</td>
@@ -1099,7 +1099,7 @@ export default function ReportsPage() {
                             return (
                               <div
                                 key={i}
-                                className="bg-muted/20 hover:bg-muted/40 p-4 rounded-2xl border border-border/40 hover:border-primary/40 cursor-pointer transition-all duration-200 active:scale-[0.99] shadow-[0_4px_12px_rgb(0,0,0,0.01)] hover:shadow-md group"
+                                className="bg-card/45 backdrop-blur-xl p-4 rounded-2xl border border-border/80 hover-premium-lift cursor-pointer active:scale-[0.98] group"
                                 onClick={() => setSelectedQuestion(q)}
                               >
                                 <div className="flex justify-between items-start mb-3 gap-2">

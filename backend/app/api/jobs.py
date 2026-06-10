@@ -781,10 +781,20 @@ def delete_job(
         )
     validate_hr_ownership(job, current_user, resource_name="job")
     
-    # Delete the job (and associated data manually to ensure cascade)
     try:
         # Fetch all applications for this job
         applications = db.query(Application).filter(Application.job_id == job_id).all()
+        
+        # Log job deletion to audit log
+        from app.services.candidate_service import CandidateService
+        CandidateService(db).create_audit_log(
+            current_user.id,
+            "JOB_DELETED",
+            "Job",
+            job_id,
+            {"title": job.title, "application_count": len(applications)},
+            is_critical=True
+        )
         
         for app in applications:
             # Delete related data for each application
@@ -821,9 +831,9 @@ def delete_job(
         db.commit()
     except Exception as e:
         db.rollback()
-        logger.error(f"Error deleting job: {e}")
+        logger.exception("Failed to delete job")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete job: {str(e)}"
+            detail="Failed to delete job. Please try again."
         )
     return None

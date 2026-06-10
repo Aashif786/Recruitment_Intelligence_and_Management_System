@@ -2,6 +2,13 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import {
     AlertDialog,
@@ -73,8 +80,8 @@ function RepoPicker({
         }
     }, [selectedId, sets])
 
-    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const id = e.target.value ? parseInt(e.target.value) : null
+    const handleSelectSet = (val: string) => {
+        const id = val === "none" ? null : parseInt(val)
         const set = id ? sets.find(s => s.id === id) || null : null
         setSelectedSet(set)
         onSelect(id, set)
@@ -92,18 +99,22 @@ function RepoPicker({
                 </p>
             ) : (
                 <>
-                    <select
-                        className="w-full h-10 px-3 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground text-sm transition-all"
-                        value={selectedId ?? ''}
-                        onChange={handleChange}
+                    <Select
+                        value={selectedId ? String(selectedId) : "none"}
+                        onValueChange={handleSelectSet}
                     >
-                        <option value="">— Select a question set —</option>
-                        {sets.map(s => (
-                            <option key={s.id} value={s.id}>
-                                {s.title} ({s.question_count} questions)
-                            </option>
-                        ))}
-                    </select>
+                        <SelectTrigger className="w-full h-10 border border-border rounded-xl bg-background/50 text-foreground text-sm">
+                            <SelectValue placeholder="— Select a question set —" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                            <SelectItem value="none">— Select a question set —</SelectItem>
+                            {sets.map(s => (
+                                <SelectItem key={s.id} value={String(s.id)}>
+                                    {s.title} ({s.question_count} questions)
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
                     {selectedSet && selectedSet.topic_tags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-1">
@@ -488,7 +499,7 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
 
     return (
         <div className="p-4 sm:p-6 md:p-8 max-w-3xl mx-auto overflow-x-hidden">
-            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 rounded-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both w-full">
+            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both w-full">
                 <CardHeader className="space-y-4">
                     <div className="mb-2">
                         <Button
@@ -575,18 +586,21 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                 <label htmlFor="experience" className="block text-sm font-bold text-foreground mb-1.5 uppercase tracking-wider px-1">
                                     Experience Level
                                 </label>
-                                <select
-                                    id="experience"
-                                    className="w-full h-11 px-4 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground text-base transition-all"
-                                    value={formData.experience_level}
-                                    onChange={(e) => setFormData({ ...formData, experience_level: e.target.value })}
+                                <Select 
+                                    value={formData.experience_level} 
+                                    onValueChange={(val) => setFormData({ ...formData, experience_level: val })}
                                 >
-                                    <option value="intern">Intern</option>
-                                    <option value="junior">Junior (0-2 years)</option>
-                                    <option value="mid">Mid-Level (3-5 years)</option>
-                                    <option value="senior">Senior (5+ years)</option>
-                                    <option value="lead">Lead / Manager</option>
-                                </select>
+                                    <SelectTrigger id="experience" className="w-full h-11 border border-border rounded-xl bg-background/50 text-foreground text-base">
+                                        <SelectValue placeholder="Select experience level" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="intern">Intern</SelectItem>
+                                        <SelectItem value="junior">Junior (0-2 years)</SelectItem>
+                                        <SelectItem value="mid">Mid-Level (3-5 years)</SelectItem>
+                                        <SelectItem value="senior">Senior (5+ years)</SelectItem>
+                                        <SelectItem value="lead">Lead / Manager</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="relative" ref={domainRef}>
                                 <label htmlFor="domain" className="block text-sm font-bold text-foreground mb-1.5 uppercase tracking-wider px-1">
@@ -650,40 +664,45 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                 <label htmlFor="job_type" className="block text-sm font-bold text-foreground mb-1.5 uppercase tracking-wider px-1">
                                     Job Type
                                 </label>
-                                <select
-                                    id="job_type"
-                                    className="w-full px-4 py-2 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground shadow-sm transition-all"
-                                    value={formData.job_type}
-                                    onChange={(e) => setFormData({ ...formData, job_type: e.target.value })}
+                                <Select 
+                                    value={formData.job_type} 
+                                    onValueChange={(val) => setFormData({ ...formData, job_type: val })}
                                 >
-                                    <option value="Full-Time">Full-Time</option>
-                                    <option value="Part-Time">Part-Time</option>
-                                    <option value="Contract">Contract</option>
-                                    <option value="Internship">Internship</option>
-                                    <option value="Temporary">Temporary</option>
-                                </select>
+                                    <SelectTrigger id="job_type" className="w-full h-10 border border-border rounded-xl bg-background/50 text-foreground text-sm">
+                                        <SelectValue placeholder="Select job type" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="Full-Time">Full-Time</SelectItem>
+                                        <SelectItem value="Part-Time">Part-Time</SelectItem>
+                                        <SelectItem value="Contract">Contract</SelectItem>
+                                        <SelectItem value="Internship">Internship</SelectItem>
+                                        <SelectItem value="Temporary">Temporary</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div>
                                 <label htmlFor="mode_of_work" className="block text-sm font-bold text-foreground mb-1.5 uppercase tracking-wider px-1">
                                     Mode of Work
                                 </label>
-                                <select
-                                    id="mode_of_work"
-                                    className="w-full px-4 py-2 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground shadow-sm transition-all"
-                                    value={formData.mode_of_work}
-                                    onChange={(e) => {
-                                        const newMode = e.target.value;
+                                <Select 
+                                    value={formData.mode_of_work} 
+                                    onValueChange={(val) => {
                                         setFormData({
                                             ...formData,
-                                            mode_of_work: newMode,
+                                            mode_of_work: val,
                                             location: formData.location === 'On-Site' ? '' : formData.location
                                         });
                                     }}
                                 >
-                                    <option value="On-Site">On-Site</option>
-                                    <option value="Remote">Remote</option>
-                                    <option value="Hybrid">Hybrid</option>
-                                </select>
+                                    <SelectTrigger id="mode_of_work" className="w-full h-10 border border-border rounded-xl bg-background/50 text-foreground text-sm">
+                                        <SelectValue placeholder="Select work mode" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="On-Site">On-Site</SelectItem>
+                                        <SelectItem value="Remote">Remote</SelectItem>
+                                        <SelectItem value="Hybrid">Hybrid</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             {formData.mode_of_work !== 'Remote' && (
                                 <div className="relative" ref={suggestionRef}>
@@ -728,15 +747,18 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                     <label htmlFor="status" className="block text-sm font-bold text-foreground mb-1.5 uppercase tracking-wider px-1">
                                         Job Status
                                     </label>
-                                    <select
-                                        id="status"
-                                        className="w-full px-4 py-2 border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground shadow-sm transition-all"
-                                        value={formData.status}
-                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    <Select 
+                                        value={formData.status} 
+                                        onValueChange={(val) => setFormData({ ...formData, status: val })}
                                     >
-                                        <option value="open">Active / Open</option>
-                                        <option value="closed">Closed / Finalized</option>
-                                    </select>
+                                        <SelectTrigger id="status" className="w-full h-10 border border-border rounded-xl bg-background/50 text-foreground text-sm">
+                                            <SelectValue placeholder="Select job status" />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl">
+                                            <SelectItem value="open">Active / Open</SelectItem>
+                                            <SelectItem value="closed">Closed / Finalized</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             )}
                         </div>
@@ -1066,17 +1088,20 @@ export function JobForm({ mode, initialData, onSubmit, isSubmitting }: JobFormPr
                                 <p className="text-xs text-muted-foreground mt-0.5 mb-3">
                                     The system will automatically generate 5 role-specific behavioral questions.
                                 </p>
-                                <select
-                                    id="behavioral_role"
-                                    className="w-full md:w-1/2 h-11 px-4 text-base border border-border rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-primary/40 focus:border-primary bg-background/50 text-foreground transition-all"
-                                    value={formData.behavioral_role}
-                                    onChange={(e) => setFormData({ ...formData, behavioral_role: e.target.value })}
+                                <Select 
+                                    value={formData.behavioral_role} 
+                                    onValueChange={(val) => setFormData({ ...formData, behavioral_role: val })}
                                 >
-                                    <option value="general">General (Standard Questions)</option>
-                                    <option value="junior">Junior (Learning, Adaptability, Following instructions)</option>
-                                    <option value="mid">Mid-Level (Ownership, Independent Problem Solving)</option>
-                                    <option value="lead">Lead/Manager (Leadership, System Design, Mentorship)</option>
-                                </select>
+                                    <SelectTrigger id="behavioral_role" className="w-full md:w-1/2 h-11 border border-border rounded-xl bg-background/50 text-foreground text-base">
+                                        <SelectValue placeholder="Select behavioral evaluation type" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="general">General (Standard Questions)</SelectItem>
+                                        <SelectItem value="junior">Junior (Learning, Adaptability, Following instructions)</SelectItem>
+                                        <SelectItem value="mid">Mid-Level (Ownership, Independent Problem Solving)</SelectItem>
+                                        <SelectItem value="lead">Lead/Manager (Leadership, System Design, Mentorship)</SelectItem>
+                                    </SelectContent>
+                                </Select>
 
                                 {/* Repository picker for behavioral */}
                                 <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">

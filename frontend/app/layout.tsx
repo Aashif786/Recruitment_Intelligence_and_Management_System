@@ -52,17 +52,21 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const branding = await getBrandingServer();
+  const safeThemeColor = /^#[0-9A-Fa-f]{3,8}$/.test(branding.themeColor || "") 
+    ? branding.themeColor 
+    : "#2563eb";
+
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" style={{ overflow: 'hidden', height: '100%' }}>
       <body className="app-shell font-sans" suppressHydrationWarning style={{ overflow: 'hidden', height: '100%', margin: 0, padding: 0 }}>
         <style dangerouslySetInnerHTML={{ __html: `
           :root {
-            --primary: ${branding.themeColor} !important;
-            --ring: ${branding.themeColor} !important;
+            --primary: ${safeThemeColor} !important;
+            --ring: ${safeThemeColor} !important;
           }
           .dark {
-            --primary: ${branding.themeColor} !important;
-            --ring: ${branding.themeColor} !important;
+            --primary: ${safeThemeColor} !important;
+            --ring: ${safeThemeColor} !important;
           }
         `}} />
         <SWRProvider>

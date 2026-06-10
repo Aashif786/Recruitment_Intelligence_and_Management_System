@@ -104,7 +104,7 @@ export default function LeaderboardPage() {
                 </div>
             </div>
 
-            <Card className="flex-1 min-h-0 flex flex-col bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 overflow-hidden mx-4">
+            <Card className="flex-1 min-h-0 flex flex-col bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden mx-4">
                 <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 shrink-0">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <Users className="h-5 w-5 text-primary" />
@@ -126,7 +126,7 @@ export default function LeaderboardPage() {
                             {paginatedRanked.map((cand, index) => {
                                 const actualRank = (rankingPage - 1) * pageSize + index + 1
                                 return (
-                                    <TableRow key={cand.id} className="hover:bg-muted/40 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] border-b border-border/20 last:border-b-0 transition-all duration-300 py-4 h-16">
+                                    <TableRow key={cand.id} className="premium-table-row border-b border-border/20 last:border-b-0 py-4 h-16">
                                         <TableCell className="font-medium align-middle">
                                             <div className="flex items-center gap-3 pl-2">
                                                 {getRankIcon(actualRank)}

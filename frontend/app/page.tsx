@@ -954,7 +954,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-stretch">
             {/* Candidate Card */}
-            <div className="group relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5 rounded-3xl">
+            <Link href="/jobs" className="group relative hover-premium-lift cursor-pointer active:scale-[0.99] transition-all duration-300 rounded-3xl block outline-none">
               <div
                 className="absolute inset-0 rounded-3xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.02)]"
               />
@@ -971,19 +971,16 @@ export default function Home() {
                   <ListItem text="Get evaluated on technical accuracy, reasoning, and depth." />
                   <ListItem text="Stay in control with transparent, structured feedback." />
                 </ul>
-                <Link href="/jobs">
-                  <Button
-                    variant="link"
-                    className="p-0 text-base text-primary hover:text-primary/80 group/link active:scale-[0.99] transition-all"
-                  >
-                    Browse openings <span className="inline-block translate-x-0 group-hover/link:translate-x-1 transition-transform duration-200">&rarr;</span>
-                  </Button>
-                </Link>
+                <div
+                  className="p-0 text-base font-semibold text-primary hover:text-primary/80 group/link inline-flex items-center gap-1 transition-all"
+                >
+                  Browse openings <span className="inline-block translate-x-0 group-hover/link:translate-x-1 transition-transform duration-200">&rarr;</span>
+                </div>
               </div>
-            </div>
+            </Link>
 
             {/* HR Card */}
-            <div className="group relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5 rounded-3xl">
+            <Link href="/auth/login?role=hr" className="group relative hover-premium-lift cursor-pointer active:scale-[0.99] transition-all duration-300 rounded-3xl block outline-none">
               <div
                 className="absolute inset-0 rounded-3xl border border-primary/30 bg-primary/20 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.02)]"
               />
@@ -1006,16 +1003,13 @@ export default function Home() {
                     dark
                   />
                 </ul>
-                <Link href="/auth/login?role=hr">
-                  <Button
-                    size="lg"
-                    className="bg-slate-950 text-white hover:bg-slate-900 rounded-full px-7 active:scale-[0.99] transition-all duration-300 hover:shadow-lg hover:shadow-black/25"
-                  >
-                    Open the HR dashboard
-                  </Button>
-                </Link>
+                <div
+                  className="inline-flex items-center justify-center font-bold bg-slate-950 text-white hover:bg-slate-900 rounded-full px-7 h-12 transition-all duration-300 hover:shadow-lg hover:shadow-black/25"
+                >
+                  Open the HR dashboard
+                </div>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </section>

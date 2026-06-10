@@ -141,7 +141,7 @@ export default function CandidateScorecardPage() {
             <div className="grid md:grid-cols-3 gap-8">
                 {/* Column 1: Core Evaluation Scores */}
                 <div className="md:col-span-2 space-y-6">
-                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 rounded-2xl">
+                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl">
                         <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4">
                             <CardTitle className="text-xl flex items-center gap-2">
                                 <Award className="w-6 h-6 text-primary" />
@@ -176,7 +176,7 @@ export default function CandidateScorecardPage() {
                     </Card>
 
                     {/* AI Insights & Feedback */}
-                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 rounded-2xl">
+                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl">
                         <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 pb-4">
                             <CardTitle className="text-xl flex items-center gap-2">
                                 <Info className="w-5 h-5 text-primary" />
@@ -225,7 +225,7 @@ export default function CandidateScorecardPage() {
 
                 {/* Column 2: Metadata & Pipeline */}
                 <div className="space-y-6">
-                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300 rounded-2xl">
+                    <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl">
                         <CardHeader className="border-b border-border/40 pb-4">
                             <CardTitle className="text-lg">Pipeline Status</CardTitle>
                         </CardHeader>
@@ -249,7 +249,7 @@ export default function CandidateScorecardPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-primary/[0.02] backdrop-blur-xl border border-primary/20 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgb(0,0,0,0.05)] transition-all duration-300">
+                    <Card className="bg-primary/[0.02] backdrop-blur-xl border border-primary/20 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl">
                         <CardHeader className="border-b border-primary/10 pb-4">
                             <CardTitle className="text-lg">Recruiter Remarks</CardTitle>
                         </CardHeader>

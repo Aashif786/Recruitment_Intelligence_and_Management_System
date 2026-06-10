@@ -38,6 +38,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { SendOfferDialog } from '@/components/send-offer-dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { CapturePhotoDialog } from '@/components/capture-photo-dialog'
 import { APIClient } from '@/app/dashboard/lib/api-client'
 import { toast } from "sonner"
@@ -303,7 +304,7 @@ export default function OnboardingPage() {
 
             {showStats && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-4 duration-500 ease-out">
-                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-blue-500/5 to-primary/5">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden bg-gradient-to-br from-blue-500/5 to-primary/5">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <FileText className="h-4 w-4 text-blue-500" />
@@ -319,7 +320,7 @@ export default function OnboardingPage() {
                             <p className="text-xs text-muted-foreground">Action required: send letters</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-amber-500/5 to-amber-600/5">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden bg-gradient-to-br from-amber-500/5 to-amber-600/5">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <Calendar className="h-4 w-4 text-amber-500" />
@@ -351,7 +352,7 @@ export default function OnboardingPage() {
                             <p className="text-xs text-muted-foreground">Upcoming in next 7 days</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_36px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden hover:-translate-y-1 bg-gradient-to-br from-emerald-500/5 to-emerald-600/5">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden bg-gradient-to-br from-emerald-500/5 to-emerald-600/5">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -375,7 +376,7 @@ export default function OnboardingPage() {
             )}
 
 
-            <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 pt-0">
+            <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden pt-0">
                 <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">

@@ -923,8 +923,11 @@ async def respond_to_offer(request: Request, response_req: OfferResponseRequest,
     fsm = CandidateStateMachine(db)
     try:
         fsm.transition(application, target_action)
+    except (InvalidTransitionError, DuplicateTransitionError) as e:
+        raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception("Offer response transition failed")
+        raise HTTPException(status_code=400, detail="Failed to process offer response. Please try again.")
 
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
@@ -1045,8 +1048,11 @@ def complete_onboarding(
     fsm = CandidateStateMachine(db)
     try:
         fsm.transition(application, TransitionAction.SYSTEM_ONBOARD, user_id=current_user.id)
+    except (InvalidTransitionError, DuplicateTransitionError) as e:
+        raise HTTPException(status_code=400, detail=get_user_friendly_fsm_error(e))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception("Onboarding transition failed")
+        raise HTTPException(status_code=400, detail="Failed to transition candidate to onboarded state.")
         
     application.onboarded_at = get_ist_now()
     
