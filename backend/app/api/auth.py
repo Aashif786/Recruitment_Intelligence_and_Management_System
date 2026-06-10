@@ -1,3 +1,4 @@
+print("DEBUG auth: starting imports", flush=True)
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Response, Request
 from typing import List
 from sqlalchemy.orm import Session
@@ -13,6 +14,7 @@ import string
 import logging
 from app.core.timezone import get_ist_now, to_naive_ist
 
+print("DEBUG auth: imports finished", flush=True)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])

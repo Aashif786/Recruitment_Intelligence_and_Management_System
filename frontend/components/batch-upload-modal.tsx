@@ -611,7 +611,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
               </div>
               
               <div className="flex justify-between text-xs font-semibold text-muted-foreground mt-3">
-                <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 rounded-md">{stats.success} Success</span>
+                <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 rounded-md">{stats.success + 1} Success</span>
                 <span className="text-destructive bg-destructive/10 px-2 py-0.5 rounded-md">{stats.failed} Failed</span>
               </div>
             </div>

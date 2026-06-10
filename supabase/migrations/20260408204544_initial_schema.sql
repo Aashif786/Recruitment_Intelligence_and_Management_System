@@ -19,10 +19,18 @@ CREATE TABLE IF NOT EXISTS users (
     profile_image_url VARCHAR(500),
     otp_code VARCHAR(255),
     otp_expiry TIMESTAMP WITH TIME ZONE,
+    login_attempt_count INTEGER NOT NULL DEFAULT 0,
+    login_locked_until TIMESTAMP,
+    otp_attempt_count INTEGER NOT NULL DEFAULT 0,
+    otp_locked_until TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    password_changed_at TIMESTAMP,
+    imap_email VARCHAR(255),
+    imap_password TEXT,
+    auto_sync_enabled BOOLEAN DEFAULT FALSE,
     CONSTRAINT check_users_role CHECK (
-        role IN ('super_admin', 'hr', 'recruiter', 'pending_hr', 'candidate')
+        role IN ('super_admin', 'hr', 'pending_hr', 'candidate')
     ),
     CONSTRAINT check_users_approval_status CHECK (
         approval_status IN ('pending', 'approved', 'rejected')
@@ -147,6 +155,7 @@ CREATE TABLE IF NOT EXISTS applications (
     scoring_metadata JSONB,
     email_sent_at TIMESTAMP,
     email_status VARCHAR(20) DEFAULT 'pending',
+    is_disposable_email BOOLEAN DEFAULT FALSE,
     CONSTRAINT uq_application_job_email UNIQUE (job_id, candidate_email),
     CONSTRAINT uq_application_job_phone_hash UNIQUE (job_id, candidate_phone_hash),
     CONSTRAINT check_applications_status CHECK (
@@ -187,7 +196,8 @@ CREATE TABLE IF NOT EXISTS offers (
     offer_accepted_user_agent TEXT,
     offer_email_status VARCHAR(20) DEFAULT 'pending',
     offer_email_retry_count INTEGER DEFAULT 0,
-    reminder_sent_at TIMESTAMP
+    reminder_sent_at TIMESTAMP,
+    offer_preview_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_offers_application_id ON offers(application_id);
@@ -501,7 +511,11 @@ CREATE TABLE IF NOT EXISTS attachment_resumes (
     email_body TEXT,
     mime_type VARCHAR(100),
     received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    processed BOOLEAN DEFAULT FALSE
+    processed BOOLEAN DEFAULT FALSE,
+    hr_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    retry_count INTEGER DEFAULT 0,
+    last_error TEXT,
+    mapping_failed BOOLEAN DEFAULT FALSE
 );
 
 CREATE INDEX IF NOT EXISTS idx_attachment_resumes_sender ON attachment_resumes(sender_email);

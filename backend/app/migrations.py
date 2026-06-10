@@ -76,6 +76,9 @@ _REQUIRED_COLUMNS = [
     # OTP brute-force protection (added after initial schema)
     ("users", "otp_attempt_count", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "otp_locked_until", "TIMESTAMP WITH TIME ZONE"),
+    # Login brute-force protection (BUG-012)
+    ("users", "login_attempt_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("users", "login_locked_until", "TIMESTAMP"),
     # Disposable email detection
     ("applications", "is_disposable_email", "BOOLEAN DEFAULT FALSE"),
 ]
@@ -191,18 +194,26 @@ def run_startup_migrations(engine: Engine):
                 column_exists(conn, "applications", "resume_status")
                 and "resume_extractions" in inspector.get_table_names()
             ):
-                conn.execute(text("""
-                    UPDATE applications
-                    SET resume_status = 'parsed'
-                    WHERE (resume_status = 'pending' OR resume_status IS NULL)
-                      AND EXISTS (
-                        SELECT 1
-                        FROM resume_extractions re
-                        WHERE re.application_id = applications.id
-                      )
-                """))
-                conn.commit()
-                logger.info("Backfilled applications.resume_status from resume_extractions")
+                has_pending = conn.execute(text("""
+                    SELECT 1 FROM applications 
+                    WHERE resume_status = 'pending' OR resume_status IS NULL 
+                    LIMIT 1
+                """)).fetchone()
+                if has_pending:
+                    conn.execute(text("""
+                        UPDATE applications
+                        SET resume_status = 'parsed'
+                        WHERE (resume_status = 'pending' OR resume_status IS NULL)
+                          AND EXISTS (
+                            SELECT 1
+                            FROM resume_extractions re
+                            WHERE re.application_id = applications.id
+                          )
+                    """))
+                    conn.commit()
+                    logger.info("Backfilled applications.resume_status from resume_extractions")
+                else:
+                    logger.debug("No pending/NULL resume_status applications to backfill.")
         except Exception as e:
             _safe_rollback(conn)
             logger.warning(f"Failed to backfill applications.resume_status: {e}")
@@ -224,13 +235,17 @@ def run_startup_migrations(engine: Engine):
         # 1cd. CRIT-03 Migration: set candidate_phone_normalized and candidate_phone_raw to NULL for privacy/data minimization
         try:
             if column_exists(conn, "applications", "candidate_phone_normalized"):
-                conn.execute(text("UPDATE applications SET candidate_phone_normalized = NULL WHERE candidate_phone_normalized IS NOT NULL"))
-                conn.commit()
-                logger.info("Cleared candidate_phone_normalized from all applications (CRIT-03 data minimization).")
+                has_normalized = conn.execute(text("SELECT 1 FROM applications WHERE candidate_phone_normalized IS NOT NULL LIMIT 1")).fetchone()
+                if has_normalized:
+                    conn.execute(text("UPDATE applications SET candidate_phone_normalized = NULL WHERE candidate_phone_normalized IS NOT NULL"))
+                    conn.commit()
+                    logger.info("Cleared candidate_phone_normalized from all applications (CRIT-03 data minimization).")
             if column_exists(conn, "applications", "candidate_phone_raw"):
-                conn.execute(text("UPDATE applications SET candidate_phone_raw = NULL WHERE candidate_phone_raw IS NOT NULL"))
-                conn.commit()
-                logger.info("Cleared candidate_phone_raw from all applications (MED-06 data minimization).")
+                has_raw = conn.execute(text("SELECT 1 FROM applications WHERE candidate_phone_raw IS NOT NULL LIMIT 1")).fetchone()
+                if has_raw:
+                    conn.execute(text("UPDATE applications SET candidate_phone_raw = NULL WHERE candidate_phone_raw IS NOT NULL"))
+                    conn.commit()
+                    logger.info("Cleared candidate_phone_raw from all applications (MED-06 data minimization).")
         except Exception as e:
             _safe_rollback(conn)
             logger.warning(f"Failed to clear plaintext phone numbers: {e}")
@@ -431,13 +446,19 @@ def run_startup_migrations(engine: Engine):
         # Populate Application.hr_id
         try:
             if column_exists(conn, "applications", "hr_id") and column_exists(conn, "jobs", "hr_id"):
-                conn.execute(text("""
-                    UPDATE applications
-                    SET hr_id = (SELECT hr_id FROM jobs WHERE jobs.id = applications.job_id)
-                    WHERE hr_id IS NULL
-                """))
-                conn.commit()
-                logger.info("Migration completed: populated Application.hr_id")
+                has_null_hr = conn.execute(text("""
+                    SELECT 1 FROM applications WHERE hr_id IS NULL LIMIT 1
+                """)).fetchone()
+                if has_null_hr:
+                    conn.execute(text("""
+                        UPDATE applications
+                        SET hr_id = (SELECT hr_id FROM jobs WHERE jobs.id = applications.job_id)
+                        WHERE hr_id IS NULL
+                    """))
+                    conn.commit()
+                    logger.info("Migration completed: populated Application.hr_id")
+                else:
+                    logger.debug("No applications with NULL hr_id to populate.")
         except Exception as exc:
             _safe_rollback(conn)
             logger.warning(f"Migration failed to populate hr_id: {exc}")

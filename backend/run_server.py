@@ -22,5 +22,17 @@ if __name__ == "__main__":
     )
     server = uvicorn.Server(config)
 
+    import os
+    pid_file = ".backend.pid"
+    with open(pid_file, "w") as f:
+        f.write(str(os.getpid()))
+
     import asyncio
-    asyncio.run(server.serve(sockets=[sock]))
+    try:
+        asyncio.run(server.serve(sockets=[sock]))
+    finally:
+        if os.path.exists(pid_file):
+            try:
+                os.remove(pid_file)
+            except Exception:
+                pass

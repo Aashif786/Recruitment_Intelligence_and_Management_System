@@ -43,6 +43,7 @@ import { APIClient } from '@/app/dashboard/lib/api-client'
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { EyeOff } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { 
     Dialog, 
     DialogContent, 
@@ -533,32 +534,41 @@ export default function OnboardingPage() {
                                         </TableCell>
                                         <TableCell className="text-right pr-6">
                                             <div className="flex items-center justify-end gap-2">
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="ghost" 
-                                                    className="h-8 w-8 p-0"
-                                                    onClick={async () => {
-                                                        const win = window.open('', '_blank');
-                                                        if (!win) {
-                                                            toast.error("Popup blocked! Please allow popups for this site.");
-                                                            return;
-                                                        }
-                                                        win.document.write('<div style="font-family: sans-serif; padding: 40px; text-align: center; color: #666;">Loading offer letter preview...</div>');
-                                                        try {
-                                                            const res = await APIClient.get(`/api/onboarding/applications/${candidate.id}/offer-preview`) as any;
-                                                            win.document.open();
-                                                            win.document.write(res.html || '<div style="color: red; padding: 20px;">Offer letter is empty or not generated yet.</div>');
-                                                            win.document.close();
-                                                        } catch (error: any) {
-                                                            win.document.open();
-                                                            win.document.write(`<div style="color: red; padding: 20px; font-family: sans-serif;"><h3>Failed to load offer preview</h3><p>${error.message || "Unknown error"}</p></div>`);
-                                                            win.document.close();
-                                                            toast.error(error.message || "Failed to load offer preview");
-                                                        }
-                                                    }}
-                                                >
-                                                    <Eye className="h-4 w-4 text-muted-foreground" />
-                                                </Button>
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="ghost" 
+                                                                className="h-8 w-8 p-0"
+                                                                onClick={async () => {
+                                                                    const win = window.open('', '_blank');
+                                                                    if (!win) {
+                                                                        toast.error("Popup blocked! Please allow popups for this site.");
+                                                                        return;
+                                                                    }
+                                                                    win.document.write('<div style="font-family: sans-serif; padding: 40px; text-align: center; color: #666;">Loading offer letter preview...</div>');
+                                                                    try {
+                                                                        const res = await APIClient.get(`/api/onboarding/applications/${candidate.id}/offer-preview`) as any;
+                                                                        win.document.open();
+                                                                        win.document.write(res.html || '<div style="color: red; padding: 20px;">Offer letter is empty or not generated yet.</div>');
+                                                                        win.document.close();
+                                                                    } catch (error: any) {
+                                                                        win.document.open();
+                                                                        win.document.write(`<div style="color: red; padding: 20px; font-family: sans-serif;"><h3>Failed to load offer preview</h3><p>${error.message || "Unknown error"}</p></div>`);
+                                                                        win.document.close();
+                                                                        toast.error(error.message || "Failed to load offer preview");
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <Eye className="h-4 w-4 text-muted-foreground" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            Preview Offer Letter
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                                 {candidate.status === 'hired' && (
                                                     <SendOfferDialog 
                                                         applicationId={candidate.id}

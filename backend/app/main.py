@@ -35,7 +35,36 @@ from contextlib import asynccontextmanager
 from app.core.auth import hash_password
 from app.core.config import get_settings
 from app.infrastructure.database import Base, engine
-from app.api import auth, jobs, applications, interviews, decisions, notifications, analytics, tickets, support, hr_tickets, ops_email, settings as hr_settings, onboarding, repository
+
+print("DEBUG import: auth", flush=True)
+from app.api import auth
+print("DEBUG import: jobs", flush=True)
+from app.api import jobs
+print("DEBUG import: applications", flush=True)
+from app.api import applications
+print("DEBUG import: interviews", flush=True)
+from app.api import interviews
+print("DEBUG import: decisions", flush=True)
+from app.api import decisions
+print("DEBUG import: notifications", flush=True)
+from app.api import notifications
+print("DEBUG import: analytics", flush=True)
+from app.api import analytics
+print("DEBUG import: tickets", flush=True)
+from app.api import tickets
+print("DEBUG import: support", flush=True)
+from app.api import support
+print("DEBUG import: hr_tickets", flush=True)
+from app.api import hr_tickets
+print("DEBUG import: ops_email", flush=True)
+from app.api import ops_email
+print("DEBUG import: hr_settings", flush=True)
+from app.api import settings as hr_settings
+print("DEBUG import: onboarding", flush=True)
+from app.api import onboarding
+print("DEBUG import: repository", flush=True)
+from app.api import repository
+print("DEBUG import: all api routers done", flush=True)
 from app.domain.models import (
     User, Job, Application, ResumeExtraction, 
     Interview, InterviewQuestion, InterviewAnswer,

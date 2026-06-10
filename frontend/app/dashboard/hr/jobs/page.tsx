@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/page-header'
 import useSWR from "swr"
 import { fetcher } from "@/app/dashboard/lib/swr-fetcher"
 import { performMutation } from "@/app/dashboard/lib/swr-utils"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 import {
     Select,
@@ -352,39 +352,60 @@ export default function HRJobsPage() {
                                 </div>
 
                                 {/* Actions */}
-                                <div className="col-span-2 text-right" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex justify-end gap-2">
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-9 w-9 p-0 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                                            title="Edit Job"
-                                            onClick={() => router.push(`/dashboard/hr/jobs/${job.id}/edit`)}
-                                        >
-                                            <Edit2 className="h-4 w-4" />
-                                        </Button>
+                                <div className="col-span-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex justify-center gap-2">
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-9 w-9 p-0 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                        onClick={() => router.push(`/dashboard/hr/jobs/${job.id}/edit`)}
+                                                        >
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    Edit Job
+                                                </TooltipContent>
+                                            </Tooltip>
 
                                         {job.status === 'open' && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-9 w-9 p-0 text-amber-600 hover:bg-amber-500/10 rounded-lg transition-colors"
-                                                title="Close Job"
-                                                onClick={() => handleClose(job.id)}
-                                            >
-                                                <XCircle className="h-4 w-4" />
-                                            </Button>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-9 w-9 p-0 text-amber-600 hover:bg-amber-500/10 rounded-lg transition-colors"
+                                                    onClick={() => handleClose(job.id)}
+                                                    >
+                                                        <XCircle className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    Close Job
+                                                </TooltipContent>
+                                            </Tooltip>
                                         )}
 
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-9 w-9 p-0 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                                            title="Delete Job"
-                                            onClick={() => handleDelete(job.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-9 w-9 p-0 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                            onClick={() => handleDelete(job.id)}
+                                                            >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+    
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        Delete Job
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                        </TooltipProvider>
                                     </div>
                                 </div>
                             </div>

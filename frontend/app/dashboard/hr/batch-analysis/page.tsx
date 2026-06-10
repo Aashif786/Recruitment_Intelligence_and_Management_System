@@ -281,7 +281,7 @@ export default function BatchAnalysisPage() {
             <CardDescription className="flex items-center justify-between">
               <span>Download candidate data filtered by date, role, or time-of-day.</span>
               <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400 dark:border-amber-500/30 text-[10px] h-5">
-                Max 1000
+                Max 40
               </Badge>
             </CardDescription>
           </CardHeader>

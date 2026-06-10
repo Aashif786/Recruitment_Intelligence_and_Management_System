@@ -1,3 +1,4 @@
+print("DEBUG jobs: starting imports", flush=True)
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request
 from typing import Optional, List, Any
 from sqlalchemy.orm import Session
@@ -7,7 +8,10 @@ from app.domain.schemas import JobCreate, JobUpdate, JobResponse, JobExtractionR
 from app.core.auth import get_current_hr
 from app.core.ownership import validate_hr_ownership
 from app.core.rate_limiter import limiter
+
+print("DEBUG jobs: importing extract_job_details", flush=True)
 from app.services.ai_service import extract_job_details
+print("DEBUG jobs: importing parse_resume", flush=True)
 from app.services.resume_parser import parse_resume
 from app.core.config import get_settings
 from app.core.idempotency import is_duplicate_request
@@ -22,6 +26,7 @@ import logging
 import re
 from app.core.config import get_settings
 
+print("DEBUG jobs: imports finished", flush=True)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])

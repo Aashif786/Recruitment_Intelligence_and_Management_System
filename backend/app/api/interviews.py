@@ -56,6 +56,24 @@ from app.core.rate_limiter import limiter
 from app.core.idempotency import is_duplicate_request
 
 
+def _get_interview_jwt_secret() -> str:
+    """Match candidate interview token validation in app.core.auth and middleware."""
+    if settings.interview_jwt_secret:
+        return settings.interview_jwt_secret
+    if settings.env != "production":
+        return settings.jwt_secret + "_interview"
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Server configuration error: missing token signing key."
+    )
+
+
+def _interview_has_answers(db: Session, interview_id: int) -> bool:
+    return db.query(InterviewAnswer.id).filter(
+        InterviewAnswer.interview_id == interview_id
+    ).first() is not None
+
+
 
 
 STAGE_APTITUDE = "aptitude"
@@ -248,13 +266,10 @@ async def access_interview(
                 # Enforce experience-level flow (e.g., aptitude only for juniors)
                 if job.experience_level.lower() != "junior" and interview.interview_stage == STAGE_APTITUDE:
                     interview.interview_stage = STAGE_FIRST_LEVEL
-                if not interview.started_at:
-                    interview.started_at = current_time
-                    interview.duration_minutes = job.duration_minutes or 60
+                interview.duration_minutes = job.duration_minutes or 60
             else:
                 # Sensible defaults for missing metadata
                 interview.interview_stage = STAGE_FIRST_LEVEL
-                interview.started_at = current_time
                 interview.duration_minutes = 60
             
             logger.info(f"Initializing NEW interview session: {interview.id}")
@@ -300,8 +315,8 @@ async def access_interview(
             duration_mins = interview.duration_minutes
             
         token_expiry_delta = max(timedelta(hours=4), timedelta(minutes=duration_mins + 30))
-        # Use isolated interview secret if configured
-        interview_secret = settings.interview_jwt_secret or settings.jwt_secret
+        # Use the same isolated interview secret expected by middleware/API auth.
+        interview_secret = _get_interview_jwt_secret()
         token = create_access_token(
             data={"sub": str(interview.id), "role": "interview"},
             expires_delta=token_expiry_delta,
@@ -495,7 +510,16 @@ async def start_interview_session(
         db.commit()
         db.refresh(interview)
     elif interview.status == "in_progress":
-        if not interview.started_at:
+        has_answers = _interview_has_answers(db, interview_id)
+        if not has_answers:
+            job = interview.application.job if interview.application else None
+            interview.started_at = now
+            interview.used_at = interview.used_at or now
+            if not interview.duration_minutes:
+                interview.duration_minutes = (job.duration_minutes or 60) if job else 60
+            db.commit()
+            db.refresh(interview)
+        elif not interview.started_at:
             interview.started_at = now
             if not interview.duration_minutes:
                 job = interview.application.job if interview.application else None

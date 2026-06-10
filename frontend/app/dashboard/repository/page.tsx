@@ -59,6 +59,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -827,16 +828,32 @@ export default function RepositoryPage() {
                                                 <span className="text-[18px] font-black text-primary text-base">{set.question_count}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-right pr-6">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-primary hover:bg-primary/10 rounded-lg transition-all" onClick={() => openEdit(set)}>
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 rounded-lg transition-all" onClick={() => setDeleteTarget(set)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                        <TableCell className="text-right px-6">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8  text-primary hover:bg-primary/10 rounded-lg transition-all" onClick={() => openEdit(set)}>
+                                                                <Pencil className="h-4 w-4" />
+                                                            </Button>   
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Edit</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg transition-all " onClick={() => setDeleteTarget(set)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Delete</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                             </div>
-                                        </TableCell>
+                                        </TableCell> 
                                     </TableRow>
                                 ))}
                             </TableBody>

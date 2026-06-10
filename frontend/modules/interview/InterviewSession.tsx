@@ -71,6 +71,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   const [isFinished, setIsFinished] = useState(false);
   const [isTerminated, setIsTerminated] = useState(false);
   const [isDeviceTestSuccess, setIsDeviceTestSuccess] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [deviceTestError, setDeviceTestError] = useState<string | null>(null);
   const [terminationReason, setTerminationReason] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
@@ -1236,13 +1237,15 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
               )}
 
               <Button
-                disabled={!isDeviceTestSuccess}
+                disabled={!isDeviceTestSuccess || isStarting}
                 className={`w-full h-16 rounded-2xl font-black text-xl shadow-xl transition-all duration-300 active:scale-[0.99] ${
                   !isDeviceTestSuccess 
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none hover:bg-slate-300' 
                     : 'shadow-primary/20 cursor-pointer'
                 }`}
                 onClick={async () => {
+                  if (isStarting) return;
+                  setIsStarting(true);
                   // Request fullscreen before starting interview
                   try {
                     await document.documentElement.requestFullscreen();
@@ -1250,13 +1253,27 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
                   } catch (e) {
                     // Fullscreen failed — show gate instead of starting
                     setShowFullscreenGate(true);
+                    setIsStarting(false);
                     return;
                   }
-                  sessionStartRef.current = Date.now();
-                  setIsStarted(true);
+                  try {
+                    await apiFetch(`/api/interviews/${interviewId}/start`, token, {
+                      method: 'POST',
+                      body: JSON.stringify({ camera_active: true, mic_active: true }),
+                    });
+                    sessionStartRef.current = Date.now();
+                    setIsStarted(true);
+                  } catch (err: any) {
+                    toast.error(err.message || 'Failed to start interview session.');
+                    if (document.fullscreenElement) {
+                      await document.exitFullscreen().catch(() => null);
+                    }
+                    setIsFullscreen(false);
+                    setIsStarting(false);
+                  }
                 }}
               >
-                Enter Interview Board
+                {isStarting ? 'Starting...' : 'Enter Interview Board'}
               </Button>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">By clicking, you agree to the assessment monitoring protocol</p>
             </div>
