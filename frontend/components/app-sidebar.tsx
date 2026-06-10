@@ -101,7 +101,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         { href: '/dashboard/hr', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/hr/jobs', label: 'Job Postings', icon: Briefcase },
         { href: '/dashboard/hr/applications', label: 'Applications', icon: Users },
-        { href: '/dashboard/hr/ingested-emails', label: 'Email Inbox', icon: Mail },
+        { href: '/dashboard/hr/ingested-emails', label: 'Email Ingestion Inbox', icon: Mail },
         { href: '/dashboard/hr/pipeline', label: 'Hiring Pipeline', icon: UserCheck },
         { href: '/dashboard/hr/reports', label: 'Reports', icon: BarChart },
         { href: '/dashboard/hr/tickets', label: 'Tickets', icon: LifeBuoy },

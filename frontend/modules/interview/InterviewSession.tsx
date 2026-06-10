@@ -60,6 +60,32 @@ function captureFrame(video: HTMLVideoElement | null): string | null {
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
+function getFaceQuality(prediction: any, video: HTMLVideoElement) {
+  const topLeft = prediction?.topLeft || [0, 0];
+  const bottomRight = prediction?.bottomRight || [0, 0];
+  const left = Number(topLeft[0] ?? 0);
+  const top = Number(topLeft[1] ?? 0);
+  const right = Number(bottomRight[0] ?? 0);
+  const bottom = Number(bottomRight[1] ?? 0);
+  const width = Math.max(0, right - left);
+  const height = Math.max(0, bottom - top);
+  const frameArea = Math.max(1, video.videoWidth * video.videoHeight);
+  const areaRatio = (width * height) / frameArea;
+  const rawProbability = prediction?.probability;
+  const confidence = Array.isArray(rawProbability)
+    ? Number(rawProbability[0] ?? 0)
+    : typeof rawProbability === 'number'
+      ? rawProbability
+      : 1;
+  const hasReasonableSize = areaRatio >= 0.035;
+  const isInsideFrame = left >= 0 && top >= 0 && right <= video.videoWidth && bottom <= video.videoHeight;
+
+  return {
+    confidence,
+    inFocus: confidence >= 0.75 && hasReasonableSize && isInsideFrame,
+  };
+}
+
 export default function InterviewSession({ sessionId, token }: InterviewSessionProps) {
   const interviewId = sessionId;
 
@@ -712,9 +738,14 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       let stream: MediaStream;
       
       try {
-        await tf.ready();
-        if (!detectorRef.current) {
-          detectorRef.current = await blazeface.load();
+        try {
+          await tf.ready();
+          if (!detectorRef.current) {
+            detectorRef.current = await blazeface.load();
+          }
+        } catch (modelErr) {
+          console.warn('Face detector model failed to load; continuing with camera/mic checks only.', modelErr);
+          detectorRef.current = null;
         }
 
         if (isAudioLive && activeStreamRef.current) {
@@ -1034,7 +1065,27 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
     faceCheckIntervalRef.current = setInterval(async () => {
       // Use floatingVideoRef — sessionVideoRef is unmounted once the session starts
       const video = floatingVideoRef.current;
-      if (!video || !detectorRef.current) return;
+      if (!video) return;
+      if (!detectorRef.current) {
+        setIsFocusingOnMonitor(false);
+        checkCount++;
+        if (checkCount >= 5) {
+          checkCount = 0;
+          fetch(`${getApiBaseUrl()}/api/interviews/${interviewId}/monitoring-events`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              event_type: 'face_not_visible',
+              confidence_score: 0,
+              frame_snapshot: captureFrame(video),
+            }),
+          }).catch(() => {});
+        }
+        return;
+      }
       if (video.readyState < 2 || video.videoWidth === 0) {
         // Ensure stream is still bound to the widget
         if (activeStreamRef.current && video.srcObject !== activeStreamRef.current) {
@@ -1048,18 +1099,29 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         const predictions = await detectorRef.current.estimateFaces(video, false);
         const faceFound = predictions.length > 0;
         setIsFaceDetected(faceFound);
+        const faceQuality = predictions.length === 1 ? getFaceQuality(predictions[0], video) : null;
+        const faceInFocus = Boolean(faceQuality?.inFocus);
+        setIsFocusingOnMonitor(predictions.length === 1 && faceInFocus);
 
         if (predictions.length === 0) {
-          handleStrike('Candidate not in frame');
+          handleStrike('No face detected');
         } else if (predictions.length > 1) {
           handleStrike('Multiple people detected');
+        } else if (!faceInFocus) {
+          handleStrike('Face not in focus');
         }
 
         checkCount++;
         if (checkCount >= 5) {
           checkCount = 0;
-          const statusType = predictions.length === 1 ? 'normal' : (predictions.length === 0 ? 'face_not_detected' : 'multiple_people');
-          const confidence = predictions.length === 1 ? 1.0 : 0.0;
+          const statusType = predictions.length === 0
+            ? 'face_not_detected'
+            : predictions.length > 1
+              ? 'multiple_people'
+              : faceInFocus
+                ? 'normal'
+                : 'face_not_visible';
+          const confidence = predictions.length === 1 ? (faceQuality?.confidence ?? 0) : 0.0;
           
           // Capture secure frame snapshot periodically
           const snapshot = captureFrame(video);

@@ -72,13 +72,21 @@ class SecurityHeadersMiddleware:
                 if scope.get("scheme") == "https" or settings.env == "production":
                     set_header(b"strict-transport-security", b"max-age=31536000; includeSubDomains")
                 
+                dev_connect_src = (
+                    b" http://localhost:10000 http://127.0.0.1:10000"
+                    b" http://localhost:3000 http://127.0.0.1:3000"
+                    if settings.env != "production"
+                    else b""
+                )
                 set_header(b"content-security-policy",
                            # BUG-026 Fix: Removed 'unsafe-inline' from script-src.
                            # This was a CSP bypass that allowed arbitrary inline script execution.
                            b"default-src 'self'; "
                            b"script-src 'self' https://cdn.jsdelivr.net; "
+                           b"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                           b"font-src 'self' https://fonts.gstatic.com data:; "
                            b"img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com; "
-                           b"connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com https://api.groq.com; "
+                           b"connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com https://api.groq.com https://tfhub.dev https://storage.googleapis.com" + dev_connect_src + b"; "
                            b"frame-ancestors 'none'; object-src 'none'")
 
             await send(message)

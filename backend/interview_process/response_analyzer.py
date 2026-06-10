@@ -521,6 +521,12 @@ class ResponseAnalyzer:
             }
             return red_flag_res
 
+        relevance_result = await self._validate_answer_relevance(question, sanitized_answer, question_type)
+        if relevance_result and not relevance_result.get("addresses_question", False):
+            reason = relevance_result.get("reason") or "Answer does not address the question asked."
+            logger.warning("Answer relevance gate failed: %s", reason)
+            return self._zero_relevance_result(question_type, reason)
+
         # 3. AI Evaluation with Retry Mechanism
         max_retries = 2
         timeout_seconds = 15
@@ -625,6 +631,77 @@ class ResponseAnalyzer:
         if question_type == "behavioral":
             return self._fallback_behavioral_evaluation(word_count)
         return self._fallback_evaluation(question, answer, word_count, metrics)
+
+    async def _validate_answer_relevance(self, question: str, answer: str, question_type: str) -> Dict | None:
+        """Strict pre-score gate: does this answer address this exact question?"""
+        if is_ai_unavailable_response(answer):
+            return None
+
+        if answer.strip().endswith("?") and re.match(r"^(what|how|why|when|where|which|who|does|do|is|are|can)\b", answer.strip().lower()):
+            return {
+                "addresses_question": False,
+                "relevance_score": 0.0,
+                "reason": "Candidate answered with a different question instead of responding."
+            }
+
+        prompt = f"""
+        Decide whether the candidate response directly answers the interview question.
+
+        Question type: {question_type}
+        Question: {question}
+        <candidate_response>{answer}</candidate_response>
+
+        Strict rules:
+        - Return addresses_question=false if the response answers a different question.
+        - Return false if it is merely in the same broad domain but does not address the requested concept, role, action, or impact.
+        - For behavioral questions, the response must address the requested experience/situation, role, action, and contribution.
+        - For technical questions, the response must address the requested technical concept.
+
+        Return JSON ONLY:
+        {{
+          "addresses_question": true/false,
+          "relevance_score": 0-10,
+          "reason": "short reason"
+        }}
+        """
+        try:
+            gate_text = await asyncio.wait_for(
+                self.ai_client.generate(
+                    prompt=prompt,
+                    system_instr="Strict interview relevance validator. Return valid JSON only.",
+                    model=MODEL_NAME,
+                ),
+                timeout=10,
+            )
+            parsed = self._safe_json_parse(gate_text)
+            if not parsed:
+                return None
+            relevance_score = self._bound_score(parsed.get("relevance_score", parsed.get("Relevance Score", 0)))
+            addresses = bool(parsed.get("addresses_question", parsed.get("Addresses Question", False)))
+            if relevance_score <= 2:
+                addresses = False
+            return {
+                "addresses_question": addresses,
+                "relevance_score": relevance_score,
+                "reason": parsed.get("reason", parsed.get("Reason", "")),
+            }
+        except Exception as e:
+            logger.warning(f"Answer relevance gate unavailable: {e}")
+            return None
+
+    def _zero_relevance_result(self, question_type: str, reason: str) -> Dict:
+        base = {
+            "overall": 0.0,
+            "confidence_score": 1.0,
+            "strengths": [],
+            "weaknesses": [reason],
+            "reasoning": reason,
+        }
+        if question_type == "behavioral":
+            base.update({"relevance": 0.0, "action_impact": 0.0, "depth": 0.0})
+        else:
+            base.update({"technical_accuracy": 0.0, "completeness": 0.0, "depth": 0.0, "relevance": 0.0})
+        return base
 
     def _safe_json_parse(self, text: str) -> Dict:
         """Clean and parse JSON from AI response"""

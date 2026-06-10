@@ -109,14 +109,11 @@ class AnalyticsService:
             status_map = {
                 'applied': 'Applied',
                 'screened': 'Screened',
-                'aptitude_round': 'Applied',       # hidden – roll into Applied bucket
-                'ai_interview': 'Screened',         # hidden – roll into Screened bucket
+                'interview_scheduled': 'Interview scheduled',
                 'interview_completed': 'Interview completed',
                 'review_later': 'Interview completed',  # treated same as completed
                 'physical_interview': 'Physical Interview',
-                'pending_approval': 'Hired',   
                 'offer_sent': 'Offer Sent',
-                'accepted': 'Hired',
                 'hired': 'Hired',
                 'onboarded': 'Onboarded',
                 'rejected': 'Rejected'
@@ -124,8 +121,8 @@ class AnalyticsService:
             
             # Strict display order – exactly the 6 required stages
             CHART_ORDER = [ 
-                'Applied', 'Screened', 'Interview completed',
-                'Physical Interview', 'Rejected', 'Hired','Onboarded', 'Offer Sent'
+                'Applied', 'Screened', 'Interview scheduled', 'Interview completed',
+                'Physical Interview', 'Hired', 'Offer Sent', 'Onboarded', 'Rejected'
             ]
             
             # Initialize with 0s so all bars always appear
@@ -188,7 +185,7 @@ class AnalyticsService:
         valid_int_result = int_metrics.filter(Interview.status.in_(['interview_completed'])).first()
         valid_interviews = valid_int_result[0] if valid_int_result else 0
         completed_interviews = valid_int_result[1] if valid_int_result else 0
-        hired_count = hired_metrics.scalar() or 0
+        hired_count = hired_metrics.scalar() or 0   
         offered_count = offered_metrics.scalar() or 0
 
         # Debug Logging for Correctness Verification

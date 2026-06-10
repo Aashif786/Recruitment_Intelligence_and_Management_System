@@ -31,6 +31,22 @@ async def evaluate_answer_task(
         if not rule_answer_text or len(rule_answer_text.strip()) < 20:
             return 2.0  # too short
 
+        import re
+        if rule_answer_text.strip().endswith("?"):
+            return 0.0
+        stop_words = {
+            "what", "when", "where", "which", "with", "that", "this", "from",
+            "your", "about", "tell", "does", "used", "role", "team", "work",
+            "worked", "question", "answer", "project", "required",
+        }
+        q_terms = {
+            w for w in re.findall(r"[a-zA-Z][a-zA-Z0-9_+#.-]{2,}", rule_question_text.lower())
+            if w not in stop_words
+        }
+        a_terms = set(re.findall(r"[a-zA-Z][a-zA-Z0-9_+#.-]{2,}", rule_answer_text.lower()))
+        if q_terms and not (q_terms & a_terms):
+            return 0.0
+
         ans_lower = rule_answer_text.lower()
         # Baseline score for any reasonable answer.
         score = 5.0
@@ -123,6 +139,14 @@ async def evaluate_answer_task(
             # Default to high confidence for AI results, low for fallbacks
             confidence_score = float(evaluation.get("confidence_score", 0.85))
             answer_evaluation_json = json.dumps(evaluation)
+
+            if question_type == "behavioral" and technical_score <= 2:
+                answer_score = min(float(answer_score or 0), technical_score)
+                completeness_score = min(float(completeness_score or 0), technical_score)
+                depth_score = min(float(depth_score or 0), technical_score)
+            elif question_type != "behavioral" and technical_score <= 2 and completeness_score <= 4 and depth_score <= 2:
+                answer_score = min(float(answer_score or 0), 1.0)
+                completeness_score = min(float(completeness_score or 0), 1.0)
         else:
             err = last_ai_error or Exception("unknown")
             logger.error(
@@ -210,6 +234,5 @@ async def evaluate_answer_task(
         db.rollback()
     finally:
         db.close()
-
 
 

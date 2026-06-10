@@ -12,6 +12,7 @@ import {
   XCircle,
   User,
   Users,
+  UserCheck,
 } from "lucide-react";
 import {
   Card,
@@ -733,15 +734,25 @@ export default function HRApplicationsPage() {
                         }
                       />
                     )}
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-10 px-3 text-xs font-black text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
-                      onClick={() => router.push(`/dashboard/hr/applications/${app.id}`)}
-                    >
-                      VIEW
-                    </Button>
+                    {app.status === "hired" && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={processingIds.has(app.id)}
+                            className="h-10 w-10 p-0 text-emerald-600 hover:bg-emerald-500/10 rounded-xl transition-colors shadow-none"
+                            onClick={() => handleTransition(app.id, "onboard")}
+                          >
+                            <UserCheck className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Visit Onboarding Page</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {app.status === "interview_scheduled" && (
+                      <p className='text-[13px] font-medium text-muted-foreground '>NONE</p>
+                    )}
                   </div>
                 </div>
               </div>
