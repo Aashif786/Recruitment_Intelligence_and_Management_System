@@ -558,10 +558,12 @@ def encrypt_existing_plaintext_data(engine: Engine):
                     conn.rollback()
                     logger.error(f"Error checking/migrating table '{tablename}.{col_name}': {table_err}")
         
-    # Enforce strict encryption on read after migration is done
-    import app.core.encryption as encryption
-    encryption.ENFORCE_ENCRYPTION = True
-    logger.info("EncryptedText column validation/migration complete. Plaintext read check is now ENFORCED.")
+    # Enforcement of strict encryption on read is controlled by the ENFORCE_ENCRYPTION
+    # setting in app config (get_settings().enforce_encryption). The old pattern of
+    # mutating 'encryption.ENFORCE_ENCRYPTION = True' here was removed in the hardening
+    # refactor because each gunicorn worker has independent memory, so only worker-0
+    # ever saw the effect. Now all workers read consistently from settings.
+    logger.info("EncryptedText column validation/migration complete.")
 
 
 def validate_enum_parity(engine: Engine):

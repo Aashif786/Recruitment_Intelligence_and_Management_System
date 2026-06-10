@@ -91,6 +91,7 @@ if os.environ.get("WORKER_ID", "0") == "0":
             run_startup_migrations(engine)
             validate_required_columns(engine)
         except RuntimeError as e:
+            logger.critical(f"STARTUP FAILED — database migration/validation error: {e}")
             sys.exit(1)
 
 from app.infrastructure.database import SessionLocal
@@ -322,6 +323,9 @@ async def _imap_polling_loop():
             app.state.imap_last_error = None
             _consecutive_failures = 0
             sleep_seconds = _base_sleep_seconds
+        except asyncio.CancelledError:
+            # Propagate cancellation so the lifespan shutdown handler works correctly.
+            raise
         except Exception as e:
             _consecutive_failures += 1
             logger.error(f"IMAP Polling Error (failure #{_consecutive_failures}): {e}")
