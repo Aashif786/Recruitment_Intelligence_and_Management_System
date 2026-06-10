@@ -38,7 +38,7 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 1G
+          memory: "1G"
 
   backend_blue:
     build:
@@ -62,7 +62,7 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 1G
+          memory: "1G"
 
   # --- GREEN ENVIRONMENT ---
   frontend_green:
@@ -89,7 +89,7 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 1G
+          memory: "1G"
 
   backend_green:
     build:
@@ -113,4 +113,4 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 1G
+          memory: "1G"
