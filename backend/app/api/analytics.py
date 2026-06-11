@@ -921,7 +921,7 @@ def get_filtered_interviews(
     if status and status != "all":
         status_lower = status.lower()
         if status_lower == "hired":
-            query = query.filter(Application.status.in_(['hired', 'accepted', 'onboarded']))
+            query = query.filter(Application.status == 'hired')
         elif status_lower == "completed":
             query = query.filter(or_(
                 Interview.status == 'completed',

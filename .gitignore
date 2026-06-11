@@ -29,11 +29,6 @@ desktop.ini
 # Environment Variables & Secrets (CRITICAL)
 # ------------------------------------------------------------------------------
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.staging.local
 .env.*
 !.env.example
 setup/production_schema.sql

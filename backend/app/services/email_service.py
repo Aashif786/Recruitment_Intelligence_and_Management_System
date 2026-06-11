@@ -699,9 +699,6 @@ async def send_hired_email(to_email: str, job_title: str, interview=None, offer_
       <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
         We are thrilled to inform you that you have been selected for the position of <strong>{html.escape(str(job_title))}</strong> at <strong>{html.escape(company_name)}</strong>!
       </p>
-      <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center; margin-bottom:24px;">
-        Please find your Offer Letter attached to this email.
-      </p>
       <p style="font-size:15px; line-height:1.6; color:#334155; text-align:center;">
         Our HR team will reach out to you within 24-48 hours to guide you through the next steps of the onboarding process.
       </p>
