@@ -59,14 +59,33 @@ def generate_offer_letter_pdf_bytes(template_html: str, data: dict) -> bytes:
 
 def get_offer_letter_data(candidate_name, job_role, department, joining_date, company_name, logo_url, hr_email, hr_name="", hr_phone="", company_address=""):
     """ Helper to structure offer letter data """
+    resolved_logo_url = logo_url
+    if logo_url and logo_url.startswith("/"):
+        clean_path = logo_url
+        if clean_path.startswith("/calrims"):
+            clean_path = clean_path.replace("/calrims", "", 1)
+        local_logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "public", clean_path.lstrip("/")))
+        if os.path.exists(local_logo_path):
+            try:
+                import base64
+                with open(local_logo_path, "rb") as logo_file:
+                    logo_bytes = logo_file.read()
+                    logo_base64 = base64.b64encode(logo_bytes).decode('utf-8')
+                    resolved_logo_url = f"data:image/png;base64,{logo_base64}"
+            except Exception as logo_err:
+                logger.warning(f"Failed to read local logo file in service: {logo_err}")
+        
+        if resolved_logo_url and resolved_logo_url.startswith("/"):
+            frontend_url = os.environ.get("FRONTEND_BASE_URL") or settings.frontend_base_url
+            resolved_logo_url = f"{frontend_url.rstrip('/')}{logo_url}"
     return {
         "candidate_name": candidate_name,
         "job_role": job_role,
         "department": department,
         "joining_date": joining_date.strftime("%B %d, %Y") if joining_date else "TBD",
         "company_name": company_name,
-        "logo": logo_url,       # legacy compat
-        "logo_url": logo_url,   # new template variable
+        "logo": resolved_logo_url,       # legacy compat
+        "logo_url": resolved_logo_url,   # new template variable
         "hr_email": hr_email,
         "hr_name": hr_name,
         "hr_phone": hr_phone,

@@ -117,11 +117,11 @@ export default function LeaderboardPage() {
                     </div>
                 </div>
             </div>
-
-            <Card className="flex-1 min-h-0 flex flex-col bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden mx-4">
+    
+            <Card className="-mt-4 h-full flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.02)] border-border/80 !py-0 !gap-0 bg-card/80 backdrop-blur-md rounded-2xl overflow-hidden">
                 <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 shrink-0">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                        <Users className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg flex items-center pt-5 gap-2">
+                        <Users className="h-5 w-5 text-primary"/>
                         Job Leaderboard
                     </CardTitle>
                 </CardHeader>

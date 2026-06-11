@@ -909,11 +909,15 @@ class SupportTicketCreate(BaseModel):
     @field_validator('grievance_type')
     @classmethod
     def validate_grievance_type(cls, v):
-        valid_types = {"technical", "access_issue", "misconduct_appeal", "key_reissue", "other"}
+        valid_types = {
+            "technical", "access_issue", "misconduct_appeal", "key_reissue", "other",
+            "interruption", "onboarding issue", "onboarding issue (link error)"
+        }
         v_clean = v.strip().lower()
-        if v_clean not in valid_types:
+        if v_clean not in valid_types and "onboarding" not in v_clean:
             raise ValueError(f"Invalid grievance_type. Must be one of {valid_types}")
         return v_clean
+
 
 class InterviewIssueResolve(BaseModel):
     hr_response: Optional[str] = ""  # Optional for 'dismiss' action; required for reply/resolve

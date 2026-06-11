@@ -130,6 +130,13 @@ def create_support_ticket(payload: SupportTicketCreate, request: Request, db: Se
         Offer.offer_token == access_key  # Candidates use their offer token as key
     ).first()
 
+    # Fallback: if access_key is "onboarding_error", find application by email only
+    if not application and access_key == "onboarding_error":
+        application = db.query(Application).filter(
+            Application.candidate_email == email
+        ).first()
+
+
     # Find all interviews for this email to verify if the access key belongs to one
     interviews = (
         db.query(Interview)
@@ -217,7 +224,9 @@ def create_support_ticket(payload: SupportTicketCreate, request: Request, db: Se
             )
 
     # Attach metadata (clean, structured, separable from candidate message)
-    application = getattr(interview, "application", None)
+    if interview:
+        application = getattr(interview, "application", None)
+
     candidate_name = getattr(application, "candidate_name", None) if application else None
     job_role = getattr(getattr(application, "job", None), "title", None) if application else None
 

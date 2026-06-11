@@ -885,12 +885,45 @@ async def generate_id_card(
         from app.core.branding import get_all_branding
         branding = get_all_branding(db)
         
-        # Get Candidate Photo (signed URL)
-        photo_url = get_signed_url(settings.supabase_bucket_id_photos, application.candidate_photo_path)
+        # Resolve relative logo URL to absolute or local base64 so Puppeteer can load it offline without deadlock
+        logo_url = branding.get("company_logo_url")
+        if logo_url and logo_url.startswith("/"):
+            clean_path = logo_url
+            if clean_path.startswith("/calrims"):
+                clean_path = clean_path.replace("/calrims", "", 1)
+            local_logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "public", clean_path.lstrip("/")))
+            if os.path.exists(local_logo_path):
+                try:
+                    import base64
+                    with open(local_logo_path, "rb") as logo_file:
+                        logo_bytes = logo_file.read()
+                        logo_base64 = base64.b64encode(logo_bytes).decode('utf-8')
+                        logo_url = f"data:image/png;base64,{logo_base64}"
+                except Exception as logo_err:
+                    logger.warning(f"Failed to read local logo file for ID card: {logo_err}")
+            
+            if logo_url and logo_url.startswith("/"):
+                frontend_url = os.environ.get("FRONTEND_BASE_URL") or settings.frontend_base_url
+                logo_url = f"{frontend_url.rstrip('/')}{logo_url}"
+        
+        # Get Candidate Photo (inline base64 to avoid Puppeteer network/signed-URL loading issues)
+        photo_url = None
+        from app.core.storage import download_file
+        try:
+            photo_bytes = download_file(settings.supabase_bucket_id_photos, application.candidate_photo_path)
+            if photo_bytes:
+                import base64
+                photo_base64 = base64.b64encode(photo_bytes).decode('utf-8')
+                photo_url = f"data:image/jpeg;base64,{photo_base64}"
+        except Exception as photo_err:
+            logger.warning(f"Failed to inline candidate photo as base64: {photo_err}")
+            
+        if not photo_url:
+            photo_url = get_signed_url(settings.supabase_bucket_id_photos, application.candidate_photo_path)
         
         data = {
             "company_name": branding.get("company_name"),
-            "logo_url": branding.get("company_logo_url"),
+            "logo_url": logo_url,
             "candidate_name": application.candidate_name,
             "employee_id": application.employee_id,
             "job_role": application.job.title if application.job else "N/A",
