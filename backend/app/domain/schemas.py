@@ -497,10 +497,21 @@ class ResumeExtractionSummary(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class InterviewReportSummary(BaseModel):
+    """Minimal report fields needed for the applications list score bars."""
+    aptitude_score: Optional[float] = None
+    technical_skills_score: Optional[float] = None
+    behavioral_score: Optional[float] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class InterviewSummary(BaseModel):
     id: int
+    test_id: Optional[str] = None
     status: str
     overall_score: Optional[float] = 0.0
+    report: Optional[InterviewReportSummary] = None
 
     model_config = ConfigDict(from_attributes=True)
 

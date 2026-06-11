@@ -10,7 +10,7 @@ import logging
 import time
 from datetime import datetime, timezone, timedelta
 from app.infrastructure.database import get_db, SessionLocal
-from app.domain.models import User, Application, Job, ResumeExtraction, Interview, ResumeExtractionVersion
+from app.domain.models import User, Application, Job, ResumeExtraction, Interview, InterviewReport, ResumeExtractionVersion
 from app.domain.schemas import (
     ApplicationCreate,
     ApplicationStatusUpdate,
@@ -21,6 +21,7 @@ from app.domain.schemas import (
     JobSummary,
     ResumeExtractionSummary,
     InterviewSummary,
+    InterviewReportSummary,
     HasAppliedResponse,
     ApplicationListResponse,
     BulkDeleteEmailsRequest,
@@ -114,10 +115,21 @@ def build_application_summary_response(application: Application, current_user_id
 
     int_summary = None
     if application.interview:
+        # Build report summary for score bars if the report was eagerly loaded
+        report_summary = None
+        if application.interview.report:
+            rpt = application.interview.report
+            report_summary = InterviewReportSummary.model_construct(
+                aptitude_score=rpt.aptitude_score,
+                technical_skills_score=rpt.technical_skills_score,
+                behavioral_score=rpt.behavioral_score,
+            )
         int_summary = InterviewSummary.model_construct(
             id=application.interview.id,
+            test_id=application.interview.test_id,
             status=application.interview.status,
-            overall_score=application.interview.overall_score or 0.0
+            overall_score=application.interview.overall_score or 0.0,
+            report=report_summary,
         )
 
     # 2. Ownership Calculation (Simplified per Senior Backend Engineer request)
@@ -1133,41 +1145,27 @@ def get_hr_applications(
     safe_limit = max(1, min(int(limit or 1000), 1000))
     
     try:
-        # 1. Base Query with optimized loading
-        query = db.query(Application).outerjoin(Job).options(
-            joinedload(Application.job).load_only(Job.id, Job.title, Job.hr_id, Job.status, Job.job_id),
-            joinedload(Application.hr).load_only(User.id, User.full_name),
-            joinedload(Application.resume_extraction).load_only(
-                ResumeExtraction.id, ResumeExtraction.resume_score,
-                ResumeExtraction.skill_match_percentage, ResumeExtraction.experience_level,
-                ResumeExtraction.summary, ResumeExtraction.extracted_skills,
-            ),
-            load_only(
-                Application.id, Application.candidate_name, Application.candidate_email,
-                Application.status, Application.applied_at, Application.file_status,
-                Application.candidate_photo_path, Application.resume_file_path,
-                Application.resume_score, Application.composite_score
-            ),
-            joinedload(Application.interview).load_only(Interview.id, Interview.status, Interview.overall_score),
-        )
+        # 1. Build a base query with only the outerjoin and filters — no options/joinedloads.
+        # This is used for the COUNT so we don't pay the cost of joinedloads twice.
+        base_query = db.query(Application).outerjoin(Job)
 
-        # 2. Filters
+        # 2. Filters (applied to base_query so both count and data share the same filters)
         if job_id and str(job_id).strip() not in ("all", "All"):
             job_id_str = str(job_id).strip()
             if job_id_str.isdigit():
-                query = query.filter(Application.job_id == int(job_id_str))
+                base_query = base_query.filter(Application.job_id == int(job_id_str))
             else:
-                query = query.filter(Job.job_id == job_id_str)
+                base_query = base_query.filter(Job.job_id == job_id_str)
 
         if status and status != 'all':
             if status == "applied":
-                query = query.filter(Application.status.in_(("applied", "submitted")))
+                base_query = base_query.filter(Application.status.in_(("applied", "submitted")))
             else:
-                query = query.filter(Application.status == status)
+                base_query = base_query.filter(Application.status == status)
 
         if search and str(search).strip():
             term = f"%{search}%"
-            query = query.filter(or_(
+            base_query = base_query.filter(or_(
                 Application.candidate_name.ilike(term),
                 Job.title.ilike(term),
                 Job.job_id.ilike(term)
@@ -1186,17 +1184,15 @@ def get_hr_applications(
             sd = parse_date(from_date)
             if sd:
                 logger.info(f"Applying from_date filter (IST): {sd}")
-                # Data is now stored in IST, use direct comparison
-                query = query.filter(func.date(Application.applied_at) >= sd)
+                base_query = base_query.filter(func.date(Application.applied_at) >= sd)
             else:
                 logger.warning(f"Invalid from_date format: {from_date}")
-        
+
         if to_date:
             ed = parse_date(to_date)
             if ed:
                 logger.info(f"Applying to_date filter (IST): {ed}")
-                # Data is now stored in IST, use direct comparison
-                query = query.filter(func.date(Application.applied_at) <= ed)
+                base_query = base_query.filter(func.date(Application.applied_at) <= ed)
             else:
                 logger.warning(f"Invalid to_date format: {to_date}")
 
@@ -1207,30 +1203,59 @@ def get_hr_applications(
             # IST 12:00-18:00 (Afternoon) => UTC 06:30-12:30
             # IST 18:00-00:00 (Evening)   => UTC 12:30-18:30
             # IST 00:00-06:00 (Night)     => UTC 18:30-00:30
-            
+
             # Data is now stored in IST, extract hour directly
             ist_hour = extract('hour', Application.applied_at)
-            
-            if time_range == 'morning':
-                query = query.filter(ist_hour >= 6, ist_hour < 12)
-            elif time_range == 'afternoon':
-                query = query.filter(ist_hour >= 12, ist_hour < 18)
-            elif time_range == 'evening':
-                query = query.filter(ist_hour >= 18, ist_hour < 24)
-            elif time_range == 'night':
-                query = query.filter(ist_hour < 6)
 
-        # 3. Security
-        # Apply visibility isolation: Anyone not a super_admin is restricted to their own apps
+            if time_range == 'morning':
+                base_query = base_query.filter(ist_hour >= 6, ist_hour < 12)
+            elif time_range == 'afternoon':
+                base_query = base_query.filter(ist_hour >= 12, ist_hour < 18)
+            elif time_range == 'evening':
+                base_query = base_query.filter(ist_hour >= 18, ist_hour < 24)
+            elif time_range == 'night':
+                base_query = base_query.filter(ist_hour < 6)
+
+        # 3. Security: Apply visibility isolation (HR sees only their own apps/jobs)
         if current_user.role.lower() not in ["super_admin", "admin"]:
-            # Standard HR sees jobs they own OR apps they are assigned to
-            # Note: Job is already joined via outerjoin at the start of the query
-            query = query.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
+            # Standard HR sees jobs they own OR apps they are assigned to.
+            # Job is already joined via outerjoin at the start of the query.
+            base_query = base_query.filter(or_(Job.hr_id == current_user.id, Application.hr_id == current_user.id))
         # Super Admin sees all.
 
-        # 4. Retrieval
-        total = query.count()
-        applications = query.order_by(Application.applied_at.desc(), Application.id.desc()).offset(safe_skip).limit(safe_limit).all()
+        # 4. Count — runs on base_query (no joinedloads), which is much cheaper.
+        total = base_query.count()
+
+        # 5. Data fetch — add all eager-loading options only for the actual data query.
+        #    FIX: Application.hr_id and Application.job_id MUST be in load_only; without them
+        #    SQLAlchemy issues a lazy SELECT per application (N+1) for ownership checks.
+        data_query = base_query.options(
+            joinedload(Application.job).load_only(Job.id, Job.title, Job.hr_id, Job.status, Job.job_id),
+            joinedload(Application.hr).load_only(User.id, User.full_name),
+            joinedload(Application.resume_extraction).load_only(
+                ResumeExtraction.id, ResumeExtraction.resume_score,
+                ResumeExtraction.skill_match_percentage, ResumeExtraction.experience_level,
+                ResumeExtraction.summary, ResumeExtraction.extracted_skills,
+            ),
+            load_only(
+                Application.id, Application.job_id, Application.hr_id,
+                Application.candidate_name, Application.candidate_email,
+                Application.status, Application.applied_at, Application.file_status,
+                Application.candidate_photo_path, Application.resume_file_path,
+                Application.resume_score, Application.composite_score,
+            ),
+            # Load interview with test_id for badge display; also eagerly load the report
+            # so that score bars (aptitude/technical/behavioral) are populated without lazy fetches.
+            joinedload(Application.interview).options(
+                load_only(Interview.id, Interview.test_id, Interview.status, Interview.overall_score),
+                joinedload(Interview.report).load_only(
+                    InterviewReport.aptitude_score,
+                    InterviewReport.technical_skills_score,
+                    InterviewReport.behavioral_score,
+                ),
+            ),
+        )
+        applications = data_query.order_by(Application.applied_at.desc(), Application.id.desc()).offset(safe_skip).limit(safe_limit).all()
 
         # Path sanitization
         for app in applications:
