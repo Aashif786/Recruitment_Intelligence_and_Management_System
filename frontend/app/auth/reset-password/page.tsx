@@ -74,20 +74,16 @@ export default function ResetPasswordPage() {
     if (success) {
         return (
             <div className="flex items-center justify-center min-h-screen py-12 px-4 relative overflow-hidden">
-                {/* Ambient background glows */}
-                <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
-
-                <Card className="w-full max-w-md bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.08)] rounded-3xl relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500 p-8 text-center">
+                <Card className="w-full max-w-md relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500 p-8 text-center">
                     <div className="flex justify-center mb-6">
                         <div className="relative">
                             <div className="absolute -inset-2 rounded-full bg-emerald-500/20 blur-lg animate-pulse" />
-                            <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-400/20 to-emerald-600/20 border border-emerald-500/25 flex items-center justify-center shadow-lg">
+                            <div className="relative h-14 w-14 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shadow-sm">
                                 <Lock className="h-8 w-8 text-emerald-500 animate-bounce" />
                             </div>
                         </div>
                     </div>
-                    <h1 className="text-3xl font-bold text-foreground mb-2">Password Reset!</h1>
+                    <h1 className="text-2xl font-semibold text-foreground mb-2">Password Reset!</h1>
                     <p className="text-muted-foreground mb-6 leading-relaxed">Your password has been successfully updated. Redirecting to login...</p>
                     <Link href="/auth/login" className="text-primary font-bold hover:text-primary/80 hover:underline transition-all">
                         Go to login now
@@ -99,27 +95,23 @@ export default function ResetPasswordPage() {
 
     return (
         <div className="flex items-center justify-center min-h-screen py-12 px-4 relative overflow-hidden">
-            {/* Ambient background glows */}
-            <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-blue-500/8 blur-3xl pointer-events-none" />
-
-            <Card className="w-full max-w-md bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.08)] rounded-3xl relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Card className="w-full max-w-md relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <CardContent className="p-8">
                     <div className="text-center mb-8">
                         <div className="flex justify-center mb-5">
                             <div className="relative">
                                 <div className="absolute -inset-2 rounded-full bg-primary/15 blur-lg" />
-                                <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-500/20 border border-primary/25 flex items-center justify-center shadow-lg">
+                                <div className="relative h-14 w-14 rounded-lg bg-primary/10 border border-primary/25 flex items-center justify-center shadow-sm">
                                     <KeyRound className="h-8 w-8 text-primary" />
                                 </div>
                             </div>
                         </div>
-                        <h1 className="text-3xl font-bold text-foreground mb-2">Reset Password</h1>
+                        <h1 className="text-2xl font-semibold text-foreground mb-2">Reset Password</h1>
                         <p className="text-muted-foreground leading-relaxed">Enter the OTP sent to your email and your new password.</p>
                     </div>
 
                     {error && (
-                        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-sm font-medium">
+                        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-md text-sm font-medium">
                             {error}
                         </div>
                     )}
@@ -132,7 +124,7 @@ export default function ResetPasswordPage() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground h-12"
+                                className="h-11"
                                 placeholder="you@company.com"
                                 disabled={!!searchParams.get('email') || isSubmitting}
                             />
@@ -145,7 +137,7 @@ export default function ResetPasswordPage() {
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground text-center tracking-[0.5em] font-mono text-xl h-12"
+                                className="h-11 text-center tracking-[0.4em] font-mono text-lg"
                                 placeholder="000000"
                                 maxLength={6}
                                 disabled={isSubmitting}
@@ -159,7 +151,7 @@ export default function ResetPasswordPage() {
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground h-12"
+                                className="h-11"
                                 placeholder="••••••••"
                                 disabled={isSubmitting}
                             />
@@ -172,7 +164,7 @@ export default function ResetPasswordPage() {
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground h-12"
+                                className="h-11"
                                 placeholder="••••••••"
                                 disabled={isSubmitting}
                             />
@@ -181,7 +173,7 @@ export default function ResetPasswordPage() {
                         <Button
                             type="submit"
                             disabled={isSubmitting}
-                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 rounded-xl shadow-lg shadow-primary/25 active:scale-[0.99] transition-all duration-200 mt-4"
+                            className="w-full h-11 shadow-md shadow-primary/10 mt-4"
                         >
                             {isSubmitting ? (
                                 <>

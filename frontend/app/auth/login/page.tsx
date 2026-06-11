@@ -143,7 +143,7 @@ function LoginContent() {
               <span className="text-sm font-semibold tracking-wide uppercase text-primary-foreground">Next-Gen Hiring</span>
             </div>
 
-            <h1 className="text-4xl xl:text-5xl font-extrabold leading-tight tracking-tight text-white mb-4">
+            <h1 className="text-3xl xl:text-4xl font-semibold leading-tight tracking-normal text-white mb-4">
               Intelligence meets intention.
             </h1>
 
@@ -180,9 +180,7 @@ function LoginContent() {
         
         {/* Subtle background decoration for right side */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-           <div className="absolute top-[0%] right-[0%] w-[350px] h-[350px] bg-primary/8 rounded-full blur-[120px]" />
-           <div className="absolute bottom-[0%] left-[0%] w-[300px] h-[300px] bg-primary/5 rounded-full blur-[100px]" />
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[200px] bg-primary/3 rounded-full blur-[80px] rotate-12" />
+           <div className="absolute inset-0 bg-muted/20" />
         </div>
 
         <div className="w-full max-w-md relative z-10">
@@ -194,11 +192,11 @@ function LoginContent() {
             {/* Logo for mobile only (desktop has the massive image) */}
             <div className="flex items-center gap-3 lg:hidden mb-12">
                <img src={companyLogo} alt="Logo" className="h-8 w-auto object-contain max-w-[120px]" />
-               <span className="text-xl font-bold tracking-tight">{companyName}</span>
+               <span className="text-lg font-semibold tracking-normal">{companyName}</span>
             </div>
 
             <div className="space-y-2 mb-10">
-              <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Sign In</h2>
+              <h2 className="text-2xl font-semibold tracking-normal text-foreground">Sign In</h2>
               <p className="text-muted-foreground">
                 {searchParams.get('role') === 'hr' 
                   ? 'Log into your secure administrative portal.' 
@@ -216,7 +214,7 @@ function LoginContent() {
                   exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm font-semibold flex items-center gap-3">
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm font-semibold flex items-center gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse shrink-0" />
                     {error}
                   </div>
@@ -265,12 +263,7 @@ function LoginContent() {
                   placeholder="••••••••"
                   disabled={isSubmitting}
                   required
-                  className={cn(
-                    "w-full h-12 pl-12 pr-12 bg-muted/30 border border-border/80 rounded-xl outline-none transition-all duration-300",
-                    "focus:border-primary focus:ring-4 focus:ring-primary/10 focus:bg-background",
-                    "placeholder:text-muted-foreground/40 text-foreground font-medium shadow-sm",
-                    isSubmitting && "opacity-50 cursor-not-allowed"
-                  )}
+                  className={cn("h-11 pl-10 pr-10", isSubmitting && "opacity-50 cursor-not-allowed")}
                 />
                 <button
                   type="button"
@@ -295,7 +288,7 @@ function LoginContent() {
               <Button
                 type="submit"
                 disabled={isSubmitting || isLoading}
-                className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/35 transition-all active:scale-[0.99] flex items-center justify-center gap-2 group"
+                className="w-full h-11 font-semibold shadow-md shadow-primary/10 flex items-center justify-center gap-2 group"
               >
                 {isSubmitting ? (
                   <>
@@ -362,9 +355,7 @@ function InputField({ id, label, type, placeholder, value, onChange, icon: Icon,
           autoComplete={autoComplete ?? id}
           required
           className={cn(
-            "w-full h-12 pl-12 pr-4 bg-muted/30 border border-border/80 rounded-xl outline-none transition-all duration-300",
-            "focus:border-primary focus:ring-4 focus:ring-primary/10 focus:bg-background",
-            "placeholder:text-muted-foreground/40 text-foreground font-medium shadow-sm",
+            "h-11 pl-10",
             disabled && "opacity-50 cursor-not-allowed"
           )}
         />

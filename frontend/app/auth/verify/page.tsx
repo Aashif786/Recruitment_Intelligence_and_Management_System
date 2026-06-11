@@ -58,14 +58,14 @@ export default function VerifyPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen py-12 px-4">
-      <Card className="w-full max-w-md bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-3xl relative z-10">
+      <Card className="w-full max-w-md relative z-10">
         <CardContent className="p-8">
 
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4 text-primary">
               <KeyRound className="h-12 w-12" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Verify Account</h1>
+            <h1 className="text-2xl font-semibold text-foreground mb-2">Verify Account</h1>
             <p className="text-muted-foreground">We sent a 6-digit code to <br /> <span className="font-semibold text-foreground">{email || 'your email'}</span></p>
           </div>
 
@@ -94,7 +94,7 @@ export default function VerifyPage() {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} // only allow numbers
                   required
-                  className="w-full text-center tracking-[0.5em] text-2xl font-bold pr-4 py-4 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground/30 text-foreground h-14"
+                  className="h-12 text-center tracking-[0.4em] text-xl font-semibold pr-4"
                   placeholder="000000"
                   disabled={isSubmitting || success}
                 />
@@ -104,7 +104,7 @@ export default function VerifyPage() {
             <Button
               type="submit"
               disabled={isSubmitting || success}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 rounded-xl shadow-lg shadow-primary/25 active:scale-[0.99] transition-all duration-200"
+              className="w-full h-11 shadow-md shadow-primary/10"
             >
               {isSubmitting ? (
                 <>

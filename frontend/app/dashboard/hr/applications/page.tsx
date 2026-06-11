@@ -296,26 +296,26 @@ export default function HRApplicationsPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="section-stack">
       <PageHeader
         title="Applications"
         description="Review and manage candidate applications."
         icon={Users}
       >
-        <div className="bg-primary/10 border border-primary/20 rounded-2xl px-6 py-4 flex flex-col items-end shadow-sm">
-          <span className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Total Records Found</span>
-          <span className="text-xl font-black text-primary tabular-nums">
+        <div className="rounded-lg border border-primary/20 bg-primary/10 px-4 py-3 text-right shadow-sm">
+          <span className="text-[10px] font-semibold text-primary uppercase tracking-normal mb-1 block">Total Records</span>
+          <span className="text-xl font-semibold text-primary tabular-nums">
             {isLoading ? "..." : totalCount}
           </span>
         </div>
       </PageHeader>
 
       {/* Filters Toolbar */}
-      <div className="bg-card/45 backdrop-blur-xl p-4 rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] mb-8 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
+      <div className="surface-panel p-4 animate-in fade-in slide-in-from-top-4 duration-500 ease-out">
         <div className="flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-end">
           {/* Combined Search Bar */}
           <div className="w-full md:flex-1 min-w-0">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">Search applications</label>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-normal mb-1 px-1">Search applications</label>
             <div className="relative group flex gap-2">
               <div className="relative flex-1">
                 <svg
@@ -334,7 +334,7 @@ export default function HRApplicationsPage() {
                 <Input
                     type="text"
                     placeholder="Search name, ID, or job details..."
-                    className="w-full pl-12 pr-4 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-base placeholder:text-muted-foreground text-foreground"
+                    className="pl-10"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -344,37 +344,37 @@ export default function HRApplicationsPage() {
 
           {/* Date From Filter */}
           <div className="w-full sm:w-[170px]">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">From Date</label>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-normal mb-1 px-1">From Date</label>
             <input
               type="date"
               min="2020-01-01"
               max={dateTo || new Date().toLocaleDateString('en-CA')}
-              className="w-full px-3 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-sm font-medium text-foreground cursor-pointer"
+              className="w-full px-3 h-10 bg-background border border-input hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 rounded-md text-sm font-medium text-foreground cursor-pointer"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
             />
           </div>
 
           <div className="w-full sm:w-[170px]">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">To Date</label>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-normal mb-1 px-1">To Date</label>
             <input
               type="date"
               min={dateFrom || "2020-01-01"}
               max={new Date().toLocaleDateString('en-CA')}
               value={dateTo}
-              className="w-full px-3 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-sm font-medium text-foreground cursor-pointer"
+              className="w-full px-3 h-10 bg-background border border-input hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 rounded-md text-sm font-medium text-foreground cursor-pointer"
               onChange={(e) => setDateTo(e.target.value)}
             />
           </div>
 
           {/* Status Filter */}
           <div className="w-full sm:w-[200px]">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">Status</label>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-normal mb-1 px-1">Status</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl text-base font-medium text-foreground">
+              <SelectTrigger>
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
+              <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="applied">Applied</SelectItem>
                 <SelectItem value="screened">Screened</SelectItem>
@@ -392,12 +392,12 @@ export default function HRApplicationsPage() {
 
           {/* Job Filter */}
           <div className="w-full sm:w-[200px]">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 shadow-sm px-1">Filter by Job</label>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-normal mb-1 px-1">Filter by Job</label>
             <Select value={jobIdFilter} onValueChange={setJobIdFilter}>
-              <SelectTrigger className="w-full h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl text-base font-medium text-foreground">
+              <SelectTrigger>
                 <SelectValue placeholder="All Jobs" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
+              <SelectContent>
                 <SelectItem value="all">All Jobs</SelectItem>
                 {jobs?.map((job) => (
                   <SelectItem key={job.id} value={String(job.id)}>
@@ -469,9 +469,9 @@ export default function HRApplicationsPage() {
           </Button>
         </div>
       ) : (
-        <div className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="surface-panel overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* List Header */}
-          <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-3 bg-muted/30 border-b border-border/40 text-xs uppercase tracking-widest font-black text-muted-foreground">
+          <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-3 bg-muted/35 border-b border-border/60 text-xs uppercase tracking-normal font-semibold text-muted-foreground">
             <div className="col-span-3 xl:col-span-2">Candidate</div>
             <div className="col-span-2">Position & IDs</div>
             <div className="col-span-2">Skills Match</div>
@@ -501,17 +501,17 @@ export default function HRApplicationsPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <div className="font-bold text-base text-foreground group-hover:text-primary transition-colors truncate">
+                    <div className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
                       {app.candidate_name}
                     </div>
-                    <div className="text-sm text-muted-foreground truncate">{app.candidate_email}</div>
+                    <div className="text-xs text-muted-foreground truncate">{app.candidate_email}</div>
                   </div>
                 </div>
 
                 {/* Position & IDs */}
                 <div className="col-span-2 min-w-0 mt-3 lg:mt-0">
-                  <div className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Position & IDs</div>
-                  <div className="text-base font-semibold text-foreground truncate">{app.job.title}</div>
+                  <div className="lg:hidden text-xs font-semibold text-muted-foreground uppercase tracking-normal mb-1">Position & IDs</div>
+                  <div className="text-sm font-semibold text-foreground truncate">{app.job.title}</div>
                   <div className="flex flex-wrap gap-2 mt-1.5">
                     {app.job.job_id && (
                       <span className="text-[11px] bg-muted px-2 py-0.5 rounded text-muted-foreground border border-border font-bold">
@@ -528,7 +528,7 @@ export default function HRApplicationsPage() {
 
                 {/* Skills Match */}
                 <div className="col-span-2 mt-3 lg:mt-0">
-                  <div className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Skills Match</div>
+                  <div className="lg:hidden text-xs font-semibold text-muted-foreground uppercase tracking-normal mb-1">Skills Match</div>
                   <div className="flex flex-wrap gap-1.5">
                     {(() => {
                       try {
@@ -551,11 +551,11 @@ export default function HRApplicationsPage() {
 
                 {/* Scores */}
                 <div className="col-span-2 mt-3 lg:mt-0">
-                  <div className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Scores</div>
+                  <div className="lg:hidden text-xs font-semibold text-muted-foreground uppercase tracking-normal mb-1">Scores</div>
                   {(app.composite_score! > 0 || app.resume_extraction) && (
-                    <div className="inline-flex items-center gap-2 bg-primary/10 px-2.5 py-1 rounded-xl border border-primary/20 hover:bg-primary/15 transition-colors mb-2 shadow-sm">
-                      <span className="text-[11px] font-black text-primary uppercase tracking-tight">Score</span>
-                      <span className="text-base font-black text-primary tabular-nums">
+                    <div className="inline-flex items-center gap-2 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 hover:bg-primary/15 transition-colors mb-2 shadow-sm">
+                      <span className="text-[11px] font-semibold text-primary uppercase tracking-normal">Score</span>
+                      <span className="text-sm font-semibold text-primary tabular-nums">
                         {((app.composite_score ?? 0) > 0 
                           ? (app.composite_score ?? 0) 
                           : ((app.resume_extraction?.resume_score ?? 0) <= 10 
@@ -586,13 +586,13 @@ export default function HRApplicationsPage() {
 
                 {/* Status & Date */}
                 <div className="col-span-2 text-left lg:text-center min-w-0 mt-3 lg:mt-0">
-                  <div className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Status</div>
+                  <div className="lg:hidden text-xs font-semibold text-muted-foreground uppercase tracking-normal mb-2">Status</div>
                   <div className="flex flex-row lg:flex-col items-center lg:justify-center gap-3 lg:gap-1.5">
                     <span className={`capsule-badge text-[10px] px-3 py-1 font-bold ${getStatusColor(app.status)}`}>
                       {app.status.replace(/_/g, " ").toUpperCase()}
                     </span>
                     {app.file_status === 'missing' && (
-                      <span className="text-destructive text-[9px] font-black tracking-tighter uppercase">File Missing</span>
+                      <span className="text-destructive text-[10px] font-semibold tracking-normal uppercase">File Missing</span>
                     )}
                     <span className="text-xs font-bold text-muted-foreground">
                       {new Date(app.applied_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}

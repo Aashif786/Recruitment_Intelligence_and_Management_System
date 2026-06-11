@@ -129,7 +129,7 @@ export default function RegisterPage() {
               <span className="text-sm font-semibold tracking-wide uppercase text-emerald-100">Global Talent Network</span>
             </div>
 
-            <h1 className="text-4xl xl:text-5xl font-extrabold leading-tight tracking-tight text-white mb-4">
+            <h1 className="text-3xl xl:text-4xl font-semibold leading-tight tracking-normal text-white mb-4">
               Build your legacy.
             </h1>
 
@@ -166,8 +166,7 @@ export default function RegisterPage() {
         
         {/* Subtle background decoration for right side */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-           <div className="absolute top-[0%] right-[0%] w-[300px] h-[300px] bg-primary/5 rounded-full blur-[100px]" />
-           <div className="absolute bottom-[0%] left-[0%] w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[100px]" />
+           <div className="absolute inset-0 bg-muted/20" />
         </div>
 
         <div className="w-full max-w-md relative z-10 py-10">
@@ -179,11 +178,11 @@ export default function RegisterPage() {
             {/* Logo for mobile only */}
             <div className="flex items-center gap-3 lg:hidden mb-8">
                <img src={companyLogo} alt="Logo" className="h-8 w-auto object-contain max-w-[120px]" />
-               <span className="text-xl font-bold tracking-tight">{companyName}</span>
+               <span className="text-lg font-semibold tracking-normal">{companyName}</span>
             </div>
 
             <div className="space-y-2 mb-8">
-              <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Create HR Account</h2>
+              <h2 className="text-2xl font-semibold tracking-normal text-foreground">Create HR Account</h2>
               <p className="text-muted-foreground">Register an HR account. After verification, a Super Admin must approve your access.</p>
             </div>
           </motion.div>
@@ -197,7 +196,7 @@ export default function RegisterPage() {
                   exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm font-semibold flex items-center gap-3">
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm font-semibold flex items-center gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse shrink-0" />
                     {error}
                   </div>
@@ -299,7 +298,7 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting || isLoading || passwordCriteriaCount < 4 || !agreedToTerms}
-                className="w-full h-12 bg-foreground hover:bg-foreground/90 text-background font-bold rounded-xl shadow-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2 group"
+                className="w-full h-11 bg-foreground hover:bg-foreground/90 text-background font-semibold shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2 group"
               >
                 {isSubmitting ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -362,9 +361,7 @@ function InputField({ id, label, type, placeholder, value, onChange, icon: Icon,
           autoComplete={autoComplete}
           required
           className={cn(
-            "w-full h-12 pl-12 pr-4 bg-muted/30 border border-border/80 rounded-xl outline-none transition-all duration-300",
-            "focus:border-primary focus:ring-4 focus:ring-primary/10 focus:bg-background",
-            "placeholder:text-muted-foreground/40 text-foreground font-medium shadow-sm",
+            "h-11 pl-10",
             disabled && "opacity-50 cursor-not-allowed"
           )}
         />

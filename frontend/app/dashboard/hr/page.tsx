@@ -235,7 +235,7 @@ export default function HRDashboard() {
   // Metrics will fallback to zero defaults handled in useMemos.
 
   return (
-    <div className="space-y-8">
+    <div className="section-stack">
       {/* Header */}
       <PageHeader 
         title="Recruitment Dashboard"
@@ -246,8 +246,8 @@ export default function HRDashboard() {
 
 
       {isSuperAdmin && pendingApprovals.length > 0 && (
-        <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] pt-0 overflow-hidden animate-in fade-in duration-300">
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
+        <Card className="pt-0 overflow-hidden animate-in fade-in duration-300">
+          <CardHeader className="bg-muted/35 border-b border-border/60 pb-4 pt-5">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-foreground/80">Pending HR Approvals</CardTitle>
@@ -274,7 +274,7 @@ export default function HRDashboard() {
       )}
 
       {/* Stats Cards AI Enhanced */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 stagger-children">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 stagger-children">
         <Link href="/dashboard/hr/applications" className="block cursor-pointer">
           <StatsCard
             title="Total Candidates"
@@ -309,18 +309,18 @@ export default function HRDashboard() {
       </div>
 
       {/* Charts & Tables Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
 
         {/* Chart Section */}
         <div className="lg:col-span-2 animate-in fade-in duration-500 delay-300">
-          <Card className="h-full bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] pt-0 overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
+          <Card className="h-full pt-0 overflow-hidden">
+            <CardHeader className="bg-muted/35 border-b border-border/60 pb-4 pt-5">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle >Application Pipeline</CardTitle>
                   <CardDescription className="text-muted-foreground">Distribution of candidates by status</CardDescription>
                 </div>
-                <div className="p-2 bg-muted/20 text-blue-600 rounded-lg">
+                <div className="p-2 bg-primary/10 text-primary rounded-md">
                   <TrendingUp className="h-5 w-5" />
                 </div>
               </div>
@@ -336,8 +336,8 @@ export default function HRDashboard() {
 
         {/* Recent Activity / Quick Actions */}
         <div className="space-y-6 animate-in fade-in duration-500 delay-500">
-          <Card className="bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] pt-0 overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
+          <Card className="pt-0 overflow-hidden">
+            <CardHeader className="bg-muted/35 border-b border-border/60 pb-4 pt-5">
               <CardTitle >Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 pt-6 stagger-children">
@@ -359,7 +359,7 @@ export default function HRDashboard() {
 const StatsCard = React.memo(({ title, subtitle, value, icon: Icon, color, bg, isInteractive = false }: any) => {
   return (
     <Card className={cn(
-      "bg-card/45 backdrop-blur-xl border border-border/80 group rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)]",
+      "group overflow-hidden",
       isInteractive && "hover-premium-lift cursor-pointer active:scale-[0.98] transition-transform duration-200"
     )}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -371,12 +371,12 @@ const StatsCard = React.memo(({ title, subtitle, value, icon: Icon, color, bg, i
             <p className="text-xs text-muted-foreground/60 mt-0.5">{subtitle}</p>
           )}
         </div>
-        <div className={`p-2.5 rounded-xl ${bg} transition-all duration-300 group-hover:scale-110 group-hover:shadow-sm`}>
+        <div className={`p-2.5 rounded-md ${bg} transition-colors duration-200`}>
           <Icon className={`h-4 w-4 ${color}`} />
         </div>
       </CardHeader>
       <CardContent>
-        <div className={`text-4xl font-black tracking-tight text-foreground dark:text-white mt-2 ${color} transition-colors duration-300`}>{value}</div>
+        <div className={`text-3xl font-semibold leading-none text-foreground dark:text-white mt-2 tabular-nums ${color} transition-colors duration-300`}>{value}</div>
       </CardContent>
     </Card>
   )
@@ -388,7 +388,7 @@ const ActionButton = React.memo(({ href, label }: { href: string, label: string 
     <Link href={href} className="block group">
       <Button 
         variant="outline" 
-        className="w-full justify-between text-foreground hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary active:bg-primary/10 active:text-primary border-border hover:border-primary/40 active:scale-[0.99] transition-all duration-200 rounded-xl"
+        className="w-full justify-between text-foreground hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary active:bg-primary/10 active:text-primary border-border hover:border-primary/40 active:scale-[0.99] transition-all duration-200"
       >
         {label}
         <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />

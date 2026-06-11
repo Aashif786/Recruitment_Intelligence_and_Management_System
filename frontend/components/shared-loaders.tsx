@@ -75,16 +75,16 @@ export function useLoadingState(initialState = false, minDuration = 800) {
  */
 export function StatsGridSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-1">
+    <div className="grid grid-cols-1 gap-4 p-1 sm:grid-cols-2 lg:grid-cols-4">
       {Array.from({ length: count }).map((_, i) => (
         <div 
           key={i} 
-          className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-3xl p-6 space-y-4 animate-in fade-in zoom-in duration-500"
+          className="bg-card border border-border/70 rounded-lg p-5 space-y-4 shadow-sm animate-in fade-in zoom-in duration-500"
           style={{ animationDelay: `${i * 100}ms` }}
         >
           <div className="flex justify-between items-start">
             <Skeleton className="h-4 w-24 rounded-full" />
-            <Skeleton className="h-8 w-8 rounded-xl" />
+            <Skeleton className="h-8 w-8 rounded-md" />
           </div>
           <div className="space-y-2">
             <Skeleton className="h-10 w-16 rounded-lg" />
@@ -102,7 +102,7 @@ export function StatsGridSkeleton({ count = 4 }: { count?: number }) {
 export function DataTableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="w-full space-y-4 animate-in fade-in duration-700">
-      <div className="flex items-center gap-4 px-4 py-3 bg-muted/30 rounded-2xl border-b border-border">
+      <div className="flex items-center gap-4 px-4 py-3 bg-muted/30 rounded-lg border border-border/70">
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className={cn("h-4", i === 0 ? "w-40" : "flex-1", "rounded-full")} />
         ))}
@@ -111,7 +111,7 @@ export function DataTableSkeleton({ rows = 5 }: { rows?: number }) {
         {Array.from({ length: rows }).map((_, i) => (
           <div 
             key={i} 
-            className="flex items-center gap-4 px-4 py-4 border border-border/80 rounded-2xl bg-card/45 backdrop-blur-xl"
+            className="flex items-center gap-4 px-4 py-4 border border-border/70 rounded-lg bg-card shadow-sm"
             style={{ opacity: 1 - (i * 0.15) }}
           >
             <div className="flex items-center gap-3 w-40">
@@ -195,7 +195,7 @@ export function LoadingWrapper({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="w-full py-16 flex flex-col items-center justify-center text-center space-y-4 bg-destructive/5 rounded-3xl border border-destructive/20 focus:outline-none"
+            className="w-full py-16 flex flex-col items-center justify-center text-center space-y-4 bg-destructive/5 rounded-lg border border-destructive/20 focus:outline-none"
             role="alert"
           >
             <div className="p-4 bg-destructive/10 rounded-full text-destructive">
@@ -211,7 +211,7 @@ export function LoadingWrapper({
               <Button 
                 variant="outline" 
                 onClick={onRetry}
-                className="gap-2 rounded-full border-destructive/30 hover:bg-destructive/10 text-destructive"
+              className="gap-2 border-destructive/30 hover:bg-destructive/10 text-destructive"
               >
                 <RefreshCcw className="h-4 w-4" /> Retry Connection
               </Button>

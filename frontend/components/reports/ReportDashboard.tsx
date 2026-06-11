@@ -90,34 +90,34 @@ export const ReportDashboard = React.memo(function ReportDashboard({
   }, [appliedFilters])
 
   return (
-    <div className="lg:col-span-3  flex-1 md:col-span-2 space-y-4 lg:h-[calc(100vh-8.5rem)] lg:max-h-[calc(100vh-8.5rem)] lg:overflow-y-auto pr-2 scrollbar-premium">
+    <div className="lg:col-span-3 flex-1 md:col-span-2 space-y-4 lg:h-[calc(100vh-8.5rem)] lg:max-h-[calc(100vh-8.5rem)] lg:overflow-y-auto pr-2 scrollbar-premium">
       {/* Compact Metrics Strip */}
       {!hideStats && (
-        <div className="animate-in fade-in slide-in-from-top-8 duration-700 ease-out fill-mode-both delay-100 rounded-2xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] px-4 py-3">
+        <div className="animate-in fade-in slide-in-from-top-8 duration-500 ease-out fill-mode-both delay-100 surface-panel px-4 py-3">
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-            <div className="rounded-xl bg-muted/30 border border-border/40 px-3 py-2 hover:bg-muted/50 hover:border-primary/20 transition-all duration-200">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Total Applied</p>
-              <p className="text-2xl font-black leading-tight text-foreground tabular-nums">{metrics.totalApplied}</p>
+            <div className="rounded-md bg-muted/30 border border-border/50 px-3 py-2 hover:bg-muted/50 hover:border-primary/20 transition-all duration-200">
+              <p className="text-[10px] uppercase tracking-normal text-muted-foreground font-semibold">Total Applied</p>
+              <p className="text-xl font-semibold leading-tight text-foreground tabular-nums">{metrics.totalApplied}</p>
             </div>
-            <div className="rounded-xl bg-muted/30 border border-border/40 px-3 py-2 hover:bg-muted/50 hover:border-primary/20 transition-all duration-200">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Total Finished</p>
-              <p className="text-2xl font-black leading-tight text-foreground tabular-nums">{metrics.totalFinished}</p>
+            <div className="rounded-md bg-muted/30 border border-border/50 px-3 py-2 hover:bg-muted/50 hover:border-primary/20 transition-all duration-200">
+              <p className="text-[10px] uppercase tracking-normal text-muted-foreground font-semibold">Total Finished</p>
+              <p className="text-xl font-semibold leading-tight text-foreground tabular-nums">{metrics.totalFinished}</p>
             </div>
-            <div className="rounded-xl bg-muted/30 border border-border/40 px-3 py-2 hover:bg-muted/50 hover:border-primary/20 transition-all duration-200">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Total Reports</p>
-              <p className="text-2xl font-black leading-tight text-foreground tabular-nums">{metrics.total}</p>
+            <div className="rounded-md bg-muted/30 border border-border/50 px-3 py-2 hover:bg-muted/50 hover:border-primary/20 transition-all duration-200">
+              <p className="text-[10px] uppercase tracking-normal text-muted-foreground font-semibold">Total Reports</p>
+              <p className="text-xl font-semibold leading-tight text-foreground tabular-nums">{metrics.total}</p>
             </div>
-            <div className="rounded-xl bg-primary/5 border border-primary/15 px-3 py-2 hover:bg-primary/10 transition-all duration-200">
-              <p className="text-[10px] uppercase tracking-widest text-primary/70 font-bold">Avg Score</p>
-              <p className="text-2xl font-black leading-tight text-primary tabular-nums">{metrics.avgScore}</p>
+            <div className="rounded-md bg-primary/5 border border-primary/15 px-3 py-2 hover:bg-primary/10 transition-all duration-200">
+              <p className="text-[10px] uppercase tracking-normal text-primary/70 font-semibold">Avg Score</p>
+              <p className="text-xl font-semibold leading-tight text-primary tabular-nums">{metrics.avgScore}</p>
             </div>
-            <div className="rounded-xl bg-muted/30 border border-border/40 px-3 py-2 hover:bg-muted/50 hover:border-primary/20 transition-all duration-200">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Avg Questions</p>
-              <p className="text-2xl font-black leading-tight text-foreground tabular-nums">{metrics.avgQuestions}</p>
+            <div className="rounded-md bg-muted/30 border border-border/50 px-3 py-2 hover:bg-muted/50 hover:border-primary/20 transition-all duration-200">
+              <p className="text-[10px] uppercase tracking-normal text-muted-foreground font-semibold">Avg Questions</p>
+              <p className="text-xl font-semibold leading-tight text-foreground tabular-nums">{metrics.avgQuestions}</p>
             </div>
-            <div className="rounded-xl bg-emerald-500/5 border border-emerald-500/15 px-3 py-2 hover:bg-emerald-500/10 transition-all duration-200">
-              <p className="text-[10px] uppercase tracking-widest text-emerald-600/70 dark:text-emerald-400/70 font-bold">Selection Rate</p>
-              <p className="text-2xl font-black leading-tight text-emerald-600 dark:text-emerald-400 tabular-nums">{metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%</p>
+            <div className="rounded-md bg-emerald-500/5 border border-emerald-500/15 px-3 py-2 hover:bg-emerald-500/10 transition-all duration-200">
+              <p className="text-[10px] uppercase tracking-normal text-emerald-600/70 dark:text-emerald-400/70 font-semibold">Selection Rate</p>
+              <p className="text-xl font-semibold leading-tight text-emerald-600 dark:text-emerald-400 tabular-nums">{metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%</p>
             </div>
           </div>
         </div>
@@ -194,15 +194,15 @@ export const ReportDashboard = React.memo(function ReportDashboard({
 
       {/* Reports List / Results */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex justify-between items-center mb-4">
-          <TabsList className="h-11 rounded-full p-1 bg-muted/80 border border-border/60">
-            <TabsTrigger value="detailed" className="rounded-full px-5 h-full">Detailed View</TabsTrigger>
-            <TabsTrigger value="table" className="rounded-full px-5 h-full">Table View</TabsTrigger>
-            <TabsTrigger value="analytics" className="rounded-full px-5 h-full">Summary Analytics</TabsTrigger>
+        <div className="flex flex-col gap-3 mb-4 xl:flex-row xl:items-center xl:justify-between">
+          <TabsList className="h-10 rounded-md p-1 bg-muted/80 border border-border/60">
+            <TabsTrigger value="detailed" className="rounded-sm px-4 h-full">Detailed View</TabsTrigger>
+            <TabsTrigger value="table" className="rounded-sm px-4 h-full">Table View</TabsTrigger>
+            <TabsTrigger value="analytics" className="rounded-sm px-4 h-full">Summary Analytics</TabsTrigger>
           </TabsList>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex flex-row h-11 items-center gap-2 rounded-md bg-muted/40 px-3 py-2">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Hide Stats</p>
+                <p className="text-[11px] uppercase tracking-normal text-muted-foreground font-semibold">Hide Stats</p>
                 <Switch
                   id="hide-stats" 
                   checked={hideStats}
@@ -214,14 +214,14 @@ export const ReportDashboard = React.memo(function ReportDashboard({
                 onClick={() => void downloadCSV()}
                 disabled={isExportingCsv || totalCount === 0}
                 variant="outline" 
-                className="gap-2 bg-background hover:bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-300 shadow-sm h-11 rounded-full px-6 font-bold animate-in fade-in slide-in-from-right-4 duration-300"
+                className="gap-2 bg-background hover:bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-300 shadow-sm h-10 px-4 font-semibold animate-in fade-in slide-in-from-right-4 duration-300"
               >
                 <FileText className="h-4 w-4" /> {isExportingCsv ? 'Exporting…' : 'Export all filtered'}
               </Button>
             )}
 
-            <div className="flex items-center gap-2.5 bg-slate-100/80 dark:bg-slate-800/50 px-4 h-11 rounded-full border border-slate-200/60 dark:border-slate-700/50 shadow-sm animate-in fade-in zoom-in duration-500">
-              <span className="text-[13px] font-bold text-muted-foreground tracking-tight">Show</span>
+            <div className="flex items-center gap-2.5 bg-muted/45 px-3 h-10 rounded-md border border-border/60 shadow-sm animate-in fade-in zoom-in duration-500">
+              <span className="text-xs font-semibold text-muted-foreground tracking-normal">Show</span>
               <Select
                 value={String(reportsPerPage)}
                 onValueChange={(v) => {
@@ -229,7 +229,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
                   setReportsPage(1)
                 }}
               >
-                <SelectTrigger className="h-8 w-[84px] rounded-full bg-background border-border text-[14px] font-extrabold text-foreground shadow-none focus:ring-2 focus:ring-primary/20 transition-all hover:border-primary/40 px-3">
+                <SelectTrigger className="h-8 w-[76px] rounded-md bg-background border-border text-sm font-semibold text-foreground shadow-none focus:ring-2 focus:ring-primary/20 transition-all hover:border-primary/40 px-3">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-border shadow-xl">
@@ -239,7 +239,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
                   <SelectItem value="100" className="rounded-lg focus:bg-primary/10">100</SelectItem>
                 </SelectContent>
               </Select>
-              <span className="text-[13px] font-bold text-muted-foreground tracking-tight">per page</span>
+              <span className="text-xs font-semibold text-muted-foreground tracking-normal">per page</span>
             </div>
           </div>
         </div>
@@ -271,7 +271,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
         </TabsContent>
 
         <TabsContent value="table" className="animate-in fade-in zoom-in-95 duration-300">
-          <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden">
+          <Card className="overflow-hidden">
             <CardContent className="p-0">
               <Table>
                 <TableHeader className="bg-muted/30 border-b border-border/40">
@@ -374,7 +374,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
 
         <TabsContent value="analytics" className="animate-in fade-in zoom-in-95 duration-300">
           {metrics.total > 0 ? (
-            <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden">
+            <Card className="overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xl flex items-center gap-2">
                   <BarChart className="h-5 w-5 text-primary" />
@@ -393,31 +393,31 @@ export const ReportDashboard = React.memo(function ReportDashboard({
                   </div>
 
                   <div className="w-full lg:w-1/2 grid grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-                      <div className="text-3xl font-black text-foreground tracking-tight">{metrics.avgScore}</div>
-                      <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Avg Score</div>
+                    <div className="surface-panel p-5 text-center flex flex-col justify-center">
+                      <div className="text-2xl font-semibold text-foreground tracking-normal">{metrics.avgScore}</div>
+                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-normal mt-1">Avg Score</div>
                     </div>
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-                      <div className="text-3xl font-black text-foreground tracking-tight">{metrics.total}</div>
-                      <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Interviews</div>
+                    <div className="surface-panel p-5 text-center flex flex-col justify-center">
+                      <div className="text-2xl font-semibold text-foreground tracking-normal">{metrics.total}</div>
+                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-normal mt-1">Interviews</div>
                     </div>
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-                      <div className="text-3xl font-black text-foreground tracking-tight">{metrics.avgQuestions}</div>
-                      <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Avg Qs</div>
+                    <div className="surface-panel p-5 text-center flex flex-col justify-center">
+                      <div className="text-2xl font-semibold text-foreground tracking-normal">{metrics.avgQuestions}</div>
+                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-normal mt-1">Avg Qs</div>
                     </div>
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-                      <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    <div className="surface-panel p-5 text-center flex flex-col justify-center">
+                      <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 tracking-normal">
                         {metrics.total > 0 ? Math.round((metrics.selected / metrics.total) * 100) : 0}%
                       </div>
-                      <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Success Rate</div>
+                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-normal mt-1">Success Rate</div>
                     </div>
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-                      <div className="text-3xl font-black text-foreground tracking-tight">{metrics.totalApplied}</div>
-                      <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Applied</div>
+                    <div className="surface-panel p-5 text-center flex flex-col justify-center">
+                      <div className="text-2xl font-semibold text-foreground tracking-normal">{metrics.totalApplied}</div>
+                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-normal mt-1">Total Applied</div>
                     </div>
-                    <div className="bg-card/45 backdrop-blur-xl p-6 rounded-2xl border border-border/80 text-center flex flex-col justify-center shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-                      <div className="text-3xl font-black text-foreground tracking-tight">{metrics.totalFinished}</div>
-                      <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Finished</div>
+                    <div className="surface-panel p-5 text-center flex flex-col justify-center">
+                      <div className="text-2xl font-semibold text-foreground tracking-normal">{metrics.totalFinished}</div>
+                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-normal mt-1">Total Finished</div>
                     </div>
                   </div>
                 </div>

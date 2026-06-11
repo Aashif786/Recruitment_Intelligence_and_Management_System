@@ -72,9 +72,9 @@ export function SendOfferDialog({ applicationId, candidateName, onSuccess, trigg
             <DialogTrigger asChild>
                 {trigger}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl">
+            <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle className="text-xl font-bold tracking-tight">Issue Offer Letter</DialogTitle>
+                    <DialogTitle>Issue Offer Letter</DialogTitle>
                     <DialogDescription className="text-sm text-muted-foreground">
                         Set the joining date and release the offer letter to <strong className="font-semibold text-foreground">{candidateName}</strong> immediately.
                     </DialogDescription>
@@ -88,21 +88,21 @@ export function SendOfferDialog({ applicationId, candidateName, onSuccess, trigg
                                 id="joining_date" 
                                 type="date" 
                                 min={new Date().toISOString().split('T')[0]}
-                                className="pl-10 h-10 rounded-xl border-border/80 focus:ring-primary/20 focus-visible:ring-primary/20"
+                                className="pl-10 h-10"
                                 value={joiningDate}
                                 onChange={(e) => setJoiningDate(e.target.value)}
                             />
                         </div>
                     </div>
                 </div>
-                <DialogFooter className="gap-2 sm:gap-0 mt-2">
-                    <Button variant="ghost" onClick={() => setOpen(false)} disabled={loading} className="rounded-xl active:scale-95 transition-all">
+                <DialogFooter className="mt-2">
+                    <Button variant="ghost" onClick={() => setOpen(false)} disabled={loading}>
                         Cancel
                     </Button>
                     <Button 
                         onClick={handleSend} 
                         disabled={loading} 
-                        className="rounded-xl bg-primary hover:bg-primary/90 active:scale-[0.98] transition-all font-bold px-8 shadow-md shadow-primary/10"
+                        className="px-6 shadow-md shadow-primary/10"
                     >
                         {loading ? "Releasing..." : "Release Offer"}
                     </Button>

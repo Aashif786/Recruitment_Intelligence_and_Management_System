@@ -78,9 +78,9 @@ export function RejectDialog({ candidateName, onConfirm, trigger }: RejectDialog
             <DialogTrigger asChild>
                 {trigger}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] border border-border/80 bg-background/90 backdrop-blur-xl shadow-2xl rounded-3xl">
+            <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-destructive font-bold text-xl">
+                    <DialogTitle className="flex items-center gap-2 text-destructive">
                         <AlertTriangle className="h-5 w-5 animate-pulse" />
                         Confirm Rejection
                     </DialogTitle>
@@ -95,10 +95,10 @@ export function RejectDialog({ candidateName, onConfirm, trigger }: RejectDialog
                             Reason for Rejection <span className="text-destructive">*</span>
                         </Label>
                         <Select value={reason} onValueChange={setReason}>
-                            <SelectTrigger id="reason" className={`rounded-xl border-border/80 focus:ring-primary/20 ${!reason ? "text-muted-foreground" : ""}`}>
+                            <SelectTrigger id="reason" className={!reason ? "text-muted-foreground" : ""}>
                                 <SelectValue placeholder="Select a reason..." />
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl">
+                            <SelectContent>
                                 {REJECTION_REASONS.map((r) => (
                                     <SelectItem key={r} value={r}>
                                         {r}
@@ -115,20 +115,19 @@ export function RejectDialog({ candidateName, onConfirm, trigger }: RejectDialog
                         <Textarea
                             id="notes"
                             placeholder="Add any additional notes or context..."
-                            className="resize-none h-24 rounded-xl border-border/80 focus:ring-primary/20 focus-visible:ring-primary/20"
+                            className="resize-none h-24"
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                         />
                     </div>
                 </div>
 
-                <DialogFooter className="gap-2 sm:gap-0 mt-2">
+                <DialogFooter className="mt-2">
                     <Button
                         type="button"
                         variant="outline"
                         onClick={() => handleOpenChange(false)}
                         disabled={isSubmitting}
-                        className="rounded-xl active:scale-95 transition-all"
                     >
                         Cancel
                     </Button>
@@ -137,7 +136,7 @@ export function RejectDialog({ candidateName, onConfirm, trigger }: RejectDialog
                         variant="destructive"
                         onClick={handleConfirm}
                         disabled={isSubmitting || !reason}
-                        className="min-w-[120px] rounded-xl active:scale-[0.98] transition-all shadow-md shadow-destructive/10"
+                        className="min-w-[120px] shadow-md shadow-destructive/10"
                     >
                         {isSubmitting ? "Rejecting..." : "Confirm Rejection"}
                     </Button>
