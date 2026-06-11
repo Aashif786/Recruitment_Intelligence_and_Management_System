@@ -21,8 +21,7 @@ services:
       args:
         - NEXT_PUBLIC_API_BASE_URL=https://caldimproducts.com/calrims
     env_file:
-      - path: ./backend/.env
-        required: false
+      - ./backend/.env
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_BASE_URL=https://caldimproducts.com/calrims
@@ -40,8 +39,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     env_file:
-      - path: ./backend/.env
-        required: false
+      - ./backend/.env
     environment:
       - ENV=production
       - BACKEND_START_MODE=docker
@@ -64,8 +62,7 @@ services:
       args:
         - NEXT_PUBLIC_API_BASE_URL=https://caldimproducts.com/calrims
     env_file:
-      - path: ./backend/.env
-        required: false
+      - ./backend/.env
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_BASE_URL=https://caldimproducts.com/calrims
@@ -83,8 +80,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     env_file:
-      - path: ./backend/.env
-        required: false
+      - ./backend/.env
     environment:
       - ENV=production
       - BACKEND_START_MODE=docker
