@@ -1,0 +1,89 @@
+# Core Web Framework
+fastapi==0.128.0
+starlette==0.50.0
+uvicorn==0.42.0
+gunicorn==25.1.0
+python-multipart==0.0.22
+# Database
+SQLAlchemy==2.0.46
+alembic==1.18.4
+psycopg2-binary==2.9.11
+greenlet==3.3.1
+# Auth and Security
+passlib==1.7.4
+bcrypt==4.2.0
+python-jose==3.5.0
+cryptography==46.0.4
+cffi==2.0.0
+pycparser==3.0
+# Pydantic and Settings
+pydantic==2.12.5
+pydantic-settings==2.12.0
+annotated-types==0.7.0
+typing_extensions==4.15.0
+typing-inspection==0.4.2
+# Rate Limiting and Caching
+slowapi==0.1.9
+limits==5.8.0
+redis==5.2.1
+# AI / LLM
+anthropic==0.77.0
+groq>=0.9.0
+tenacity==9.1.2
+jiter==0.13.0
+# File Handling and Parsing
+pypdf==6.6.2
+python-docx==1.2.0
+pillow==12.1.0
+lxml==6.0.2
+aiofiles==25.1.0
+xhtml2pdf==0.2.16
+reportlab==4.4.10
+# HTTP Clients
+httpx==0.28.1
+httpcore==1.0.9
+requests==2.32.5
+aiohttp==3.13.3
+anyio==4.12.1
+# Supabase Storage
+supabase==2.13.0
+# Data
+pandas==2.3.3
+numpy==2.4.2
+orjson==3.11.8
+openpyxl==3.1.5
+xlrd==2.0.2
+# Email and Notifications
+email-validator==2.3.0
+# Utilities
+python-dotenv==1.2.1
+environs==14.5.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+click==8.3.1
+packaging==26.0
+python-dateutil==2.9.0.post0
+pytz==2025.2
+tzdata==2025.3
+six==1.17.0
+certifi==2026.1.4
+idna==3.11
+urllib3==2.6.3
+charset-normalizer==3.4.4
+distro==1.9.0
+sniffio==1.3.1
+h11==0.16.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+referencing==0.37.0
+rpds-py==0.30.0
+Mako==1.3.10
+multidict==6.7.1
+yarl==1.22.0
+frozenlist==1.8.0
+propcache==0.4.1
+aiosignal==1.4.0
+aiohappyeyeballs==2.6.1
+colorama==0.4.6
+nh3>=0.2.14
+sentry-sdk==2.5.1

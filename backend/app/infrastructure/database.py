@@ -8,15 +8,17 @@ settings = get_settings()
 # Create database engine
 db_echo = False if settings.env == "production" else settings.debug
 
-if settings.database_url.startswith("sqlite"):
+db_url = settings.database_url or "sqlite:///./rims.db"
+
+if db_url.startswith("sqlite"):
     engine = create_engine(
-        settings.database_url,
-        connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
+        db_url,
+        connect_args={"check_same_thread": False} if "sqlite" in db_url else {},
         echo=db_echo
     )
 else:
     # PgBouncer detection: standard port is 6543 or we can check port/key in URL
-    is_pgbouncer = "6543" in settings.database_url or "pgbouncer" in settings.database_url.lower()
+    is_pgbouncer = "6543" in db_url or "pgbouncer" in db_url.lower()
     if is_pgbouncer:
         p_size = settings.db_pool_size if settings.db_pool_size is not None else 5
         m_overflow = settings.db_max_overflow if settings.db_max_overflow is not None else 10
@@ -25,7 +27,7 @@ else:
         m_overflow = settings.db_max_overflow if settings.db_max_overflow is not None else 20
 
     engine = create_engine(
-        settings.database_url,
+        db_url,
         pool_pre_ping=True,
         pool_size=p_size,
         max_overflow=m_overflow,

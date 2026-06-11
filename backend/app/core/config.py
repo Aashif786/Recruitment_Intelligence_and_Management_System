@@ -27,13 +27,13 @@ if os.path.exists(_base_env_path):
 class Settings(BaseSettings):
     base_dir: Path = BASE_DIR
     # Database
-    database_url: str = "" # Mandatory via validate_config
+    database_url: str = "sqlite:///./rims.db" # Mandatory via validate_config
     db_pool_size: Optional[int] = None
     db_max_overflow: Optional[int] = None
 
 
     # JWT
-    jwt_secret: str = ""
+    jwt_secret: str = "dev_jwt_secret_key_must_be_at_least_32_chars_long"
     interview_jwt_secret: str = "" # Isolated key for interview candidate sessions
     jwt_algorithm: str = "HS256"
     pdf_generation_secret: str = "" # Secret for authorizing internal PDF service calls
@@ -221,6 +221,17 @@ class Settings(BaseSettings):
         """Validate critical settings at startup. Called from main.py."""
         import logging
         logger = logging.getLogger(__name__)
+
+        # 0. Production Safety Guards
+        if (self.env or "").strip().lower() == "production":
+            if not self.database_url or "sqlite" in self.database_url:
+                error_msg = "SECURITY ERROR: SQLite database is not allowed in production."
+                logger.critical(error_msg)
+                raise ValueError(error_msg)
+            if not self.jwt_secret or self.jwt_secret == "dev_jwt_secret_key_must_be_at_least_32_chars_long":
+                error_msg = "SECURITY ERROR: Default development JWT secret is not allowed in production."
+                logger.critical(error_msg)
+                raise ValueError(error_msg)
 
         # 1. Fatal Mandatory Settings (Must stop app if missing)
         fatal_required = {

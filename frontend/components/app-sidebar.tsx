@@ -138,27 +138,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border bg-sidebar/90 backdrop-blur-2xl text-sidebar-foreground shadow-[2px_0_20px_-4px_rgba(0,0,0,0.12)] transition-colors duration-300">
             <SidebarHeader className="border-b border-sidebar-border/60 px-4 py-5 group-data-[collapsible=icon]:px-2">
                 <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center gap-2">
-                    {/* Brand Identity */}
-                    <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:hidden">
-                        <div className="relative group shrink-0">
-                            {/* Ambient soft glow on logo hover */}
-                            <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-primary/20 via-blue-500/20 to-indigo-500/20 opacity-0 group-hover:opacity-100 blur-md transition-all duration-500" />
-                            <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-primary/30 to-blue-600/30 opacity-0 group-hover:opacity-60 blur-sm transition-all duration-300" />
-                            <img
-                                src={companyLogo || '/calrims/logo.png'}
-                                alt="Company logo"
-                                className="relative h-8 w-auto object-contain transition-all duration-300 group-hover:scale-110 group-hover:rotate-[-2deg]"
-                            />
-                        </div>
-                        <div className="flex flex-col min-w-0 leading-tight">
-                            <span className="font-black text-sm tracking-wide bg-gradient-to-r from-primary via-blue-500 to-indigo-600 bg-clip-text text-transparent truncate uppercase">
-                                {branding.productName || 'CAL-RIMS'}
-                            </span>
-                            <span className="text-[9px] font-extrabold text-muted-foreground/60 tracking-widest truncate uppercase mt-0.5">
-                                BY {branding.companyName ? branding.companyName.replace(/ Engineering/i, '') : 'CALDIM'}
-                            </span>
-                        </div>
-                    </div>
 
                     {/* Collapse Button - shown in both states */}
                     {state === 'collapsed' ? (

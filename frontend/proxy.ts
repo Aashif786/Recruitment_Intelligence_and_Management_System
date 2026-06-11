@@ -8,7 +8,7 @@ import { jwtVerify } from 'jose';
  * Protects dashboard routes by checking and verifying the authentication token
  * Redirects unauthenticated or invalidly authenticated users to login page
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get('access_token')?.value || request.cookies.get('token')?.value;
   const { pathname } = request.nextUrl;
 

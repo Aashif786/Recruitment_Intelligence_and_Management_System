@@ -208,11 +208,11 @@ export const ReportFilters = React.memo(function ReportFilters({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-premium">
+        <CardContent className="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-premium">
 
           {/* Search */}
           <div className="grid w-full items-center gap-1.5">
-            <Label htmlFor="search" className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">Search</Label>
+            <Label htmlFor="search" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">SEARCH</Label>
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <TooltipProvider delayDuration={150}>
@@ -220,7 +220,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                   <TooltipTrigger asChild>
                     <Input
                       id="search"
-                      placeholder="Candidate Name"
+                      placeholder="Search Candidate Name"
                       className="pl-8 hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                       value={searchQuery}
                       onKeyDown={(e) => {
@@ -242,7 +242,7 @@ export const ReportFilters = React.memo(function ReportFilters({
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-muted/30 space-y-1">
+          <div className="grid w-full items-center gap-1.5">
             <Label htmlFor="job-filter" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Filters</Label>
             <Select value={jobFilter} onValueChange={setJobFilter}>
               <SelectTrigger id="job-filter" className="w-full h-9 text-sm rounded-xl bg-background/50 border-border/40 hover:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all duration-200">
@@ -258,7 +258,7 @@ export const ReportFilters = React.memo(function ReportFilters({
           </div>
 
           {/* Grouped Status/Exp/Skill Filters */}
-          <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-3 ">
+          <div className="grid grid-cols-1 gap-1 pt-1 sm:grid-cols-3 ">
 
             {/* Experience Filter */}
             <div className="space-y-1 rounded-xl border border-border/50 bg-muted/25">
@@ -314,7 +314,7 @@ export const ReportFilters = React.memo(function ReportFilters({
           </div>
 
           {/* Score Range */}
-          <div className="space-y-2 p-3 rounded-xl border border-border/60 bg-muted/30">
+          <div className="grid w-full items-center gap-1.5">
             <div className="flex justify-between items-center">
               <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Score Range</Label>
               <span className="text-[13px] font-semibold text-primary">{pendingScoreRange[0]} - {pendingScoreRange[1]}</span>
@@ -330,11 +330,10 @@ export const ReportFilters = React.memo(function ReportFilters({
             />
           </div>
 
-          <Separator className="my-1" />
 
           {/* Calendar */}
           <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <div className="space-y-3 p-3 rounded-xl border border-border/60 bg-muted/30">
+          <div className="grid w-full items-center gap-1.5">
               <div className="space-y-2">
                 <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Date Range</Label>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -448,7 +447,6 @@ export const ReportFilters = React.memo(function ReportFilters({
 
               </div>
 
-              <Separator />
 
               <div className="space-y-1">
                 <div className="flex justify-between items-center px-1">
