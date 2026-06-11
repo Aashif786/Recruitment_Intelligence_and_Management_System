@@ -240,18 +240,6 @@ def get_current_user(
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
-        # Enforce password changed session revocation check (MED-03)
-        iat = payload.get("iat")
-        if iat and user.password_changed_at:
-            token_iat_dt = datetime.fromtimestamp(iat, tz=timezone.utc).replace(tzinfo=None)
-            if token_iat_dt < user.password_changed_at:
-                logger.warning(f"Rejected token for user (id redacted) issued at {token_iat_dt} before password_changed_at {user.password_changed_at}")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Password has been changed. Please log in again.",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-
         # ── Phase 2 Fix: Row Level Security Identity ──
         set_db_identity(db, user.id)
 
