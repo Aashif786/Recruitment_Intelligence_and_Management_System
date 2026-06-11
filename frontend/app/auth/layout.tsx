@@ -8,6 +8,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen relative overflow-hidden bg-transparent">
+      <ParticlesBackground />
       {children}
     </div>
   )

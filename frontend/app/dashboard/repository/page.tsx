@@ -157,18 +157,21 @@ function TagInput({
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
     return (
-        <div className="flex flex-col items-center justify-center py-24 gap-5 text-center">
-            <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center border border-border">
-                <Database className="h-9 w-9 text-muted-foreground/50" />
+        <div className="flex flex-col items-center justify-center py-24 gap-5 text-center animate-in fade-in duration-500">
+            <div className="relative">
+                <div className="absolute -inset-3 rounded-full bg-primary/10 blur-xl" />
+                <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/15 to-blue-500/10 border border-primary/20 flex items-center justify-center shadow-lg">
+                    <Database className="h-9 w-9 text-primary" />
+                </div>
             </div>
             <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-foreground">No question sets yet</h3>
+                <h3 className="text-lg font-bold text-foreground">No question sets yet</h3>
                 <p className="text-sm text-muted-foreground max-w-xs">
                     Create reusable question sets for aptitude, technical, and behavioural rounds.
                     They'll be available to pick when creating a job.
                 </p>
             </div>
-            <Button onClick={onAdd} className="gap-2">
+            <Button onClick={onAdd} className="gap-2 rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all duration-200">
                 <Plus className="h-4 w-4" /> Create First Set
             </Button>
         </div>
@@ -186,13 +189,19 @@ function SetCard({
     onEdit: (s: QuestionSet) => void
     onDelete: (s: QuestionSet) => void
 }) {
+    const stripeColor = {
+        aptitude: 'border-t-amber-500/60',
+        technical: 'border-t-blue-500/60',
+        behavioural: 'border-t-purple-500/60',
+    }[set.round_type] ?? 'border-t-primary/40'
+
     return (
-        <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] group">
+        <Card className={`bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] group hover-premium-lift border-t-4 ${stripeColor} transition-all duration-300 hover:border-border/60`}>
             <CardContent className="p-5 space-y-3">
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-foreground text-sm leading-snug truncate">
+                        <h3 className="font-bold text-foreground text-sm leading-snug truncate group-hover:text-primary transition-colors duration-200">
                             {set.title}
                         </h3>
                     </div>
@@ -785,17 +794,31 @@ export default function RepositoryPage() {
 
             {/* Content */}
             {loading ? (
-                <div className="flex items-center justify-center py-24">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="flex flex-col items-center justify-center py-24 gap-4">
+                    <div className="relative">
+                        <div className="h-12 w-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-6 w-6 rounded-full bg-primary/10 animate-pulse" />
+                        </div>
+                    </div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest animate-pulse">Loading Question Repository...</p>
                 </div>
             ) : sets.length === 0 ? (
                 <EmptyState onAdd={openCreate} />
             ) : filteredSets.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-                    <BookOpen className="h-10 w-10 text-muted-foreground/30" />
-                    <p className="text-sm text-muted-foreground">No sets match your filter.</p>
-                    <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setFilterRound('all'); setCurrentPage(1) }}>
-                        Clear filters
+                <div className="flex flex-col items-center justify-center py-20 gap-4 text-center animate-in fade-in duration-500">
+                    <div className="relative">
+                        <div className="absolute -inset-2 rounded-full bg-primary/10 blur-xl" />
+                        <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-blue-500/10 border border-primary/20 flex items-center justify-center shadow-md">
+                            <BookOpen className="h-6 w-6 text-primary" />
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-sm font-bold text-foreground">No question sets found</p>
+                        <p className="text-xs text-muted-foreground max-w-xs mx-auto">No question sets match your search terms or round filters.</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setFilterRound('all'); setCurrentPage(1) }} className="text-xs font-bold text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-xl h-9 px-4 transition-all">
+                        Clear Filters
                     </Button>
                 </div>
             ) : (

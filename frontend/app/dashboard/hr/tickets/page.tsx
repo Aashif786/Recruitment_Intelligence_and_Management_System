@@ -250,8 +250,14 @@ export default function HRTicketsPage() {
             </PageHeader>
 
             {isLoading ? (
-                <div className="flex justify-center py-20">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <div className="relative">
+                        <div className="h-16 w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 animate-pulse" />
+                        </div>
+                    </div>
+                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest animate-pulse">Loading Tickets...</p>
                 </div>
             ) : (filter !== 'feedback' && tickets.length === 0) || (filter === 'feedback' && feedbacks.length === 0) ? (
                 <Card className="bg-card/45 backdrop-blur-xl border border-dashed border-border/80 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] py-20">

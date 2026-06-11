@@ -75,7 +75,17 @@ export default function CandidateScorecardPage() {
         (url: string) => fetcher<InterviewReport>(url)
     )
 
-    if (appLoading) return <div className="p-12 text-center text-muted-foreground animate-pulse">Loading Scorecard...</div>
+    if (appLoading) return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 animate-in fade-in duration-500">
+            <div className="relative">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary shadow-lg"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <Award className="h-6 w-6 text-primary animate-pulse" />
+                </div>
+            </div>
+            <p className="text-sm font-bold text-muted-foreground animate-pulse tracking-widest uppercase mt-2">Loading Scorecard...</p>
+        </div>
+    )
     if (!application) return <div className="p-12 text-center text-destructive">Candidate not found</div>
 
     const getRecommendationColor = (rec?: string) => {

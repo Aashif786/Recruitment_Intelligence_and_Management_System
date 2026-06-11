@@ -660,11 +660,11 @@ export default function PublicJobDetailPage() {
                                                 Share this job link online.
                                             </p>
                                             <div className="flex items-center gap-2">
-                                                <input
+                                                <Input
                                                     type="text"
                                                     readOnly
                                                     value={`${typeof window !== 'undefined' ? window.location.origin : ''}/jobs/${job.id}`}
-                                                    className="flex-1 text-xs px-3 py-2 bg-background border border-border/80 rounded-lg text-muted-foreground font-mono focus:outline-none"
+                                                    className="flex-1 text-xs px-3 py-2 bg-background border border-border/80 rounded-lg text-muted-foreground font-mono focus:outline-none h-9"
                                                 />
                                                 <Button
                                                     variant="secondary"

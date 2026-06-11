@@ -234,7 +234,7 @@ export default function BatchAnalysisPage() {
         icon={FileText}
       />
 
-      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
         {/* ─── Bulk Upload Card ──────────────────────────── */}
         <Card className="flex flex-col h-full bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden pt-0">
           <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
@@ -363,10 +363,13 @@ export default function BatchAnalysisPage() {
               </div>
               {/* Filter Summary */}
               {filterSummary.length > 0 && (
-                <div className="bg-primary/5 border border-primary/15 rounded-xl p-3.5 space-y-1.5">
-                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Exporting with filters</p>
+                <div className="bg-primary/5 border-l-4 border-l-primary border border-primary/15 rounded-xl p-3.5 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary inline-block" />
+                    Exporting with filters
+                  </p>
                   {filterSummary.map((line, i) => (
-                    <p key={i} className="text-sm text-foreground/80 font-medium">{line}</p>
+                    <p key={i} className="text-sm text-foreground/80 font-medium pl-3">{line}</p>
                   ))}
                 </div>
               )}
@@ -381,9 +384,12 @@ export default function BatchAnalysisPage() {
 
               {/* Export Success Count */}
               {exportCount !== null && exportCount > 0 && !exportError && (
-                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                  ✅ Successfully exported {exportCount} candidates.
-                </p>
+                <div className="flex items-center gap-2.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 rounded-xl p-3 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="h-7 w-7 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                  <p className="text-sm font-bold">Successfully exported {exportCount} candidate{exportCount !== 1 ? 's' : ''}.</p>
+                </div>
               )}
 
               {/* Live Count Badge */}
@@ -405,7 +411,7 @@ export default function BatchAnalysisPage() {
                 <Button
                   onClick={handleFilteredExport}
                   disabled={isExporting || !!dateError || liveCount === 0}
-                  className="flex-1 gap-2 active:scale-[0.99] transition-all duration-200"
+                  className="flex-1 gap-2 rounded-xl shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 active:scale-[0.99] transition-all duration-200 font-bold"
                 >
                   {isExporting ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Exporting...</>
@@ -414,7 +420,11 @@ export default function BatchAnalysisPage() {
                   )}
                 </Button>
                 {hasFilters && (
-                  <Button variant="outline" onClick={clearFilters} className="shrink-0 active:scale-[0.99] transition-all duration-200">
+                  <Button 
+                    variant="outline" 
+                    onClick={clearFilters} 
+                    className="shrink-0 rounded-xl active:scale-[0.99] transition-all duration-200 font-bold hover:bg-muted/50"
+                  >
                     Clear Filters
                   </Button>
                 )}

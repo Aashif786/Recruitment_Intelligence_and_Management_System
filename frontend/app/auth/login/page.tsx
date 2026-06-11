@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Zap, Mail, Lock, ArrowRight, Loader2, Sparkles, Brain, Cpu, Globe, ShieldCheck, CheckCircle2, Eye, EyeOff, LucideIcon } from 'lucide-react'
 import { cn } from '@/app/dashboard/lib/utils'
 import { getSessionData } from '@/lib/session-store'
@@ -252,10 +253,10 @@ function LoginContent() {
                 </Link>
               </div>
               <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 group-focus-within:text-primary transition-colors">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 group-focus-within:text-primary transition-colors z-10 pointer-events-none">
                   <Lock className="h-5 w-5" />
                 </div>
-                <input
+                <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -274,7 +275,7 @@ function LoginContent() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-primary transition-colors focus:outline-none"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-primary transition-colors focus:outline-none z-10"
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
@@ -347,10 +348,10 @@ function InputField({ id, label, type, placeholder, value, onChange, icon: Icon,
         {label}
       </label>
       <div className="relative">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 group-focus-within:text-primary transition-colors">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 group-focus-within:text-primary transition-colors z-10 pointer-events-none">
           <Icon className="h-5 w-5" />
         </div>
-        <input
+        <Input
           id={id}
           name={id}
           type={type}

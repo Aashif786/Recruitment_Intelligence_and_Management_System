@@ -15,6 +15,7 @@ import { fetcher } from "@/app/dashboard/lib/swr-fetcher"
 import { performMutation } from "@/app/dashboard/lib/swr-utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import {
     Select,
     SelectContent,
@@ -183,8 +184,8 @@ export default function HRJobsPage() {
                         <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 px-1">Search Job Roles</label>
                         <div className="relative group flex gap-2">
                             <div className="relative flex-1">
-                                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors" />
-                                <input
+                                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors z-10 pointer-events-none" />
+                                <Input
                                     type="text"
                                     placeholder="Search by title, ID, or description..."
                                     className="w-full pl-12 pr-4 h-11 bg-background border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-base placeholder:text-muted-foreground text-foreground hover:border-primary/40"
@@ -257,13 +258,26 @@ export default function HRJobsPage() {
                     <p className="text-sm font-bold text-muted-foreground animate-pulse tracking-widest uppercase">Fetching Jobs...</p>
                 </div>
             ) : filteredJobs.length === 0 ? (
-                <div className="text-center py-16 bg-card rounded-xl border border-border shadow-sm">
-                    <div className="p-4 bg-muted w-fit rounded-full mx-auto mb-4">
-                        <Briefcase className="w-8 h-8 text-muted-foreground" />
+                <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-12 text-center flex flex-col items-center gap-3 animate-in fade-in duration-500">
+                    <div className="relative">
+                        <div className="absolute -inset-3 rounded-full bg-primary/10 blur-xl" />
+                        <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/15 to-blue-500/10 border border-primary/20 flex items-center justify-center shadow-lg">
+                            <Briefcase className="w-7 h-7 text-primary" />
+                        </div>
                     </div>
-                    <h3 className="text-lg font-bold text-foreground mb-2">No jobs match your criteria</h3>
-                    <p className="text-muted-foreground mb-6">Try adjusting your filters or create a new job listing.</p>
-                    <Button variant="outline" onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}>Clear Filters</Button>
+                    <div className="space-y-1">
+                        <h3 className="text-lg font-bold text-foreground">No jobs match your criteria</h3>
+                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                            Try adjusting your search terms or filters, or create a new job posting.
+                        </p>
+                    </div>
+                    <Button 
+                        variant="outline" 
+                        onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}
+                        className="mt-2 rounded-xl border-border font-bold active:scale-[0.99] transition-all hover:bg-muted/50"
+                    >
+                        Clear Filters
+                    </Button>
                 </div>
             ) : (
                 <div className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in slide-in-from-bottom-4 duration-700">

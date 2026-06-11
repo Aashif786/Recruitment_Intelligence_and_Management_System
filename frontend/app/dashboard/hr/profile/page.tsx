@@ -80,9 +80,13 @@ export default function ProfilePage() {
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header / Hero Section */}
-            <div className="relative h-64 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-white/10 overflow-hidden shadow-2xl shadow-slate-950/20">
-                <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
+            <div className="relative h-64 rounded-3xl bg-gradient-to-br from-[oklch(0.14_0.04_260)] via-[oklch(0.18_0.05_255)] to-[oklch(0.12_0.03_250)] border border-white/10 overflow-hidden shadow-2xl shadow-black/30">
+                {/* Grid overlay */}
+                <div className="absolute inset-0 opacity-[0.07]" style={{backgroundImage:'linear-gradient(to right,rgba(255,255,255,0.3)1px,transparent 0),linear-gradient(to bottom,rgba(255,255,255,0.3)1px,transparent 0)',backgroundSize:'48px 48px'}} />
+                {/* Color orbs */}
+                <div className="absolute -top-12 -left-12 w-56 h-56 rounded-full bg-primary/30 blur-3xl opacity-60" />
+                <div className="absolute -bottom-8 right-10 w-48 h-48 rounded-full bg-blue-600/20 blur-3xl opacity-50" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                 
                 <div className="absolute bottom-10 left-10 flex items-center gap-6 z-10">
                     <div className="relative group">
@@ -116,12 +120,12 @@ export default function ProfilePage() {
                                                 <button
                                                     key={style}
                                                     onClick={() => handleUpdateAvatar(url)}
-                                                    className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-muted active:scale-[0.99] transition-all duration-200 border-2 border-transparent hover:border-primary/20"
+                                                    className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-primary/5 active:scale-[0.97] transition-all duration-300 border border-transparent hover:border-primary/20 group/avatar"
                                                 >
-                                                    <Avatar className="h-16 w-16">
+                                                    <Avatar className="h-16 w-16 shadow-sm group-hover/avatar:scale-110 group-hover/avatar:shadow-md transition-all duration-300">
                                                         <AvatarImage src={url} className="bg-slate-100" />
                                                     </Avatar>
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider">{style.replace('-', ' ')}</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground group-hover/avatar:text-primary transition-colors mt-1">{style.replace('-', ' ')}</span>
                                                 </button>
                                             )
                                         })}
@@ -184,7 +188,7 @@ export default function ProfilePage() {
                         <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
                             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-primary">Your Impact</CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-4 space-y-6">
+                        <CardContent className="pt-4 space-y-6 stagger-children">
                             <ImpactMetric icon={Users} label="Candidates Managed" value={metrics.total_candidates} color="text-blue-500" />
                             <ImpactMetric icon={TrendingUp} label="Hiring Success Rate" value={`${metrics.hiring_success_rate}%`} color="text-emerald-500" />
                             <ImpactMetric icon={CheckCircle} label="Offers Released" value={metrics.offers_released} color="text-primary" />
@@ -250,27 +254,27 @@ export default function ProfilePage() {
 
 function InfoRow({ icon: Icon, label, value, valueClass }: any) {
     return (
-        <div className="flex items-center justify-between group">
+        <div className="flex items-center justify-between group cursor-default">
             <div className="flex items-center gap-3">
-                <div className="p-2 bg-muted rounded-lg group-hover:bg-primary/10 transition-colors">
+                <div className="p-2 bg-muted rounded-lg group-hover:bg-primary/10 group-hover:scale-105 transition-all duration-300">
                     <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
-                <span className="text-sm font-medium text-muted-foreground">{label}</span>
+                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
             </div>
-            <span className={`text-sm font-semibold ${valueClass || 'text-foreground'}`}>{value}</span>
+            <span className={`text-sm font-semibold transition-transform duration-300 group-hover:translate-x-[-2px] ${valueClass || 'text-foreground'}`}>{value}</span>
         </div>
     )
 }
 
 function ImpactMetric({ icon: Icon, label, value, color }: any) {
     return (
-        <div className="flex items-center gap-4 group">
-            <div className={`p-3 rounded-2xl bg-card dark:bg-slate-900/60 shadow-sm border border-border/80 ${color} group-hover:shadow-md group-hover:scale-105 transition-all duration-200`}>
+        <div className="flex items-center gap-4 group cursor-default">
+            <div className={`p-3 rounded-2xl bg-card dark:bg-slate-900/60 shadow-sm border border-border/80 ${color} group-hover:shadow-md group-hover:scale-110 group-hover:bg-primary/5 transition-all duration-300`}>
                 <Icon className="h-5 w-5" />
             </div>
-            <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
-                <p className="text-xl font-black tabular-nums">{value}</p>
+            <div className="transition-transform duration-300 group-hover:translate-x-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
+                <p className="text-xl font-black tabular-nums mt-0.5">{value}</p>
             </div>
         </div>
     )
@@ -278,9 +282,12 @@ function ImpactMetric({ icon: Icon, label, value, color }: any) {
 
 function FeatureBox({ title, description }: any) {
     return (
-        <div className="p-5 rounded-2xl bg-muted/30 border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] group cursor-default">
-            <h4 className="font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{title}</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+        <div className="p-5 rounded-2xl bg-muted/30 border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] group cursor-default hover-premium-lift hover:border-primary/20 hover:bg-primary/[0.02] transition-all duration-300">
+            <div className="flex items-start gap-3 mb-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary mt-2 shrink-0 group-hover:scale-125 transition-transform duration-200" />
+                <h4 className="font-bold text-foreground group-hover:text-primary transition-colors duration-200">{title}</h4>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed pl-[18px]">{description}</p>
         </div>
     )
 }

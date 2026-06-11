@@ -35,6 +35,9 @@ export function ParticlesBackground() {
         const render = () => {
             ctx.clearRect(0, 0, width, height)
 
+            // Dynamic theme-aware primary color lookup from CSS variables
+            const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || 'oklch(0.42 0.16 260)'
+
             particles.forEach((p) => {
                 p.x += p.vx
                 p.y += p.vy
@@ -46,7 +49,9 @@ export function ParticlesBackground() {
 
                 ctx.beginPath()
                 ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
-                ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`
+                
+                // Use CSS color-mix to blend the dynamic branding color with opacity
+                ctx.fillStyle = `color-mix(in srgb, ${primaryColor} ${p.opacity * 100}%, transparent)`
                 ctx.fill()
             })
 

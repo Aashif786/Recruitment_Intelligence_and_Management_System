@@ -41,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 interface Application {
   id: number;
@@ -318,7 +319,7 @@ export default function HRApplicationsPage() {
             <div className="relative group flex gap-2">
               <div className="relative flex-1">
                 <svg
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-primary h-5 w-5 transition-colors z-10 pointer-events-none"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -330,7 +331,7 @@ export default function HRApplicationsPage() {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                     />
                 </svg>
-                <input
+                <Input
                     type="text"
                     placeholder="Search name, ID, or job details..."
                     className="w-full pl-12 pr-4 h-11 bg-background/50 border border-border/60 hover:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 rounded-xl text-base placeholder:text-muted-foreground text-foreground"
@@ -439,12 +440,33 @@ export default function HRApplicationsPage() {
           <p className="text-sm font-bold text-muted-foreground animate-pulse tracking-widest uppercase">Fetching Records...</p>
         </div>
       ) : applications.length === 0 ? (
-        <div className="text-center py-16 bg-card rounded-2xl border border-border/50 shadow-sm flex flex-col items-center gap-3">
-          <div className="p-4 bg-muted rounded-2xl border border-border/40">
-            <Users className="h-8 w-8 text-muted-foreground/40" />
+        <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-12 text-center flex flex-col items-center gap-3 animate-in fade-in duration-500">
+          <div className="relative">
+            <div className="absolute -inset-3 rounded-full bg-primary/10 blur-xl" />
+            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/15 to-blue-500/10 border border-primary/20 flex items-center justify-center shadow-lg">
+              <Users className="h-7 w-7 text-primary" />
+            </div>
           </div>
-          <p className="text-muted-foreground font-semibold">No applications match your filtering criteria.</p>
-          <p className="text-sm text-muted-foreground/70">Try adjusting or clearing your filters.</p>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-foreground">No applications found</h3>
+            <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+              No candidates match your current filtering criteria. Try resetting or adjusting the options above.
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setSearchTerm("");
+              setDateFrom("");
+              setDateTo("");
+              setStatusFilter("all");
+              setJobIdFilter("all");
+              setApplicationsPage(1);
+            }}
+            className="mt-2 rounded-xl border-border font-bold active:scale-[0.99] transition-all hover:bg-muted/50"
+          >
+            Clear All Filters
+          </Button>
         </div>
       ) : (
         <div className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in slide-in-from-bottom-4 duration-700">

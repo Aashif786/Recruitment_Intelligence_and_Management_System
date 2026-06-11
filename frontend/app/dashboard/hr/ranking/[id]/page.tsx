@@ -48,25 +48,39 @@ export default function LeaderboardPage() {
         return sortedRanked.slice(start, start + pageSize)
     }, [sortedRanked, rankingPage, pageSize])
 
-    if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading ranking...</div>
+    if (isLoading) return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 animate-in fade-in duration-500">
+            <div className="relative">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary shadow-lg"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <Trophy className="h-6 w-6 text-primary animate-pulse" />
+                </div>
+            </div>
+            <p className="text-sm font-bold text-muted-foreground animate-pulse tracking-widest uppercase mt-2">Computing Leaderboard...</p>
+        </div>
+    )
 
     const getRankIcon = (rank: number) => {
         if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-500" />
         if (rank === 2) return <Medal className="h-5 w-5 text-muted-foreground" />
         if (rank === 3) return <Award className="h-5 w-5 text-amber-600" />
-        return <span className="text-sm font-mono text-muted-foreground ml-1.5">{rank}</span>
+        return (
+            <span className="h-6 w-6 rounded-full bg-muted border border-border/30 text-[11px] font-mono font-bold text-muted-foreground flex items-center justify-center shadow-sm">
+                {rank}
+            </span>
+        )
     }
 
     const getRecommendationBadge = (rec: string) => {
-        if (rec === 'Strong Hire') return <Badge className="bg-green-600 hover:bg-green-700 text-white border-0">Strong Hire</Badge>
-        if (rec === 'Hire') return <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0">Hire</Badge>
-        if (rec === 'Borderline') return <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">Borderline</Badge>
-        if (rec === 'Reject') return <Badge variant="destructive" className="border-0">Reject</Badge>
-        return <Badge variant="secondary">N/A</Badge>
+        if (rec === 'Strong Hire') return <span className="capsule-badge capsule-badge-success">Strong Hire</span>
+        if (rec === 'Hire') return <span className="capsule-badge capsule-badge-success">Hire</span>
+        if (rec === 'Borderline') return <span className="capsule-badge capsule-badge-warning">Borderline</span>
+        if (rec === 'Reject') return <span className="capsule-badge capsule-badge-destructive">Reject</span>
+        return <span className="capsule-badge capsule-badge-neutral">N/A</span>
     }
 
     return (
-        <div className="flex flex-col lg:h-[calc(100vh-7.5rem)] gap-6 overflow-hidden">
+        <div className="flex flex-col lg:h-[calc(100vh-7.5rem)] gap-6 overflow-hidden animate-in fade-in duration-700">
             <div className="flex flex-col gap-4 shrink-0 px-4 pt-4">
                 <Button 
                     variant="ghost" 
@@ -144,7 +158,7 @@ export default function LeaderboardPage() {
                                             {cand.status.replace(/_/g, ' ')}
                                         </TableCell>
                                         <TableCell className="text-center align-middle">
-                                            <div className="inline-flex items-center justify-center p-2 rounded-lg bg-primary/10 text-primary font-mono font-black text-lg min-w-[60px] border border-primary/20 shadow-sm">
+                                            <div className="inline-flex items-center justify-center p-2 rounded-lg bg-primary/10 text-primary font-mono font-black text-lg min-w-[60px] border border-primary/20 shadow-sm hover:scale-105 transition-transform duration-200 cursor-default">
                                                 {cand.composite_score || 0}
                                             </div>
                                         </TableCell>

@@ -302,8 +302,8 @@ export default function OnboardingPage() {
 
 
             {showStats && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-4 duration-500 ease-out">
-                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden bg-gradient-to-br from-blue-500/5 to-primary/5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-4 duration-500 ease-out stagger-children">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden bg-gradient-to-br from-blue-500/5 to-primary/5 border-l-4 border-l-blue-500/50">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <FileText className="h-4 w-4 text-blue-500" />
@@ -311,15 +311,15 @@ export default function OnboardingPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-black">
+                            <div className="text-3xl font-black tabular-nums text-blue-600 dark:text-blue-400">
                                 {candidates?.filter(c => 
                                     (c.status === 'hired' || c.status === 'pending_approval') && !c.offer_sent
                                 ).length || 0}
                             </div>
-                            <p className="text-xs text-muted-foreground">Action required: send letters</p>
+                            <p className="text-xs text-muted-foreground mt-1">Action required: send letters</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden bg-gradient-to-br from-amber-500/5 to-amber-600/5">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden bg-gradient-to-br from-amber-500/5 to-amber-600/5 border-l-4 border-l-amber-500/50">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <Calendar className="h-4 w-4 text-amber-500" />
@@ -327,7 +327,7 @@ export default function OnboardingPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-black">
+                            <div className="text-3xl font-black tabular-nums text-amber-600 dark:text-amber-400">
                                 {candidates?.filter(c => {
                                     if (!c.joining_date || c.status === 'onboarded') return false
                                     // Candidates who are in the active final pipeline but not yet onboarded
@@ -348,10 +348,10 @@ export default function OnboardingPage() {
                                     return diff >= 0 && diff <= sevenDaysInMs
                                 }).length || 0}
                             </div>
-                            <p className="text-xs text-muted-foreground">Upcoming in next 7 days</p>
+                            <p className="text-xs text-muted-foreground mt-1">Upcoming in next 7 days</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden bg-gradient-to-br from-emerald-500/5 to-emerald-600/5">
+                    <Card className="bg-card/45 backdrop-blur-xl rounded-2xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden bg-gradient-to-br from-emerald-500/5 to-emerald-600/5 border-l-4 border-l-emerald-500/50">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -359,7 +359,7 @@ export default function OnboardingPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-black">
+                            <div className="text-3xl font-black tabular-nums text-emerald-600 dark:text-emerald-400">
                                 {candidates?.filter(c => {
                                     if (c.status !== 'onboarded') return false
                                     if (!c.onboarded_at) return true // Fallback for legacy records
@@ -368,7 +368,7 @@ export default function OnboardingPage() {
                                     return oDate.getMonth() === now.getMonth() && oDate.getFullYear() === now.getFullYear()
                                 }).length || 0}
                             </div>
-                            <p className="text-xs text-muted-foreground">Successfully closed hires</p>
+                            <p className="text-xs text-muted-foreground mt-1">Successfully closed hires</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -380,7 +380,7 @@ export default function OnboardingPage() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
                             <div className="relative flex-1 max-w-md">
-                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
                                 <Input 
                                     placeholder="Search by name or email..." 
                                     className="pl-10 h-10 bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
@@ -462,17 +462,35 @@ export default function OnboardingPage() {
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-32 text-center">
-                                        <div className="flex justify-center items-center gap-2">
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                                            Loading candidates...
+                                    <TableCell colSpan={6} className="h-48 text-center align-middle">
+                                        <div className="flex flex-col items-center justify-center gap-4">
+                                            <div className="relative">
+                                                <div className="h-12 w-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="h-6 w-6 rounded-full bg-primary/10 animate-pulse" />
+                                                </div>
+                                            </div>
+                                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest animate-pulse">Loading onboarding pipeline...</p>
                                         </div>
                                     </TableCell>
                                 </TableRow>
                             ) : paginatedCandidates?.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                                        No candidates found in onboarding phase.
+                                    <TableCell colSpan={6} className="h-48 text-center align-middle">
+                                        <div className="flex flex-col items-center justify-center gap-3 py-6 animate-in fade-in duration-500">
+                                            <div className="relative">
+                                                <div className="absolute -inset-2 rounded-full bg-primary/10 blur-xl" />
+                                                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-blue-500/10 border border-primary/20 flex items-center justify-center shadow-md">
+                                                    <Users className="h-6 w-6 text-primary" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-bold text-foreground">No onboarding candidates</p>
+                                                <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                                                    No candidates are currently in the onboarding pipeline matching the active filters.
+                                                </p>
+                                            </div>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -607,7 +625,7 @@ export default function OnboardingPage() {
                                                     <Button 
                                                         size="sm" 
                                                         variant="outline" 
-                                                        className="h-8 gap-1.5 text-xs text-amber-600 border-amber-500 hover:bg-amber-50"
+                                                        className="h-8 gap-1.5 text-xs text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10 rounded-lg font-bold"
                                                         onClick={() => {
                                                             setApprovingCandidate(candidate)
                                                             setIsApproveOpen(true)
@@ -620,7 +638,7 @@ export default function OnboardingPage() {
                                                 {candidate.status === 'accepted' && (
                                                     <Button 
                                                         size="sm" 
-                                                        className="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700"
+                                                        className="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md shadow-emerald-600/10 font-bold active:scale-[0.99] transition-all"
                                                         onClick={() => handleComplete(candidate.id)}
                                                     >
                                                         <UserPlus className="h-3.5 w-3.5" />
@@ -633,7 +651,7 @@ export default function OnboardingPage() {
                                                             <Button 
                                                                 size="sm" 
                                                                 variant="outline" 
-                                                                className="h-8 gap-1.5 text-xs text-blue-600 border-blue-500 hover:bg-blue-50"
+                                                                className="h-8 gap-1.5 text-xs text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/10 rounded-lg font-bold"
                                                                 onClick={() => {
                                                                     setActiveCaptureId(candidate.id)
                                                                     setIsCaptureOpen(true)
@@ -643,12 +661,12 @@ export default function OnboardingPage() {
                                                                 Add Photo
                                                             </Button>
                                                         ) : !candidate.id_card_url ? (
-                                                            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs text-amber-600 border-amber-500 hover:bg-amber-50" onClick={() => handleGenerateID(candidate.id)}>
+                                                            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10 rounded-lg font-bold" onClick={() => handleGenerateID(candidate.id)}>
                                                                 <CreditCard className="h-3.5 w-3.5" />
                                                                 Generate ID
                                                             </Button>
                                                         ) : (
-                                                            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs text-emerald-600 border-emerald-500 hover:bg-emerald-50" onClick={async () => {
+                                                            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 rounded-lg font-bold" onClick={async () => {
                                                                 try {
                                                                     const res = await APIClient.get(`/api/onboarding/applications/${candidate.id}/download-id-card`) as any;
                                                                     const link = document.createElement('a');
@@ -665,7 +683,7 @@ export default function OnboardingPage() {
                                                                 Download ID
                                                             </Button>
                                                         )}
-                                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 hidden sm:inline-flex">
+                                                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 dark:border-emerald-500/30 font-bold text-[10px] tracking-wider uppercase hidden sm:inline-flex rounded-full">
                                                             Onboarded
                                                         </Badge>
                                                     </div>

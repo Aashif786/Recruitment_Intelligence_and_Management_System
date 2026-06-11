@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Lock, ArrowRight, Loader2, ArrowLeft, KeyRound } from 'lucide-react'
 import { getApiBaseUrl } from '@/lib/config'
 
@@ -72,14 +73,23 @@ export default function ResetPasswordPage() {
 
     if (success) {
         return (
-            <div className="flex items-center justify-center min-h-screen py-12 px-4">
-                <Card className="w-full max-w-md bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-3xl relative z-10 text-center p-8">
-                    <div className="flex justify-center mb-4 text-green-500">
-                        <Lock className="h-12 w-12" />
+            <div className="flex items-center justify-center min-h-screen py-12 px-4 relative overflow-hidden">
+                {/* Ambient background glows */}
+                <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
+
+                <Card className="w-full max-w-md bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.08)] rounded-3xl relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500 p-8 text-center">
+                    <div className="flex justify-center mb-6">
+                        <div className="relative">
+                            <div className="absolute -inset-2 rounded-full bg-emerald-500/20 blur-lg animate-pulse" />
+                            <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-400/20 to-emerald-600/20 border border-emerald-500/25 flex items-center justify-center shadow-lg">
+                                <Lock className="h-8 w-8 text-emerald-500 animate-bounce" />
+                            </div>
+                        </div>
                     </div>
                     <h1 className="text-3xl font-bold text-foreground mb-2">Password Reset!</h1>
-                    <p className="text-muted-foreground mb-6">Your password has been successfully updated. Redirecting to login...</p>
-                    <Link href="/auth/login" className="text-primary font-bold hover:underline">
+                    <p className="text-muted-foreground mb-6 leading-relaxed">Your password has been successfully updated. Redirecting to login...</p>
+                    <Link href="/auth/login" className="text-primary font-bold hover:text-primary/80 hover:underline transition-all">
                         Go to login now
                     </Link>
                 </Card>
@@ -88,15 +98,24 @@ export default function ResetPasswordPage() {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen py-12 px-4">
-            <Card className="w-full max-w-md bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-3xl relative z-10">
+        <div className="flex items-center justify-center min-h-screen py-12 px-4 relative overflow-hidden">
+            {/* Ambient background glows */}
+            <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-blue-500/8 blur-3xl pointer-events-none" />
+
+            <Card className="w-full max-w-md bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.08)] rounded-3xl relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <CardContent className="p-8">
                     <div className="text-center mb-8">
-                        <div className="flex justify-center mb-4 text-primary">
-                            <KeyRound className="h-12 w-12" />
+                        <div className="flex justify-center mb-5">
+                            <div className="relative">
+                                <div className="absolute -inset-2 rounded-full bg-primary/15 blur-lg" />
+                                <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-500/20 border border-primary/25 flex items-center justify-center shadow-lg">
+                                    <KeyRound className="h-8 w-8 text-primary" />
+                                </div>
+                            </div>
                         </div>
                         <h1 className="text-3xl font-bold text-foreground mb-2">Reset Password</h1>
-                        <p className="text-muted-foreground">Enter the OTP sent to your email and your new password.</p>
+                        <p className="text-muted-foreground leading-relaxed">Enter the OTP sent to your email and your new password.</p>
                     </div>
 
                     {error && (
@@ -108,12 +127,12 @@ export default function ResetPasswordPage() {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-foreground">Email Address</label>
-                            <input
+                            <Input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground"
+                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground h-12"
                                 placeholder="you@company.com"
                                 disabled={!!searchParams.get('email') || isSubmitting}
                             />
@@ -121,12 +140,12 @@ export default function ResetPasswordPage() {
 
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-foreground">OTP Code</label>
-                            <input
+                            <Input
                                 type="text"
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground text-center tracking-[0.5em] font-mono text-xl"
+                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground text-center tracking-[0.5em] font-mono text-xl h-12"
                                 placeholder="000000"
                                 maxLength={6}
                                 disabled={isSubmitting}
@@ -135,12 +154,12 @@ export default function ResetPasswordPage() {
 
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-foreground">New Password</label>
-                            <input
+                            <Input
                                 type="password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground"
+                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground h-12"
                                 placeholder="••••••••"
                                 disabled={isSubmitting}
                             />
@@ -148,12 +167,12 @@ export default function ResetPasswordPage() {
 
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-foreground">Confirm New Password</label>
-                            <input
+                            <Input
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground"
+                                className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground text-foreground h-12"
                                 placeholder="••••••••"
                                 disabled={isSubmitting}
                             />

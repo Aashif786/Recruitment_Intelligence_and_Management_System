@@ -154,16 +154,16 @@ export function NotificationBell() {
                 </div>
                 <ScrollArea className={cn(notificationsArray.length > 0 ? "h-[450px]" : "h-auto")}>
                     {notificationsArray.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Bell className="h-6 w-6 text-muted-foreground" />
+                        <div className="flex flex-col items-center justify-center py-16 px-6 text-center animate-in fade-in zoom-in-95 duration-400">
+                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/10 to-blue-500/10 flex items-center justify-center mb-4 ring-4 ring-primary/5 border border-primary/10">
+                                <Bell className="h-6 w-6 text-primary/60" />
                             </div>
-                            <p className="text-sm font-semibold text-foreground">No new notifications</p>
-                            <p className="text-xs text-muted-foreground mt-1">We'll alert you when something happens.</p>
+                            <p className="text-sm font-bold text-foreground">All caught up!</p>
+                            <p className="text-xs text-muted-foreground mt-1">No new notifications right now.</p>
                         </div>
                     ) : (
                         <div className="flex flex-col w-[358px] sm:w-[408px]">
-                            {sortedNotifications.map(n => (
+                            {sortedNotifications.map((n, idx) => (
                                 <button
                                     key={n.id}
                                     onClick={() => {
@@ -173,10 +173,11 @@ export function NotificationBell() {
                                             setIsOpen(false)
                                         }
                                     }}
+                                    style={{ animationDelay: `${idx * 40}ms` }}
                                     className={cn(
-                                        "w-full text-left pl-4 py-4 pr-8 hover:bg-muted/40 transition-all border-l-4 group border-b border-border/50 last:border-b-0 relative",
+                                        "w-full text-left pl-4 py-4 pr-8 hover:bg-muted/40 transition-all border-l-4 group border-b border-border/50 last:border-b-0 relative animate-in fade-in slide-in-from-top-2 duration-300",
                                         !n.is_read 
-                                            ? 'bg-muted/20 border-l-primary' 
+                                            ? 'bg-primary/5 border-l-primary' 
                                             : 'bg-transparent border-l-transparent'
                                     )}
                                 >
