@@ -8,8 +8,12 @@ import { Input } from "@/components/ui/input"
 import { Calendar } from 'lucide-react'
 import { APIClient } from '@/app/dashboard/lib/api-client'
 import { toast } from "sonner"
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/app/dashboard/lib/auth-context'
 
 export function SendOfferDialog({ applicationId, candidateName, onSuccess, trigger, initialDate }: { applicationId: number, candidateName: string, onSuccess: () => void, trigger: React.ReactNode, initialDate?: string }) {
+    const router = useRouter()
+    const { user } = useAuth()
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [joiningDate, setJoiningDate] = useState(initialDate ? initialDate.split('T')[0] : '')
@@ -39,7 +43,25 @@ export function SendOfferDialog({ applicationId, candidateName, onSuccess, trigg
             setOpen(false)
             onSuccess()
         } catch (error: any) {
-            toast.error(error.message || "Could not process offer")
+            const msg = error.message || "Could not process offer"
+            const isConfigError = msg.toLowerCase().includes('settings') || 
+                                  msg.toLowerCase().includes('template') || 
+                                  msg.toLowerCase().includes('configured') ||
+                                  msg.toLowerCase().includes('missing')
+            if (user?.role === 'super_admin' && isConfigError) {
+                toast.error(msg, {
+                    action: {
+                        label: 'Go to Settings',
+                        onClick: () => {
+                            setOpen(false)
+                            router.push('/dashboard/settings')
+                        }
+                    },
+                    duration: 10000
+                })
+            } else {
+                toast.error(msg)
+            }
         } finally {
             setLoading(false)
         }

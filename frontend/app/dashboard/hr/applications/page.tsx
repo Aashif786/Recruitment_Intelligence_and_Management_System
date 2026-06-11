@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import {
@@ -84,6 +83,7 @@ interface PaginatedResponse<T> {
 
 
 export default function HRApplicationsPage() {
+  const { push } = useRouter();
   const router = useRouter();
   const { invalidateApplications } = useApplicationsMutate();
   const [pageSize, setPageSize] = useState(10);
@@ -734,7 +734,7 @@ export default function HRApplicationsPage() {
                         }
                       />
                     )}
-                    {app.status === "hired" && (
+                    {(app.status === "hired" || app.status === "offer_sent" || app.status === "onboarded") && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -742,7 +742,7 @@ export default function HRApplicationsPage() {
                             variant="ghost"
                             disabled={processingIds.has(app.id)}
                             className="h-10 w-10 p-0 text-emerald-600 hover:bg-emerald-500/10 rounded-xl transition-colors shadow-none"
-                            onClick={() => handleTransition(app.id, "onboard")}
+                            onClick={() => push(`/dashboard/onboarding?search=${encodeURIComponent(app.candidate_name)}`)}
                           >
                             <UserCheck className="h-5 w-5" />
                           </Button>
@@ -750,7 +750,7 @@ export default function HRApplicationsPage() {
                         <TooltipContent>Visit Onboarding Page</TooltipContent>
                       </Tooltip>
                     )}
-                    {app.status === "interview_scheduled" && (
+                    {(app.status === "interview_scheduled" || app.status === "rejected") && (
                       <p className='text-[13px] font-medium text-muted-foreground '>NONE</p>
                     )}
                   </div>

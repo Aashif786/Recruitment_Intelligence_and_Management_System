@@ -12,6 +12,7 @@ import { APIClient } from '@/app/dashboard/lib/api-client';
 
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
+import '@tensorflow/tfjs-converter';
 import * as blazeface from '@tensorflow-models/blazeface';
 import {
   Loader2, ShieldCheck, ShieldAlert,
@@ -19,6 +20,15 @@ import {
 } from 'lucide-react';
 import InterviewSidebar from './InterviewSidebar';
 import { FeedbackDialog, IssueReportDialog } from '@/components/interview-support';
+
+// TF Hub default URL redirects to Kaggle (404) — serve the model from our own origin instead.
+const BLAZEFACE_MODEL_URL = '/calrims/models/blazeface/model.json';
+
+async function loadFaceDetector() {
+  await tf.setBackend('webgl');
+  await tf.ready();
+  return blazeface.load({ modelUrl: BLAZEFACE_MODEL_URL });
+}
 
 interface InterviewSessionProps {
   sessionId: string;
@@ -72,11 +82,13 @@ function getFaceQuality(prediction: any, video: HTMLVideoElement) {
   const frameArea = Math.max(1, video.videoWidth * video.videoHeight);
   const areaRatio = (width * height) / frameArea;
   const rawProbability = prediction?.probability;
-  const confidence = Array.isArray(rawProbability)
-    ? Number(rawProbability[0] ?? 0)
-    : typeof rawProbability === 'number'
-      ? rawProbability
-      : 1;
+  let confidence = 0;
+  if (typeof rawProbability === 'number') {
+    confidence = rawProbability;
+  } else if (Array.isArray(rawProbability)) {
+    const first = rawProbability[0];
+    confidence = typeof first === 'number' ? first : Number(first?.[0] ?? 0);
+  }
   const hasReasonableSize = areaRatio >= 0.035;
   const isInsideFrame = left >= 0 && top >= 0 && right <= video.videoWidth && bottom <= video.videoHeight;
 
@@ -741,12 +753,14 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
       
       try {
         try {
-          await tf.ready();
           if (!detectorRef.current) {
-            detectorRef.current = await blazeface.load();
+            detectorRef.current = await loadFaceDetector();
           }
         } catch (modelErr) {
-          console.warn('Face detector model failed to load; continuing with camera/mic checks only.', modelErr);
+          console.warn(
+            '[FaceCheck] Face detector model failed to load during device check; continuing with camera/mic checks only.',
+            modelErr instanceof Error ? modelErr.message : modelErr
+          );
           detectorRef.current = null;
         }
 
@@ -890,10 +904,12 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
   // Synchronize camera stream to floating widget when interview starts
   useEffect(() => {
     if (isStarted && floatingVideoRef.current && activeStreamRef.current) {
-      if (floatingVideoRef.current.srcObject !== activeStreamRef.current) {
-        floatingVideoRef.current.srcObject = activeStreamRef.current;
+      const floatingVideo = floatingVideoRef.current;
+      if (floatingVideo.srcObject !== activeStreamRef.current) {
+        floatingVideo.srcObject = activeStreamRef.current;
         console.log("[Float] Bound camera stream to floating widget.");
       }
+      floatingVideo.play().catch((e) => console.warn("Floating video play error:", e));
     }
   }, [isStarted, isCameraConnected]);
 
@@ -1087,7 +1103,7 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
         if (!detectorLoadingRef.current && Date.now() - detectorLoadAttemptRef.current > 10000) {
           detectorLoadAttemptRef.current = Date.now();
           detectorLoadingRef.current = true;
-          blazeface.load()
+          loadFaceDetector()
             .then((detector) => {
               detectorRef.current = detector;
               detectorLoadingRef.current = false;
@@ -1096,7 +1112,10 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
             })
             .catch((err) => {
               detectorLoadingRef.current = false;
-              console.warn('[FaceCheck] Face detector reload failed; will retry.', err);
+              console.warn(
+                '[FaceCheck] Face detector reload failed; will retry.',
+                err instanceof Error ? err.message : err
+              );
             });
         }
         setIsFocusingOnMonitor(false);
@@ -1115,11 +1134,12 @@ export default function InterviewSession({ sessionId, token }: InterviewSessionP
           video.srcObject = activeStreamRef.current;
           console.log('[FaceCheck] Reattached stream to floating widget.');
         }
+        video.play().catch(() => {});
         return;
       }
       
       try {
-        const predictions = await detectorRef.current.estimateFaces(video, false);
+        const predictions = await detectorRef.current.estimateFaces(video, false, true);
         const faceFound = predictions.length > 0;
         setIsFaceDetected(faceFound);
         const faceQuality = predictions.length === 1 ? getFaceQuality(predictions[0], video) : null;

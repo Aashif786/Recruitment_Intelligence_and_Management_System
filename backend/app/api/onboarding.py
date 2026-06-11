@@ -328,6 +328,35 @@ def get_onboarding_candidates(
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, UploadFile, File, Query
 
+def validate_offer_readiness(application: Application, gs: dict, branding: dict):
+    # Candidate details validation
+    if not application.candidate_name:
+        raise HTTPException(status_code=400, detail="Candidate name is missing.")
+    if not application.candidate_email:
+        raise HTTPException(status_code=400, detail="Candidate email is missing.")
+    if not application.job or not application.job.title:
+        raise HTTPException(status_code=400, detail="Job details or title are missing for this candidate.")
+    
+    # Global Settings template validation
+    template_str = application.offer_template_snapshot or gs.get("offer_letter_template", "")
+    if not template_str:
+        raise HTTPException(
+            status_code=400, 
+            detail="No offer template found in settings. Please configure the offer template in Settings before releasing an offer."
+        )
+    
+    # System settings validations
+    if not branding.get("company_name"):
+        raise HTTPException(status_code=400, detail="Company Name is missing. Please configure it in Settings.")
+    if not gs.get("hr_email"):
+        raise HTTPException(status_code=400, detail="HR Contact Email is missing. Please configure it in Settings.")
+    if not gs.get("hr_name"):
+        raise HTTPException(status_code=400, detail="HR Contact Name is missing. Please configure it in Settings.")
+    if not gs.get("hr_phone"):
+        raise HTTPException(status_code=400, detail="HR Contact Phone is not configured. Please configure it in Settings.")
+    if not gs.get("company_address"):
+        raise HTTPException(status_code=400, detail="Office Address is not configured. Please configure it in Settings.")
+
 @router.post("/applications/{application_id}/send-offer")
 async def request_offer_approval(
     application_id: int,
@@ -382,6 +411,9 @@ async def request_offer_approval(
     application.offer_token_expiry = get_ist_now() + timedelta(days=30)
     application.offer_token_used = False
 
+    # Proactive configuration check
+    validate_offer_readiness(application, gs, branding)
+
     if auto_approve:
         is_resend = (application.status == "offer_sent")
         
@@ -409,7 +441,7 @@ async def request_offer_approval(
             from jinja2 import Environment, select_autoescape, StrictUndefined
             template_str = application.offer_template_snapshot or gs.get("offer_letter_template", "")
             if not template_str:
-                raise Exception("No offer template found in settings.")
+                raise HTTPException(status_code=400, detail="No offer template found in settings. Please configure the offer template in Settings before releasing an offer.")
             env = Environment(autoescape=select_autoescape(['html', 'xml']), undefined=StrictUndefined)
             template = env.from_string(template_str)
             rendered_html = template.render(**data)
@@ -445,6 +477,9 @@ async def request_offer_approval(
             background_tasks.add_task(process_offer_email, application.id, application.offer_pdf_path, gs.get("company_name", "Our Company"))
             return {"status": "success", "message": "Offer letter sent successfully."}
             
+        except HTTPException as e:
+            db.rollback()
+            raise e
         except (InvalidTransitionError, DuplicateTransitionError) as e:
             logger.error(f"OFFER_RELEASE_FSM_ERROR: {str(e)}")
             db.rollback()
@@ -512,6 +547,9 @@ async def approve_offer_letter(
     gs = {s.key: s.value for s in settings_records}
     from app.core.branding import get_all_branding
     branding = get_all_branding(db)
+
+    # Proactive configuration check
+    validate_offer_readiness(application, gs, branding)
     
     # PDF Generation (Puppeteer + Supabase)
     try:
@@ -532,7 +570,7 @@ async def approve_offer_letter(
         
         template_str = application.offer_template_snapshot or gs.get("offer_letter_template", "")
         if not template_str:
-            raise Exception("Offer template missing")
+            raise HTTPException(status_code=400, detail="No offer template found in settings. Please configure the offer template in Settings before releasing an offer.")
             
         from jinja2.sandbox import SandboxedEnvironment as Environment
         from jinja2 import select_autoescape, StrictUndefined
@@ -545,6 +583,8 @@ async def approve_offer_letter(
         
         application.offer_pdf_path = final_path
         logger.info(f"Offer PDF generated and uploaded to Supabase: {final_path}")
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logger.error(f"Puppeteer transition failed: {e}")
         log_audit(db, "OFFER_PDF_FAILED", application.id, current_user.id, {"error": str(e)})

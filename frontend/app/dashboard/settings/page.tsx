@@ -503,7 +503,7 @@ export default function SettingsPage() {
                                             const reader = new FileReader();
                                             reader.onload = (re) => {
                                                 setSettings({...settings, offer_letter_template: re.target?.result as string});
-                                                toast.success("Template uploaded successfully");
+                                                toast.success("Template uploaded successfully. Save changes before exiting");
                                             };
                                             reader.readAsText(file);
                                         }

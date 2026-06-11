@@ -364,10 +364,10 @@ export default function ReportsPage() {
   // Metrics
   const metrics = useMemo(() => {
     const total = reportsResponse?.total || reports.length;
-    
+
     // Use server-provided metrics if available (accurate across all pages)
     if (reportsResponse && 'metrics' in reportsResponse && reportsResponse.metrics) {
-        const apiMetrics = reportsResponse.metrics;
+      const apiMetrics = reportsResponse.metrics;
       return {
         total: reportsResponse.total || 0,
         selected: apiMetrics.selected || 0,
@@ -381,7 +381,7 @@ export default function ReportsPage() {
         totalFinished: apiMetrics.total_finished || 0,
       };
     }
-    
+
     let selectedCount = 0;
     let holdCount = 0;
     let rejectedCount = 0;
@@ -756,8 +756,8 @@ export default function ReportsPage() {
                       <div
                         role="status"
                         className={`mt-3 w-full rounded-lg border px-4 py-3 text-sm shadow-sm flex items-center gap-3 ${viewingReport.termination_reason
-                            ? 'border-red-500/40 bg-red-500/10 text-red-950 dark:text-red-100'
-                            : 'border-amber-500/40 bg-amber-500/10 text-amber-950 dark:text-amber-100'
+                          ? 'border-red-500/40 bg-red-500/10 text-red-950 dark:text-red-100'
+                          : 'border-amber-500/40 bg-amber-500/10 text-amber-950 dark:text-amber-100'
                           }`}
                       >
                         <AlertCircle className="h-5 w-5 shrink-0" />
@@ -806,7 +806,7 @@ export default function ReportsPage() {
               <Separator className="mb-2 shrink-0" />
 
               <div className="flex-1 overflow-y-auto pr-2 space-y-6 pb-6 mt-4 scrollbar-premium">
-                
+
                 {/* Skill Match Section */}
                 <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-500">
                   <div className="flex flex-col sm:flex-row gap-4 items-start">
@@ -819,15 +819,15 @@ export default function ReportsPage() {
                         try {
                           const rawSkills = viewingReport.candidate_profile.primary_skill || viewingReport.candidate_profile.skills;
                           const skillsArray = typeof rawSkills === 'string' ? JSON.parse(rawSkills) : rawSkills;
-                          
+
                           if (Array.isArray(skillsArray) && skillsArray.length > 0) {
                             return skillsArray.map((skill, i) => (
-                              <Badge 
-                                key={i} 
-                                variant="secondary" 
+                              <Badge
+                                key={i}
+                                variant="secondary"
                                 className={`text-[11px] font-bold px-3 py-1 rounded-lg border-none shadow-sm
                                   ${appliedFilters.skill !== 'All' && (skill || '').toLowerCase().includes(appliedFilters.skill.replace('_', ' ').toLowerCase())
-                                    ? 'bg-primary text-primary-foreground' 
+                                    ? 'bg-primary text-primary-foreground'
                                     : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                                   }`}
                               >
@@ -966,40 +966,6 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  {/* Skill Proficiency Evaluation Justifications */}
-                  <div className="flex flex-col gap-4 mb-8">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-primary" />
-                      Skill Proficiency Evaluation
-                    </h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      {(() => {
-                        try {
-                          if (viewingReport.evaluated_skills) {
-                            const parsedSkills = JSON.parse(viewingReport.evaluated_skills);
-                            if (Array.isArray(parsedSkills) && parsedSkills.length > 0) {
-                              return parsedSkills.map((skill, index) => (
-                                <div key={index} className="bg-card/45 backdrop-blur-xl border border-border/80 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-                                  <div className="flex justify-between items-center mb-2">
-                                    <h4 className="font-semibold text-md text-foreground">{skill.skillName || 'Unknown Skill'}</h4>
-                                    <Badge variant="secondary" className="font-bold tabular-nums">
-                                      {skill.score || 0}/10
-                                    </Badge>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground leading-relaxed">
-                                    {skill.justification || 'No justification provided.'}
-                                  </p>
-                                </div>
-                              ));
-                            }
-                          }
-                        } catch (e) {
-                          return <p className="text-sm text-muted-foreground">Unable to load skill proficiency details.</p>;
-                        }
-                        return <p className="text-sm text-muted-foreground">No specific skill evaluations recorded for this interview.</p>;
-                      })()}
-                    </div>
-                  </div>
                 </div>
 
                 <div className="flex flex-col gap-4">

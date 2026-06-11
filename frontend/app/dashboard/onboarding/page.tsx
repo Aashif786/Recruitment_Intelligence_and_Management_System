@@ -38,7 +38,6 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { SendOfferDialog } from '@/components/send-offer-dialog'
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { CapturePhotoDialog } from '@/components/capture-photo-dialog'
 import { APIClient } from '@/app/dashboard/lib/api-client'
 import { toast } from "sonner"
@@ -54,7 +53,7 @@ import {
     DialogFooter
 } from "@/components/ui/dialog"
 import { useAuth } from '@/app/dashboard/lib/auth-context'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 
@@ -92,11 +91,32 @@ interface GenerateIDResponse {
 export default function OnboardingPage() {
     const { user } = useAuth()
     const router = useRouter()
+    const handleConfigError = (error: any, fallbackMessage: string) => {
+        const msg = error.message || fallbackMessage
+        const isConfigError = msg.toLowerCase().includes('settings') || 
+                              msg.toLowerCase().includes('template') || 
+                              msg.toLowerCase().includes('configured') ||
+                              msg.toLowerCase().includes('missing')
+        if (user?.role === 'super_admin' && isConfigError) {
+            toast.error(msg, {
+                action: {
+                    label: 'Go to Settings',
+                    onClick: () => router.push('/dashboard/settings')
+                },
+                duration: 10000
+            })
+        } else {
+            toast.error(msg)
+        }
+    }
     const { data: resp, isLoading, mutate } = useSWR<OnboardingResponse>('/api/onboarding/candidates', fetcher)
     const candidates = resp?.items || []
     const totalCount = resp?.total || 0
     
-    const [search, setSearch] = useState('')
+    const searchParams = useSearchParams();
+    const initialSearch = searchParams.get('search') || '';
+    const [searchQuery, setSearchQuery] = useState(initialSearch);
+
     const [statusFilter, setStatusFilter] = useState('all')
     const [jobFilter, setJobFilter] = useState('all')
     const [currentPage, setCurrentPage] = useState(1)
@@ -104,7 +124,7 @@ export default function OnboardingPage() {
     const [showStats, setShowStats] = useState(true)
 
     const handleResetFilters = () => {
-        setSearch('')
+        setSearchQuery('')
         setStatusFilter('all')
         setJobFilter('all')
         setCurrentPage(1)
@@ -150,8 +170,8 @@ export default function OnboardingPage() {
     const filteredCandidates = useMemo(() => {
         return sortedCandidates?.filter(c => {
             const matchesSearch = 
-                c.candidate_name.toLowerCase().includes(search.toLowerCase()) ||
-                c.candidate_email.toLowerCase().includes(search.toLowerCase())
+                c.candidate_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                c.candidate_email.toLowerCase().includes(searchQuery.toLowerCase())
             
             const matchesStatus = 
                 statusFilter === 'all' || 
@@ -164,7 +184,7 @@ export default function OnboardingPage() {
 
             return matchesSearch && matchesStatus && matchesJob
         }) || []
-    }, [sortedCandidates, search, statusFilter, jobFilter])
+    }, [sortedCandidates, searchQuery, statusFilter, jobFilter])
 
     const totalPages = Math.ceil(filteredCandidates.length / pageSize)
     
@@ -198,7 +218,7 @@ export default function OnboardingPage() {
             mutate(undefined, { revalidate: true })
             setIsApproveOpen(false)
         } catch (error: any) {
-            toast.error(error.message || "Failed to approve offer letter.")
+            handleConfigError(error, "Failed to approve offer letter.")
         }
     }
 
@@ -232,7 +252,7 @@ export default function OnboardingPage() {
             setPreviewHtml(res.html)
             setIsPreviewOpen(true)
         } catch (error: any) {
-            toast.error(error.message || "Failed to load offer preview")
+            handleConfigError(error, "Failed to load offer preview")
         }
     }
 
@@ -261,7 +281,7 @@ export default function OnboardingPage() {
                 icon={CheckCircle2}
             >
                 <div className="flex items-center gap-3">
-                    { (search || statusFilter !== 'all' || jobFilter !== 'all') ? (
+                    { (searchQuery || statusFilter !== 'all' || jobFilter !== 'all') ? (
                         <>
                             <Badge variant="outline" className="h-10 px-4 bg-primary/10 dark:bg-white/5 text-primary dark:text-white border-primary/20 dark:border-white/10 flex items-center justify-center font-bold text-sm rounded-xl">
                                 {filteredCandidates.length} {filteredCandidates.length === 1 ? 'Match' : 'Matches'}
@@ -385,9 +405,9 @@ export default function OnboardingPage() {
                                 <Input 
                                     placeholder="Search by name or email..." 
                                     className="pl-10 h-10 bg-background/50 border border-input rounded-xl hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200"
-                                    value={search}
+                                    value={searchQuery}
                                     onChange={(e) => {
-                                        setSearch(e.target.value)
+                                        setSearchQuery(e.target.value)
                                         setCurrentPage(1)
                                     }}
                                 />
@@ -436,7 +456,7 @@ export default function OnboardingPage() {
                                 </Select>
                             </div>
 
-                            {(search || statusFilter !== 'all' || jobFilter !== 'all') && (
+                            {(searchQuery || statusFilter !== 'all' || jobFilter !== 'all') && (
                                 <Button
                                     variant="ghost"
                                     onClick={handleResetFilters}
@@ -558,7 +578,7 @@ export default function OnboardingPage() {
                                                                         win.document.open();
                                                                         win.document.write(`<div style="color: red; padding: 20px; font-family: sans-serif;"><h3>Failed to load offer preview</h3><p>${error.message || "Unknown error"}</p></div>`);
                                                                         win.document.close();
-                                                                        toast.error(error.message || "Failed to load offer preview");
+                                                                        handleConfigError(error, "Failed to load offer preview");
                                                                     }
                                                                 }}
                                                             >
