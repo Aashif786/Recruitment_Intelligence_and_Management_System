@@ -54,14 +54,6 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
-  // Strip transparent background overlays and blur overrides to match page background seamlessly
-  const sanitizedClassName = className
-    ? className
-        .replace(/\bbg-(card|background|sidebar)\/\d+\b/g, 'bg-background')
-        .replace(/\bbg-(card|background|sidebar)\b/g, 'bg-background')
-        .replace(/\bbackdrop-blur(-\w+)?\b/g, '')
-    : className;
-
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -69,7 +61,7 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           'bg-background text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-5 rounded-lg border border-border/80 p-6 shadow-2xl duration-200 sm:max-w-lg',
-          sanitizedClassName,
+          className,
         )}
         {...props}
       >
