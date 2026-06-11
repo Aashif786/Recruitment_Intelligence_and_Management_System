@@ -764,7 +764,7 @@ export default function HRApplicationsPage() {
                             variant="ghost"
                             disabled={processingIds.has(app.id)}
                             className="h-10 w-10 p-0 text-emerald-600 hover:bg-emerald-500/10 rounded-xl transition-colors shadow-none"
-                            onClick={() => push(`/dashboard/onboarding?search=${encodeURIComponent(app.candidate_name)}`)}
+                            onClick={() => push(`/dashboard/onboarding?search=${encodeURIComponent(app.candidate_email)}`)}
                           >
                             <UserCheck className="h-5 w-5" />
                           </Button>

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Camera, RefreshCw, Check, Upload, Image as ImageIcon } from 'lucide-react'
 import { APIClient } from '@/app/dashboard/lib/api-client'
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 interface CapturePhotoDialogProps {
     isOpen: boolean
@@ -24,13 +24,29 @@ interface CapturePhotoDialogProps {
     onSuccess: () => void
 }
 
+const dataURLtoBlob = (dataUrl: string): Blob => {
+    try {
+        const arr = dataUrl.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    } catch (e) {
+        console.error("Failed to convert data URL to Blob:", e);
+        throw new Error("Invalid image format or corrupt data");
+    }
+}
+
 export function CapturePhotoDialog({ isOpen, onOpenChange, applicationId, onSuccess }: CapturePhotoDialogProps) {
     const webcamRef = useRef<Webcam>(null)
     const [imgSrc, setImgSrc] = useState<string | null>(null)
     const [isUploading, setIsUploading] = useState(false)
     const [activeTab, setActiveTab] = useState("capture")
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const { toast } = useToast()
 
     const capture = useCallback(() => {
         const imageSrc = webcamRef.current?.getScreenshot()
@@ -58,20 +74,20 @@ export function CapturePhotoDialog({ isOpen, onOpenChange, applicationId, onSucc
         setIsUploading(true)
         try {
             // Convert base64 to blob
-            const response = await fetch(imgSrc)
-            const blob = await response.blob()
+            const blob = dataURLtoBlob(imgSrc)
             
             const formData = new FormData()
             formData.append('photo', blob, 'candidate_photo.jpg')
 
             await APIClient.postFormData(`/api/onboarding/applications/${applicationId}/capture-photo`, formData)
 
-            toast({ title: "Success", description: "Candidate photo added successfully." })
+            toast.success("Candidate photo added successfully.")
             onSuccess()
             onOpenChange(false)
             setImgSrc(null)
         } catch (error) {
-            toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" })
+            console.error(error)
+            toast.error(error instanceof Error ? error.message : "Failed to upload photo")
         } finally {
             setIsUploading(false)
         }
@@ -162,7 +178,6 @@ export function CapturePhotoDialog({ isOpen, onOpenChange, applicationId, onSucc
                                     <Button 
                                         variant="secondary" 
                                         size="sm"
-                                        onClick={() => fileInputRef.current?.click()}
                                         className="rounded-xl active:scale-95 transition-all shadow-sm"
                                     >
                                         Browse Files

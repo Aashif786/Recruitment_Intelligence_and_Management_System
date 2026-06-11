@@ -255,7 +255,7 @@ export default function ApprovalsPage() {
                             className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary font-bold rounded-lg active:scale-[0.99] transition-all duration-200"
                             onClick={() => setOtpConfirmUser(hrUser)}
                           >
-                            Send OTP
+                            Reset Password
                           </Button>
                         )}
                         {status === 'pending' && (
@@ -363,7 +363,7 @@ export default function ApprovalsPage() {
                   Sending...
                 </>
               ) : (
-                'Send OTP'
+                'Reset Password'
               )}
             </Button>
           </DialogFooter>

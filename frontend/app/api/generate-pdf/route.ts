@@ -64,7 +64,8 @@ export async function POST(req: NextRequest) {
       ALLOWED_ATTR: [
         'style', 'class', 'id', 'src', 'alt', 'width', 'height', 'border', 'cellpadding', 'cellspacing', 'color'
       ],
-      FORCE_BODY: false
+      FORCE_BODY: false,
+      WHOLE_DOCUMENT: true
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>
@@ -81,6 +82,13 @@ export async function POST(req: NextRequest) {
       browser = b
 
       const page = await b.newPage()
+
+      // Enable console & request logging for debugging
+      page.on('console', msg => console.log('PUPPETEER CONSOLE:', msg.text()));
+      page.on('pageerror', err => console.error('PUPPETEER PAGEERROR:', err));
+      page.on('requestfailed', request => {
+        console.error(`PUPPETEER REQUEST_FAILED: ${request.url()} - ${request.failure()?.errorText}`);
+      });
 
       // Set viewport to A4 dimensions at 96 DPI for layout calculation
       await page.setViewport({
