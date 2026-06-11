@@ -125,8 +125,16 @@ export default function ApprovalsPage() {
 
   if (isAuthLoading || (shouldFetch && isValidating && hrUsers.length === 0)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary shadow-lg" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-full bg-primary/10 animate-pulse" />
+            </div>
+          </div>
+          <p className="text-sm font-bold text-muted-foreground animate-pulse tracking-widest uppercase">Loading...</p>
+        </div>
       </div>
     )
   }
@@ -203,8 +211,12 @@ export default function ApprovalsPage() {
               Failed to load users. Please refresh the page.
             </div>
           ) : userCount === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-8 text-center text-sm text-muted-foreground">
-              No {status} HR accounts found.
+            <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-12 text-center flex flex-col items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                <UserCheck className="h-6 w-6 text-primary/60" />
+              </div>
+              <p className="text-sm font-bold text-foreground">No {status} HR accounts</p>
+              <p className="text-xs text-muted-foreground">All {status} requests will appear here.</p>
             </div>
           ) : (
             <Table>

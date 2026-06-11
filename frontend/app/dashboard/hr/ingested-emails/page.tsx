@@ -430,8 +430,8 @@ export default function IngestedEmailsPage() {
             >
                 <div className="flex items-center gap-4">
                     {autoSyncEnabled && (
-                        <Badge variant="outline" className="h-9 px-4 rounded-xl bg-emerald-50 text-emerald-600 border-emerald-100 flex items-center gap-2 animate-pulse font-bold text-[10px] tracking-widest uppercase">
-                            <Zap className="h-3 w-3 fill-emerald-600" />
+                        <Badge variant="outline" className="h-9 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 dark:border-emerald-500/30 flex items-center gap-2 animate-pulse font-bold text-[10px] tracking-widest uppercase">
+                            <Zap className="h-3 w-3 fill-emerald-600 dark:fill-emerald-400" />
                             Auto-Sync Active
                         </Badge>
                     )}
@@ -483,10 +483,10 @@ export default function IngestedEmailsPage() {
                                     Manage the Gmail IMAP settings used for background application polling.
                                 </CardDescription>
                             </div>
-                            <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                            <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-2xl border border-border/60">
                                 <div className="space-y-0.5 px-1">
-                                    <Label className="text-[10px] font-black uppercase tracking-tighter text-slate-500">Auto-Syncing</Label>
-                                    <p className="text-[9px] text-slate-400 font-medium">Runs every 1 minute</p>
+                                    <Label className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Auto-Syncing</Label>
+                                    <p className="text-[9px] text-muted-foreground/70 font-medium">Runs every 1 minute</p>
                                 </div>
                                 <Switch 
                                     checked={autoSyncEnabled} 
@@ -557,7 +557,7 @@ export default function IngestedEmailsPage() {
             )}
 
             {/* Quick Metrics — always show real counts from global_stats regardless of active filter */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 stagger-children">
                 <Card 
                     onClick={() => setStatusFilter('all')}
                     className={`bg-card/45 backdrop-blur-xl border shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 rounded-2xl overflow-hidden hover-premium-lift cursor-pointer active:scale-[0.98] ${statusFilter === 'all' ? 'border-primary/60 ring-2 ring-primary/10 bg-primary/[0.03]' : 'border-border/80'}`}
@@ -615,7 +615,7 @@ export default function IngestedEmailsPage() {
                 <div className="flex flex-col md:flex-row gap-4 items-center">
                     {/* Search */}
                     <div className="relative flex-1 w-full">
-                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5 z-10 pointer-events-none" />
                         <Input
                             type="text"
                             placeholder="Search sender email, subject, or resume name..."

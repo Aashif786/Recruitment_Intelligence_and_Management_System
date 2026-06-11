@@ -557,3 +557,103 @@ select:focus {
   box-shadow: 0 4px 12px -2px color-mix(in oklab, var(--primary) 5%, transparent);
 }
 
+/* ── Premium Gradient Text & Custom Utilities ──────────────────── */
+.text-gradient-primary {
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    color-mix(in oklab, var(--primary) 70%, #4f46e5) 50%,
+    color-mix(in oklab, var(--primary) 50%, #06b6d4) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+}
+
+/* ── Interactive Pulsing Borders for AI highlights ────────────── */
+@keyframes border-pulse {
+  0%, 100% { border-color: color-mix(in oklab, var(--primary) 20%, var(--border)); }
+  50% { border-color: color-mix(in oklab, var(--primary) 60%, var(--border)); }
+}
+.animate-border-pulse {
+  animation: border-pulse 2.5s infinite ease-in-out;
+}
+/* ── Staggered children entrance animation ─────────────────────── */
+.stagger-children > * {
+  opacity: 0;
+  animation: fade-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.stagger-children > *:nth-child(1)  { animation-delay: 0ms;   }
+.stagger-children > *:nth-child(2)  { animation-delay: 60ms;  }
+.stagger-children > *:nth-child(3)  { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 420ms; }
+.stagger-children > *:nth-child(n+9){ animation-delay: 480ms; }
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Capsule badge: warning amber ──────────────────────────────── */
+.capsule-badge-warning {
+  background: color-mix(in oklab, #f59e0b 12%, transparent);
+  color: #d97706;
+  border-color: color-mix(in oklab, #f59e0b 25%, transparent);
+}
+.dark .capsule-badge-warning {
+  color: #fbbf24;
+}
+
+/* ── Premium button focus glow ─────────────────────────────────── */
+button:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--primary) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar premium for all scrollable radix primitives ─────── */
+[data-radix-scroll-area-viewport] {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--border) 80%, transparent) transparent;
+}
+[data-radix-scroll-area-viewport]::-webkit-scrollbar { width: 4px; height: 4px; }
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-track { background: transparent; }
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--border) 90%, transparent);
+  border-radius: 9999px;
+}
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--primary) 40%, var(--border));
+}
+
+/* ── Data table cell link-style hover ──────────────────────────── */
+.table-cell-link {
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+  text-underline-offset: 3px;
+}
+.table-cell-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+/* ── Gradient border animated for focused inputs ───────────────── */
+@keyframes input-border-glow {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 10%, transparent); }
+  50%       { box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 20%, transparent); }
+}
+input:focus-visible,
+[data-slot="input"]:focus-visible {
+  animation: input-border-glow 2s ease-in-out infinite;
+}
+

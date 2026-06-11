@@ -1162,8 +1162,6 @@ def get_hr_applications(
         if status and status != 'all':
             if status == "applied":
                 query = query.filter(Application.status.in_(("applied", "submitted")))
-            elif status == "hired":
-                query = query.filter(Application.status.in_(("hired", "onboarded", "offer_sent")))
             else:
                 query = query.filter(Application.status == status)
 

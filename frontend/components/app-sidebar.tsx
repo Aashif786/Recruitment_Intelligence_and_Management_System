@@ -123,7 +123,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:hidden">
                         <div className="relative group shrink-0">
                             {/* Ambient soft glow on logo hover */}
-                            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary/30 to-blue-600/30 opacity-0 group-hover:opacity-100 blur-sm transition-all duration-500" />
+                            <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-primary/20 via-blue-500/20 to-indigo-500/20 opacity-0 group-hover:opacity-100 blur-md transition-all duration-500" />
+                            <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-primary/30 to-blue-600/30 opacity-0 group-hover:opacity-60 blur-sm transition-all duration-300" />
                             <img
                                 src={companyLogo || '/calrims/logo.png'}
                                 alt="Company logo"
@@ -251,11 +252,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <div className="flex items-center justify-between gap-3 overflow-hidden group-data-[collapsible=icon]:justify-center w-full">
                     {/* User Info (Visible when expanded) */}
                     <div className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:hidden flex-1">
-                        <Avatar className="h-9 w-9 border-2 border-primary/20 shadow-sm ring-2 ring-primary/5 hover:ring-primary/20 hover:scale-105 transition-all duration-200 cursor-pointer">
-                            <AvatarFallback className="bg-gradient-to-br from-primary via-primary/80 to-accent text-primary-foreground font-black text-xs">
-                                {initials}
-                            </AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                            <Avatar className="h-9 w-9 border-2 border-primary/20 shadow-sm ring-2 ring-primary/5 hover:ring-primary/20 hover:scale-105 transition-all duration-200 cursor-pointer">
+                                <AvatarImage 
+                                    src={user?.profile_image_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.email || '')}`} 
+                                    alt={user?.full_name} 
+                                    className="object-cover bg-slate-800"
+                                />
+                                <AvatarFallback className="bg-gradient-to-br from-primary via-primary/80 to-accent text-primary-foreground font-black text-xs">
+                                    {initials}
+                                </AvatarFallback>
+                            </Avatar>
+                            {/* Online indicator dot */}
+                            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-sidebar ring-1 ring-emerald-500/30 animate-pulse" />
+                        </div>
                         <div className="flex flex-col overflow-hidden min-w-0">
                             <span className="font-bold text-xs text-sidebar-foreground truncate leading-tight">
                                 {user?.full_name}

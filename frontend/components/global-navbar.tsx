@@ -8,7 +8,7 @@ import { useAuth } from '@/app/dashboard/lib/auth-context'
 import { ChevronRight } from 'lucide-react'
 import { UserNav } from '@/components/user-nav'
 import { NotificationBell } from '@/components/notification-bell'
-import { ModeToggle } from '@/components/mode-toggle'
+import { ToggleTheme } from '@/components/lightswind/toggle-theme'
 import { ThemeTogglerButton } from '@/components/animate-ui/components/buttons/theme-toggler'
 import useSWR from 'swr'
 import { APIClient } from '@/app/dashboard/lib/api-client'
@@ -60,7 +60,7 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
         </div>
       )}
 
-      <ModeToggle className="text-muted-foreground hover:text-foreground hover:bg-accent hidden md:flex" />
+      <ToggleTheme className="text-muted-foreground hover:text-foreground hover:bg-accent hidden md:flex" />
 
       {isDashboard ? (
         <div className="flex items-center gap-2 md:gap-4">
@@ -102,7 +102,7 @@ export const GlobalNavbar = React.memo(function GlobalNavbar() {
 
         {/* Mobile Navigation Toggle */}
         <div className="flex items-center gap-2 md:hidden">
-          <ModeToggle className="text-muted-foreground" />
+          <ToggleTheme className="text-muted-foreground" />
           <Button
             variant="ghost"
             size="icon"

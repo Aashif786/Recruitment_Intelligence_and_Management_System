@@ -12,7 +12,7 @@ import { Loader2, Save, Building2, User, Mail, Phone, FileText, ShieldAlert, Set
 import { PageHeader } from '@/components/page-header'
 import { useAuth } from '@/app/dashboard/lib/auth-context'
 import { useRouter } from 'next/navigation'
-import { ModeToggle } from '@/components/mode-toggle'
+import { ToggleTheme } from '@/components/lightswind/toggle-theme'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 export default function SettingsPage() {
@@ -151,14 +151,20 @@ export default function SettingsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center p-20">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="flex flex-col items-center justify-center p-20 gap-4 min-h-[400px]">
+                <div className="relative">
+                    <div className="h-12 w-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-6 w-6 rounded-full bg-primary/10 animate-pulse" />
+                    </div>
+                </div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest animate-pulse">Loading System Settings...</p>
             </div>
         )
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <PageHeader
                 title="System Settings"
                 description="Configure company details and automation templates"
@@ -175,8 +181,8 @@ export default function SettingsPage() {
                 </Button>
             </PageHeader>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden rounded-2xl pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden rounded-2xl pt-0 hover-premium-lift hover:shadow-md hover:border-border/60 transition-all duration-300">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
@@ -246,7 +252,7 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col rounded-2xl pt-0 hover-premium-lift hover:shadow-md hover:border-border/60 transition-all duration-300">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
@@ -309,7 +315,7 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* White-Label Branding Config Card */}
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden md:col-span-2 rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden md:col-span-2 rounded-2xl pt-0 hover-premium-lift hover:shadow-md hover:border-border/60 transition-all duration-300">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <CardTitle className="flex items-center gap-2 text-base font-bold">
                             <div className="p-1.5 bg-primary/10 rounded-lg">
@@ -443,7 +449,7 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* New Theme Preference Card */}
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden md:col-span-2 rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden md:col-span-2 rounded-2xl pt-0 hover-premium-lift hover:shadow-md hover:border-border/60 transition-all duration-300">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <div className="flex items-center justify-between">
                             <div>
@@ -455,7 +461,7 @@ export default function SettingsPage() {
                                 </CardTitle>
                                 <CardDescription>Choose how your workspace looks</CardDescription>
                             </div>
-                            <ModeToggle />
+                            <ToggleTheme />
                         </div>
                     </CardHeader>
                     <CardContent className="p-6">
@@ -469,7 +475,7 @@ export default function SettingsPage() {
                 </Card>
             </div>
 
-                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden rounded-2xl pt-0">
+                <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden rounded-2xl pt-0 hover-premium-lift hover:shadow-md hover:border-border/60 transition-all duration-300">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pt-6">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -562,14 +568,14 @@ export default function SettingsPage() {
                     </div>
                 </CardHeader>
                  <CardContent className="p-6 space-y-4">
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+                    <div className="bg-primary/5 border border-primary/15 p-4 rounded-xl">
                         <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-bold text-blue-800 dark:text-blue-300 text-sm">Available Placeholders</h4>
-                            <span className="text-[10px] uppercase font-bold text-blue-600/50">Usage: {'{{placeholder}}'}</span>
+                            <h4 className="font-bold text-primary text-sm">Available Placeholders</h4>
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground/60">Usage: {'{{placeholder}}'}</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {['candidate_name', 'job_role', 'department', 'joining_date', 'company_name', 'hr_name', 'offer_date', 'hr_email', 'hr_phone', 'company_address', 'logo_url'].map(p => (
-                                <code key={p} className="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border text-[10px] font-mono shadow-sm">{p}</code>
+                                <code key={p} className="bg-background px-1.5 py-0.5 rounded border border-border text-[10px] font-mono shadow-sm text-foreground">{p}</code>
                             ))}
                         </div>
                     </div>

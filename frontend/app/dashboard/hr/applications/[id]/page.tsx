@@ -61,25 +61,25 @@ const FSM_BUTTONS: Record<string, { action: string; label: string; icon: React.R
 }
 
 const RESUME_STATUS_LABELS: Record<string, { label: string; color: string }> = {
-    pending: { label: "Resume: queued", color: "bg-slate-100 text-foreground/80 border-border" },
-    parsing: { label: "Resume: parsing…", color: "bg-sky-100 text-sky-800 border-sky-200" },
-    parsed: { label: "Resume: ready", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-    failed: { label: "Resume: failed", color: "bg-red-100 text-red-800 border-red-200" },
+    pending: { label: "Resume: queued", color: "bg-muted text-muted-foreground border-border/80" },
+    parsing: { label: "Resume: parsing…", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+    parsed: { label: "Resume: ready", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
+    failed: { label: "Resume: failed", color: "bg-destructive/15 text-destructive border-destructive/20" },
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-    applied: { label: "Applied", color: "bg-blue-100 text-blue-700 border-blue-200" },
-    screened: { label: "Screened", color: "bg-indigo-100 text-primary/80 border-indigo-200" },
-    interview_scheduled: { label: "Interview Scheduled", color: "bg-purple-100 text-purple-700 border-purple-200" },
-    interview_completed: { label: "Interview Completed", color: "bg-cyan-100 text-cyan-700 border-cyan-200" },
-    review_later: { label: "Review Later", color: "bg-amber-100 text-amber-700 border-amber-200" },
-    physical_interview: { label: "Physical Interview", color: "bg-teal-100 text-teal-700 border-teal-200" },
-    hired: { label: "Hired", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-    pending_approval: { label: "Pending Offer Approval", color: "bg-amber-100 text-amber-700 border-amber-200" },
-    offer_sent: { label: "Offer Sent", color: "bg-blue-100 text-blue-700 border-blue-200" },
-    accepted: { label: "Offer Accepted", color: "bg-emerald-500 text-white border-none" },
-    onboarded: { label: "Onboarded", color: "bg-slate-800 text-white border-none" },
-    rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-200" },
+    applied: { label: "Applied", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+    screened: { label: "Screened", color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20" },
+    interview_scheduled: { label: "Interview Scheduled", color: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
+    interview_completed: { label: "Interview Completed", color: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20" },
+    review_later: { label: "Review Later", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
+    physical_interview: { label: "Physical Interview", color: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20" },
+    hired: { label: "Hired", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
+    pending_approval: { label: "Pending Offer Approval", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
+    offer_sent: { label: "Offer Sent", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+    accepted: { label: "Offer Accepted", color: "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" },
+    onboarded: { label: "Onboarded", color: "bg-primary/20 text-primary border-primary/30" },
+    rejected: { label: "Rejected", color: "bg-destructive/15 text-destructive border-destructive/20" },
 }
 
 export default function HRApplicationDetailPage() {
@@ -257,9 +257,17 @@ export default function HRApplicationDetailPage() {
     }
 
     if (isLoading) {
-        return <div className="flex justify-center items-center h-screen">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+                <div className="relative">
+                    <div className="h-16 w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 animate-pulse" />
+                    </div>
+                </div>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest animate-pulse">Loading Candidate Profile...</p>
+            </div>
+        )
     }
 
     if (appError || !application) {

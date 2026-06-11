@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import {
   Zap, Mail, Lock, User, Check, ArrowRight,
   Loader2, Brain, Cpu, Globe, LucideIcon
@@ -276,20 +278,12 @@ export default function RegisterPage() {
 
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="pt-2">
               <div className="flex items-start gap-3 px-1">
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={agreedToTerms}
-                  aria-label="Agree to Terms of Service and Privacy Policy"
+                <Checkbox
                   id="terms-checkbox"
-                  onClick={() => setAgreedToTerms(!agreedToTerms)}
-                  className={cn(
-                    "mt-0.5 w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center shrink-0",
-                    agreedToTerms ? "bg-primary border-primary" : "bg-transparent border-border hover:border-primary/50"
-                  )}
-                >
-                  {agreedToTerms && <Check className="w-3.5 h-3.5 text-primary-foreground stroke-[4px]" />}
-                </button>
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                  className="mt-0.5 w-5 h-5 rounded-md border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                />
                 <label htmlFor="terms-checkbox" className="text-sm text-muted-foreground font-medium leading-tight cursor-pointer">
                   I agree to the <Link href="/terms" className="text-foreground hover:text-primary font-bold transition-colors">Terms of Service</Link> and <Link href="/privacy" className="text-foreground hover:text-primary font-bold transition-colors">Privacy Policy</Link>.
                 </label>
@@ -355,10 +349,10 @@ function InputField({ id, label, type, placeholder, value, onChange, icon: Icon,
         {label}
       </label>
       <div className="relative">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 group-focus-within:text-primary transition-colors">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 group-focus-within:text-primary transition-colors z-10 pointer-events-none">
           <Icon className="h-5 w-5" />
         </div>
-        <input
+        <Input
           id={id}
           type={type}
           value={value}

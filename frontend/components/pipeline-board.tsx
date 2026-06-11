@@ -183,9 +183,17 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
     }
 
     if (isLoading && !paginatedData) {
-        return <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
+        return (
+            <div className="flex flex-col items-center justify-center h-64 gap-4">
+                <div className="relative">
+                    <div className="h-16 w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 animate-pulse" />
+                    </div>
+                </div>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest animate-pulse">Loading Pipeline...</p>
+            </div>
+        )
     }
 
     if (fetchError || error) {
@@ -212,12 +220,19 @@ export function PipelineBoard({ jobId }: { jobId?: string }) {
 
     if (applications.length === 0 && !isLoading && !fetchError && !error) {
         return (
-            <div className="flex flex-col items-center justify-center h-full min-h-[400px] w-full bg-slate-50/50 dark:bg-slate-900/50 rounded-xl border border-dashed border-border/60">
-                <div className="p-4 bg-muted rounded-full mb-4">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center h-full min-h-[400px] w-full bg-muted/20 rounded-2xl border border-dashed border-border/60 p-12 text-center gap-4 animate-in fade-in duration-500">
+                <div className="relative">
+                    <div className="absolute -inset-3 rounded-full bg-primary/10 blur-xl" />
+                    <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/15 to-blue-500/10 border border-primary/20 flex items-center justify-center shadow-lg">
+                        <FileText className="h-7 w-7 text-primary" />
+                    </div>
                 </div>
-                <h3 className="text-xl font-bold text-foreground">No applications found</h3>
-                <p className="text-muted-foreground mt-2 max-w-sm text-center">There are currently no candidates in the pipeline{jobId ? ' for this job' : ''}.</p>
+                <div className="space-y-1">
+                    <h3 className="text-lg font-bold text-foreground">No applications found</h3>
+                    <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                        There are currently no candidates in the pipeline{jobId ? ' for this job' : ''}.
+                    </p>
+                </div>
             </div>
         )
     }

@@ -274,7 +274,7 @@ export default function HRDashboard() {
       )}
 
       {/* Stats Cards AI Enhanced */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 stagger-children">
         <Link href="/dashboard/hr/applications" className="block cursor-pointer">
           <StatsCard
             title="Total Candidates"
@@ -340,7 +340,7 @@ export default function HRDashboard() {
             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40 pb-4 pt-5">
               <CardTitle >Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 pt-6">
+            <CardContent className="space-y-4 pt-6 stagger-children">
               <ActionButton href="/dashboard/hr/applications" label="Review Applications" />
               <ActionButton href="/dashboard/hr/pipeline" label="Hiring Pipeline" />
               <ActionButton href="/dashboard/hr/reports" label="View Reports" />

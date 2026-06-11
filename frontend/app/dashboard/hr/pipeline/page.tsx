@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { fetcher } from '@/app/dashboard/lib/swr-fetcher'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Briefcase, ArrowRight, Layers, Users, UserCheck, Search } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
@@ -91,11 +92,11 @@ export default function PipelineIndexPage() {
             </PageHeader>
 
             <div className="relative group max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <input
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
+                <Input
                     type="text"
                     placeholder="Search by job title or ID..."
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-background/50 border border-border hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all font-medium shadow-sm"
+                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-background/50 border border-border hover:border-primary/40 focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/10 outline-none transition-all font-medium shadow-sm h-12"
                     value={searchTerm}
                     onChange={(e) => {
                         setSearchTerm(e.target.value)

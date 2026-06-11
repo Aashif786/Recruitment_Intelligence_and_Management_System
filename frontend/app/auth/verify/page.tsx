@@ -5,6 +5,7 @@ import { useAuth } from '@/app/dashboard/lib/auth-context'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Loader2, ArrowRight, KeyRound } from 'lucide-react'
 
 export default function VerifyPage() {
@@ -86,14 +87,14 @@ export default function VerifyPage() {
                 One-Time Password (OTP)
               </label>
               <div className="relative">
-                <input
+                <Input
                   id="otp"
                   type="text"
                   maxLength={6}
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} // only allow numbers
                   required
-                  className="w-full text-center tracking-[0.5em] text-2xl font-bold pr-4 py-4 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground/30 text-foreground"
+                  className="w-full text-center tracking-[0.5em] text-2xl font-bold pr-4 py-4 bg-background/50 border border-input rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary hover:border-primary/40 transition-all placeholder:text-muted-foreground/30 text-foreground h-14"
                   placeholder="000000"
                   disabled={isSubmitting || success}
                 />
