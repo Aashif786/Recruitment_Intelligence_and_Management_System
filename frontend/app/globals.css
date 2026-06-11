@@ -30,14 +30,14 @@
 
 :root {
   /* Light mode neutrals - Softer, smoother, less contrasty */
-  --background: oklch(0.88 0.03 250); /* noticeably darker blue-gray background */
-  --foreground: oklch(0.28 0.02 250); /* Softer slate text */
+  --background: oklch(0.965 0.012 250);
+  --foreground: oklch(0.22 0.018 250);
 
-  --card: oklch(0.94 0.01 250); /* much softer muted card color, removing bright white */
-  --card-foreground: oklch(0.28 0.02 250);
+  --card: oklch(0.99 0.004 250);
+  --card-foreground: oklch(0.22 0.018 250);
 
-  --popover: oklch(0.94 0.01 250);
-  --popover-foreground: oklch(0.28 0.02 250);
+  --popover: oklch(0.99 0.004 250);
+  --popover-foreground: oklch(0.22 0.018 250);
 
   /* Primary = Professional Deep Indigo */
   --primary: oklch(0.42 0.16 260);
@@ -45,21 +45,21 @@
   --primary-foreground: oklch(0.99 0.01 250);
 
   /* Secondary = Muted professionalism */
-  --secondary: oklch(0.94 0.01 250);
-  --secondary-foreground: oklch(0.35 0.02 250);
+  --secondary: oklch(0.945 0.012 250);
+  --secondary-foreground: oklch(0.28 0.02 250);
 
-  --muted: oklch(0.92 0.01 250);
-  --muted-foreground: oklch(0.40 0.02 250);
+  --muted: oklch(0.935 0.012 250);
+  --muted-foreground: oklch(0.44 0.02 250);
 
   /* Accent = Subtle energetic blue - lightened for visibility on hover */
-  --accent: oklch(0.92 0.02 250);
-  --accent-foreground: oklch(0.28 0.02 250);
+  --accent: oklch(0.925 0.025 250);
+  --accent-foreground: oklch(0.24 0.02 250);
 
   --destructive: oklch(0.55 0.18 25);
   --destructive-foreground: oklch(0.99 0.02 250);
 
-  --border: oklch(0.92 0.01 250);
-  --input: oklch(0.92 0.01 250);
+  --border: oklch(0.865 0.014 250);
+  --input: oklch(0.86 0.014 250);
   --ring: oklch(0.42 0.16 260);
 
   /* Charts - Clean and professional */
@@ -69,11 +69,11 @@
   --chart-4: oklch(0.65 0.13 160);
   --chart-5: oklch(0.55 0.14 30);
 
-  --radius: 1rem;
-  /* Slightly softer, more premium radius */
+  --radius: 0.75rem;
+  --radius-card: 0.5rem;
 
   /* Sidebar surfaces (light) - seamlessly match soft background */
-  --sidebar: oklch(0.975 0.01 250);
+  --sidebar: oklch(0.985 0.008 250);
   --sidebar-foreground: oklch(0.28 0.02 250);
   --sidebar-primary: oklch(0.42 0.16 260);
   --sidebar-primary-foreground: oklch(0.99 0.01 250);
@@ -189,7 +189,8 @@
     @apply bg-background text-foreground antialiased;
     font-size: 1rem;
     line-height: 1.6;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
+    text-rendering: optimizeLegibility;
   }
 
   h1,
@@ -198,7 +199,8 @@
   h4,
   h5,
   h6 {
-    @apply font-bold tracking-tight text-foreground;
+    @apply font-bold text-foreground;
+    letter-spacing: 0;
   }
 
   /* Global pointer cursor for all interactive elements */
@@ -211,6 +213,36 @@
   label[for],
   select {
     cursor: pointer;
+  }
+}
+
+@layer base {
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 18%, transparent);
+    color: var(--foreground);
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+
+  a {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
@@ -300,19 +332,6 @@
   }
 
   /* Premium glow blob decorations */
-  .glow-blob {
-    position: absolute;
-    border-radius: 9999px;
-    pointer-events: none;
-    filter: blur(80px);
-    opacity: 0.12;
-    background: var(--primary);
-    z-index: 0;
-  }
-  .dark .glow-blob {
-    opacity: 0.18;
-  }
-
   /* Glass card style */
   .glass-card {
     background: color-mix(in oklab, var(--card) 80%, transparent);
@@ -351,6 +370,20 @@
 
   .mirror {
     transform: scaleX(-1);
+  }
+
+  .surface-panel {
+    background: color-mix(in oklab, var(--card) 88%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 84%, transparent);
+    border-radius: var(--radius-card);
+    box-shadow: 0 1px 2px color-mix(in oklab, black 5%, transparent),
+      0 10px 28px color-mix(in oklab, black 4%, transparent);
+  }
+
+  .section-stack {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1rem, 2vw, 1.5rem);
   }
 }
 
@@ -511,7 +544,7 @@
 :focus-visible {
   outline: 2px solid color-mix(in oklab, var(--primary) 70%, transparent);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 /* ── Premium input focus glow & hover transitions ──────────────── */
@@ -521,6 +554,22 @@ select {
   transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
               box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
               background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-slot="card"],
+[data-slot="dialog-content"],
+[data-slot="table-container"] {
+  border-radius: var(--radius-card) !important;
+}
+
+[data-slot="card"] {
+  box-shadow: 0 1px 2px color-mix(in oklab, black 5%, transparent),
+    0 14px 36px color-mix(in oklab, black 4%, transparent);
+}
+
+[data-slot="card"]:hover {
+  box-shadow: 0 2px 8px color-mix(in oklab, black 7%, transparent),
+    0 18px 42px color-mix(in oklab, black 5%, transparent);
 }
 
 input:focus,
@@ -656,4 +705,3 @@ input:focus-visible,
 [data-slot="input"]:focus-visible {
   animation: input-border-glow 2s ease-in-out infinite;
 }
-

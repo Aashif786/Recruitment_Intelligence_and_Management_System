@@ -20,24 +20,24 @@ export function PageHeader({
   children 
 }: PageHeaderProps) {
   return (
-    <div className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10", className)}>
-      <div className="flex items-center gap-5 animate-in fade-in slide-in-from-left-4 duration-500 ease-out">
-        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 transition-all duration-300 hover:scale-105 hover:bg-primary/15 hover:ring-4 hover:ring-primary/15 group shadow-sm">
-          <Icon className="h-7 w-7 text-primary transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110" />
+    <div className={cn("flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-center sm:justify-between mb-7", className)}>
+      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-500 ease-out">
+        <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 transition-colors duration-200 group shadow-sm">
+          <Icon className="h-5 w-5 text-primary" />
         </div>
-        <div className="space-y-1.5">
-          <h1 className="text-4xl font-extrabold text-foreground tracking-tight leading-none">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-foreground leading-tight sm:text-3xl">
             {title}
           </h1>
           {description && (
-            <p className="text-muted-foreground font-medium text-base leading-snug">
+            <p className="text-muted-foreground text-sm leading-snug sm:text-base">
               {description}
             </p>
           )}
         </div>
       </div>
       {children && (
-        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-500 ease-out delay-100">
+        <div className="flex flex-wrap items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-500 ease-out delay-100">
           {children}
         </div>
       )}
