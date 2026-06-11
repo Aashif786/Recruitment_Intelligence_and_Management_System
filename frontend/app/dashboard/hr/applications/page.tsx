@@ -532,20 +532,25 @@ export default function HRApplicationsPage() {
                   <div className="flex flex-wrap gap-1.5">
                     {(() => {
                       try {
-                        const skills = JSON.parse(app.resume_extraction?.extracted_skills || '[]');
+                        // Parse once and reuse — avoids 3 separate JSON.parse calls per row.
+                        const skills: string[] = JSON.parse(app.resume_extraction?.extracted_skills || '[]');
                         if (Array.isArray(skills) && skills.length > 0) {
-                          return skills.slice(0, 3).map((skill: string, idx: number) => (
-                            <Badge key={idx} variant="secondary" className="bg-muted/50 text-muted-foreground border-none text-[10px] py-0 px-2 h-5 font-bold">
-                              {skill}
-                            </Badge>
-                          ));
+                          return (
+                            <>
+                              {skills.slice(0, 3).map((skill, idx) => (
+                                <Badge key={idx} variant="secondary" className="bg-muted/50 text-muted-foreground border-none text-[10px] py-0 px-2 h-5 font-bold">
+                                  {skill}
+                                </Badge>
+                              ))}
+                              {skills.length > 3 && (
+                                <span className="text-[10px] text-muted-foreground font-bold pt-1">+{skills.length - 3} more</span>
+                              )}
+                            </>
+                          );
                         }
                       } catch (e) {}
                       return <span className="text-sm text-muted-foreground italic font-medium">No skills data</span>;
                     })()}
-                    {app.resume_extraction && JSON.parse(app.resume_extraction.extracted_skills || '[]').length > 3 && (
-                      <span className="text-[10px] text-muted-foreground font-bold pt-1">+{JSON.parse(app.resume_extraction.extracted_skills || '[]').length - 3} more</span>
-                    )}
                   </div>
                 </div>
 

@@ -8,10 +8,11 @@ export const SWRProvider = ({ children }: { children: React.ReactNode }) => {
     <SWRConfig 
       value={{
         fetcher,
-        refreshInterval: 0,        // disabled: no background polling — manual refresh only
-        revalidateOnFocus: true,   // enabled: re-fetch when tab regains focus (keeps data fresh)
+        refreshInterval: 0,          // disabled: no background polling — manual refresh only
+        revalidateOnFocus: false,    // disabled: prevents re-fetch on every browser tab switch
         revalidateOnReconnect: true,
-        dedupingInterval: 2000     // 2s: prevents duplicate requests but doesn't suppress forced revalidations
+        dedupingInterval: 5000,      // 5s: prevents duplicate requests on rapid navigation
+        focusThrottleInterval: 30000 // 30s: even if re-enabled, throttle tab-focus revalidations
       }}
     >
       {children}
