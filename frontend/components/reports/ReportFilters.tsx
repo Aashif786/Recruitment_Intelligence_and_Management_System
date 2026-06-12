@@ -285,7 +285,8 @@ export const ReportFilters = React.memo(function ReportFilters({
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
                   <SelectItem value="All">SUGGESTION</SelectItem>
-                  <SelectItem value="Consider">Consider</SelectItem>
+                  <SelectItem value="Select">Select</SelectItem>
+                  <SelectItem value="Hold">Hold</SelectItem>
                   <SelectItem value="Reject">Reject</SelectItem>
                   <SelectItem value="Terminated">Terminated</SelectItem>
                 </SelectContent>

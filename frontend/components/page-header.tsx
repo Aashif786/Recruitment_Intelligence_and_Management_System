@@ -20,7 +20,7 @@ export function PageHeader({
   children 
 }: PageHeaderProps) {
   return (
-    <div className={cn("flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-center sm:justify-between mb-7", className)}>
+    <div className={cn("flex flex-col gap-4 border-b border-border/70 pb-4 sm:flex-row sm:items-center sm:justify-between", className)}>
       <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-500 ease-out">
         <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 transition-colors duration-200 group shadow-sm">
           <Icon className="h-5 w-5 text-primary" />

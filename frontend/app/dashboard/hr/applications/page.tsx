@@ -302,17 +302,18 @@ export default function HRApplicationsPage() {
         description="Review and manage candidate applications."
         icon={Users}
       >
-        <div className="rounded-lg border border-primary/20 bg-primary/10 px-4 py-3 text-right shadow-sm">
-          <span className="text-[10px] font-semibold text-primary uppercase tracking-normal mb-1 block">Total Records</span>
+        <div className="rounded-lg border border-primary/20 bg-primary/10 px-5 py-2 text-right shadow-sm">
+          <span className="text-[12px] font-semibold text-primary uppercase tracking-normal mb-1 block">Total Records</span>
           <span className="text-xl font-semibold text-primary tabular-nums">
             {isLoading ? "..." : totalCount}
           </span>
         </div>
       </PageHeader>
 
+
       {/* Filters Toolbar */}
-      <div className="surface-panel p-4 animate-in fade-in slide-in-from-top-4 duration-500 ease-out">
-        <div className="flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-end">
+      <div className="surface-panel p-3 animate-in fade-in slide-in-from-top-4 duration-500 ease-out">
+        <div className="flex flex-col md:flex-row flex-wrap gap-3 items-start md:items-end">
           {/* Combined Search Bar */}
           <div className="w-full md:flex-1 min-w-0">
             <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-normal mb-1 px-1">Search applications</label>
