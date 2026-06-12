@@ -96,6 +96,7 @@ export default function HRDashboard() {
   
   const [jobFilter, setJobFilter] = useState('all')
   const [debouncedSearch, setDebouncedSearch] = useState(filters.search)
+  const [chartType, setChartType] = useState<'bar' | 'funnel'>('bar')
 
   const { data: dashboardData, error: dashboardError, isLoading: dashboardLoading } = useSWR<DashboardData>(
     `/api/analytics/dashboard?${new URLSearchParams({
@@ -309,25 +310,35 @@ export default function HRDashboard() {
       </div>
 
       {/* Charts & Tables Section */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+      <div className="flex flex-row gap-4 ">
 
-        {/* Chart Section */}
-        <div className="lg:col-span-3 animate-in fade-in duration-500 delay-300">
-          <Card className="h-full pt-0 overflow-hidden">
+        {/* Chart Section */} 
+        <div className="w-[73%] animate-in fade-in duration-500 delay-300">
+          <Card className="h-full pt-0 overflow-hidden pb-5">
             <CardHeader className="bg-muted/35 border-b border-border/60 pb-4 pt-5">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle >Application Pipeline</CardTitle>
                   <CardDescription className="text-muted-foreground">Distribution of candidates by status</CardDescription>
                 </div>
-                <div className="p-2 bg-primary/10 text-primary rounded-md">
-                  <TrendingUp className="h-5 w-5" />
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setChartType(prev => prev === 'bar' ? 'funnel' : 'bar')}
+                    className="h-9 px-3 text-xs"
+                  >
+                    {chartType === 'bar' ? 'Show Funnel' : 'Show Bar'}
+                  </Button>
+                  <div className="p-2 bg-primary/10 text-primary rounded-md">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="h-[300px] w-full">
-                <DashboardChart data={chartData} />
+                <DashboardChart data={chartData} type={chartType} />
               </div>
             </CardContent>
           </Card>
@@ -335,7 +346,7 @@ export default function HRDashboard() {
         </div>
 
         {/* Recent Activity / Quick Actions */}
-        <div className="lg:col-span-1 animate-in fade-in duration-500 delay-500">
+        <div className="w-[27%] animate-in fade-in duration-500 delay-500">
           <Card className="overflow-hidden">
             <CardHeader className="bg-muted/35 border-b border-border/60 pt-5 pb-5">
               <CardTitle >Quick Actions</CardTitle>

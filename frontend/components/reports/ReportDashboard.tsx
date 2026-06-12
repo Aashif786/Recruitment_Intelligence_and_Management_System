@@ -246,7 +246,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
 
         <TabsContent value="detailed" className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both delay-300">
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-4 stagger-children">
               {filteredReports.length > 0 ? (
                 filteredReports.map((report: Report) => (
                   <ReportCard
@@ -285,7 +285,7 @@ export const ReportDashboard = React.memo(function ReportDashboard({
                     <TableHead className="text-center">Suggestion</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="stagger-children">
                   {filteredReports.map((report: Report) => (
                     <TableRow
                       key={report.id}

@@ -480,7 +480,7 @@ export default function OnboardingPage() {
                                 <TableHead className="font-bold text-right pr-6">Action</TableHead>
                             </TableRow>
                         </TableHeader>
-                        <TableBody>
+                        <TableBody className="stagger-children">
                             {isLoading ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="h-48 text-center align-middle">
@@ -787,7 +787,7 @@ export default function OnboardingPage() {
             )}
 
             <Dialog open={isApproveOpen} onOpenChange={setIsApproveOpen}>
-                <DialogContent className="max-w-md rounded-3xl border border-border/80 bg-card/45 backdrop-blur-xl shadow-2xl p-6">
+                <DialogContent className="max-w-md rounded-3xl border border-border/80 bg-background/95 backdrop-blur-xl shadow-2xl p-6">
                     <DialogHeader className="space-y-2">
                         <DialogTitle className="text-xl font-bold">Finalize Offer Approval</DialogTitle>
                         <DialogDescription className="text-sm text-muted-foreground leading-normal">
@@ -808,7 +808,7 @@ export default function OnboardingPage() {
             </Dialog>
 
             <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-                <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden border border-border/80 bg-card/45 backdrop-blur-xl shadow-2xl rounded-3xl">
+                <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden border border-border/80 bg-background/95 backdrop-blur-xl shadow-2xl rounded-3xl">
                     <DialogHeader className="p-6 border-b bg-muted/30">
                         <div className="flex items-center justify-between gap-4">
                             <div>
