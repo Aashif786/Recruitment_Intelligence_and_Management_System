@@ -143,6 +143,35 @@ def run_startup_migrations(engine: Engine):
             _safe_rollback(conn)
             logger.warning(f"Failed to create question_sets table: {e}")
 
+    # 0b. Create revoked_tokens table
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS revoked_tokens (
+                    id SERIAL PRIMARY KEY,
+                    jti VARCHAR(255) UNIQUE NOT NULL,
+                    expires_at TIMESTAMP NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.commit()
+            
+            # Create explicit index on jti
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_revoked_tokens_jti ON revoked_tokens(jti)"))
+            conn.commit()
+            
+            # Clean up expired revoked tokens from the database on startup
+            from app.core.timezone import get_ist_now
+            conn.execute(
+                text("DELETE FROM revoked_tokens WHERE expires_at < :now"),
+                {"now": get_ist_now()}
+            )
+            conn.commit()
+            logger.info("Ensured revoked_tokens table exists with index and cleaned up expired tokens")
+        except Exception as e:
+            _safe_rollback(conn)
+            logger.warning(f"Failed to setup/cleanup revoked_tokens table: {e}")
+
     # Refresh inspector after table creation
     inspector = inspect(engine)
 

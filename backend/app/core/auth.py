@@ -206,6 +206,29 @@ def get_current_user(
                         headers={"WWW-Authenticate": "Bearer"},
                     )
 
+        # Enforce database-backed token revocation check
+        jti = payload.get("jti")
+        if jti:
+            from app.domain.models import RevokedToken
+            try:
+                revoked = db.query(RevokedToken).filter(RevokedToken.jti == jti).first()
+                if revoked:
+                    logger.warning(f"Rejected revoked token JTI (DB): {jti}")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="This session has been logged out. Please log in again.",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    raise e
+                logger.error(f"Database error during token blocklist check (failing closed): {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily offline.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
         sub = payload.get("sub")
         role = payload.get("role")
         
@@ -268,6 +291,8 @@ def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        if hasattr(request, "state"):
+            request.state.user_id = user.id
         return user
     except ValueError:
         raise HTTPException(
@@ -335,6 +360,29 @@ def get_current_interview(
             interview_secret = settings.interview_jwt_secret
 
         payload = verify_token(token, secret=interview_secret)
+
+        # Enforce database-backed token revocation check for interviews
+        jti = payload.get("jti")
+        if jti:
+            from app.domain.models import RevokedToken
+            try:
+                revoked = db.query(RevokedToken).filter(RevokedToken.jti == jti).first()
+                if revoked:
+                    logger.warning(f"Rejected revoked interview JTI: {jti}")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="This interview session is no longer valid.",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    raise e
+                logger.error(f"Database error during interview JTI check (failing closed): {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily offline.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
 
         # Debug info to validate we decoded what the frontend is sending.
         logger.info(
@@ -419,6 +467,8 @@ def get_current_interview(
                     headers={"WWW-Authenticate": "Bearer"},
                 )
         
+        if hasattr(request, "state"):
+            request.state.user_id = f"interview_{interview.id}"
         return interview
     except ValueError:
         raise HTTPException(
@@ -479,6 +529,29 @@ def get_current_interview_any_status(
             interview_secret = settings.interview_jwt_secret
 
         payload = verify_token(token, secret=interview_secret)
+
+        # Enforce database-backed token revocation check for interviews
+        jti = payload.get("jti")
+        if jti:
+            from app.domain.models import RevokedToken
+            try:
+                revoked = db.query(RevokedToken).filter(RevokedToken.jti == jti).first()
+                if revoked:
+                    logger.warning(f"Rejected revoked interview JTI (any status): {jti}")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="This interview session is no longer valid.",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    raise e
+                logger.error(f"Database error during interview JTI check (failing closed): {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication service temporarily offline.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
 
         logger.info(
             "Interview auth token source (any status) "
@@ -543,6 +616,8 @@ def get_current_interview_any_status(
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
+        if hasattr(request, "state"):
+            request.state.user_id = f"interview_{interview.id}"
         return interview
     except ValueError:
         raise HTTPException(

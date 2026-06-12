@@ -1822,6 +1822,8 @@ def get_ingested_emails(
                 storage_key = path_id_for_url
                 if storage_key.startswith("MAIL_ATTACHMENTS/"):
                     storage_key = storage_key[len("MAIL_ATTACHMENTS/"):]
+                elif storage_key.startswith("resumes/"):
+                    storage_key = storage_key[len("resumes/"):]
                 try:
                     fresh_url = get_signed_url('MAIL_ATTACHMENTS', storage_key, expires_in=86400)
                     if fresh_url:
@@ -2062,7 +2064,9 @@ async def assign_ingested_email(
         path_id = _extract_storage_path_identifier(resume.file_url)
         if path_id:
             # Re-prepend bucket if we stripped it, to maintain database consistency
-            if not path_id.startswith("MAIL_ATTACHMENTS/"):
+            if path_id.startswith("resumes/"):
+                resume_file_path = path_id
+            elif not path_id.startswith("MAIL_ATTACHMENTS/"):
                 resume_file_path = f"MAIL_ATTACHMENTS/{path_id}"
             else:
                 resume_file_path = path_id

@@ -280,7 +280,7 @@ class TestOfferLetterEmailRouting:
 
     def _is_supabase_path(self, path: str) -> bool:
         """Mirror of the routing guard added to send_hired_email."""
-        return "offer_letters/" in path and not os.path.isabs(path)
+        return "offer_letters/" in path and not (os.path.isabs(path) or path.startswith("/") or path.startswith("\\"))
 
     @pytest.mark.parametrize("path", [
         "offer_letters/offer_42_1718000000.pdf",
@@ -418,3 +418,260 @@ class TestGetOfferLetterData:
             hr_email="hr@corp.com",
         )
         assert data["joining_date"] == "TBD"
+
+
+class TestTokenRevocation:
+    def test_revoked_token_rejected(self):
+        from app.core.auth import create_access_token, get_current_user
+        from app.domain.models import RevokedToken, User
+        from app.infrastructure.database import SessionLocal
+        from fastapi import HTTPException
+        from datetime import datetime, timezone, timedelta
+        
+        with SessionLocal() as db:
+            test_user = db.query(User).filter(User.email == "test_revocation@example.com").first()
+            if not test_user:
+                test_user = User(
+                    email="test_revocation@example.com",
+                    password_hash="hash",
+                    full_name="Test User",
+                    role="hr",
+                    approval_status="approved",
+                    is_active=True,
+                    is_verified=True
+                )
+                db.add(test_user)
+                db.commit()
+                db.refresh(test_user)
+            
+            token_data = {"sub": str(test_user.id), "role": test_user.role}
+            token = create_access_token(token_data)
+            
+            from jose import jwt
+            from app.core.config import get_settings
+            settings = get_settings()
+            payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            
+            class MockRequest:
+                def __init__(self, token):
+                    self.cookies = {"access_token": token}
+                    self.headers = {}
+                    self.method = "GET"
+            
+            # Before revocation: validation succeeds
+            user = get_current_user(MockRequest(token), db)
+            assert user.id == test_user.id
+            
+            # Revoke token
+            exp_dt = datetime.fromtimestamp(exp, tz=timezone.utc).replace(tzinfo=None)
+            revoked = RevokedToken(jti=jti, expires_at=exp_dt)
+            db.add(revoked)
+            db.commit()
+            
+            # After revocation: validation raises 401
+            with pytest.raises(HTTPException) as exc_info:
+                get_current_user(MockRequest(token), db)
+            assert exc_info.value.status_code == 401
+            assert "session has been logged out" in exc_info.value.detail
+            
+            # Clean up
+            db.delete(revoked)
+            db.delete(test_user)
+            db.commit()
+
+    def test_revoked_interview_token_rejected(self):
+        from app.core.auth import create_access_token, get_current_interview
+        from app.domain.models import RevokedToken, Interview, Application, Job
+        from app.infrastructure.database import SessionLocal
+        from fastapi import HTTPException
+        from datetime import datetime, timezone, timedelta
+        
+        with SessionLocal() as db:
+            job = db.query(Job).first()
+            assert job is not None
+            
+            # Clean up pre-existing test data in case a previous run crashed before cleanup
+            existing_app = db.query(Application).filter(
+                Application.job_id == job.id,
+                Application.candidate_email == "test_interviewee@example.com"
+            ).first()
+            if existing_app:
+                if existing_app.interview:
+                    db.delete(existing_app.interview)
+                db.delete(existing_app)
+                db.commit()
+            
+            app = Application(
+                job_id=job.id,
+                candidate_name="Test Interviewee",
+                candidate_email="test_interviewee@example.com",
+                status="ai_interview"
+            )
+            db.add(app)
+            db.commit()
+            db.refresh(app)
+            
+            interview = Interview(
+                application_id=app.id,
+                status="in_progress",
+                test_id="test-jti-revocation-id",
+                expires_at=datetime.now() + timedelta(days=1)
+            )
+            db.add(interview)
+            db.commit()
+            db.refresh(interview)
+            
+            token_data = {
+                "sub": str(interview.id),
+                "role": "interview"
+            }
+            
+            from app.core.config import get_settings
+            settings = get_settings()
+            interview_secret = settings.interview_jwt_secret or (settings.jwt_secret + "_interview")
+            token = create_access_token(token_data, secret=interview_secret)
+            
+            from jose import jwt
+            payload = jwt.decode(token, interview_secret, algorithms=[settings.jwt_algorithm])
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            
+            class MockRequest:
+                def __init__(self, token):
+                    self.cookies = {"access_token": token}
+                    self.headers = {}
+                    self.method = "GET"
+            
+            # Before revocation: validation succeeds
+            res = get_current_interview(MockRequest(token), db)
+            assert res.id == interview.id
+            
+            # Revoke token
+            exp_dt = datetime.fromtimestamp(exp, tz=timezone.utc).replace(tzinfo=None)
+            revoked = RevokedToken(jti=jti, expires_at=exp_dt)
+            db.add(revoked)
+            db.commit()
+            
+            # After revocation: validation raises 401
+            with pytest.raises(HTTPException) as exc_info:
+                get_current_interview(MockRequest(token), db)
+            assert exc_info.value.status_code == 401
+            assert "interview session is no longer valid" in exc_info.value.detail
+            
+            # Clean up
+            db.delete(revoked)
+            db.delete(interview)
+            db.delete(app)
+            db.commit()
+
+
+# ===========================================================================
+# 8. Operational Probes, Structured Logging, and Email Retry Logic Tests
+# ===========================================================================
+
+import os
+os.environ["BACKEND_START_MODE"] = "script"
+
+class TestOperationalProbesAndLogging:
+    """Verifies operational endpoints (/live, /ready, /health) and exception logging."""
+
+    def test_live_probe(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        client = TestClient(app)
+        response = client.get("/live")
+        assert response.status_code == 200
+        assert response.json()["data"] == {"status": "healthy"}
+
+    def test_ready_probe(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        client = TestClient(app)
+        response = client.get("/ready")
+        assert response.status_code == 200
+        assert response.json()["data"] == {"status": "healthy"}
+
+    def test_health_probe(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        client = TestClient(app)
+        response = client.get("/health")
+        assert response.status_code == 200
+        envelope = response.json()
+        assert envelope["success"] is True
+        data = envelope["data"]
+        assert data["status"] == "healthy"
+        assert "services" in data
+        assert "smtp" in data["services"]
+        assert "ai_provider" in data["services"]
+
+    @patch("app.main.logger.exception")
+    def test_unhandled_exception_logging(self, mock_logger_exception):
+        from app.main import general_exception_handler
+        from fastapi import Request
+        import pytest
+        
+        class MockRequest:
+            def __init__(self):
+                self.headers = {}
+                self.method = "GET"
+                self.url = MagicMock()
+                self.url.path = "/test-path"
+                self.state = MagicMock()
+                self.state.user_id = 999
+
+        request = MockRequest()
+        exc = Exception("Mock Unhandled Server Error")
+        
+        import asyncio
+        loop = asyncio.new_event_loop()
+        try:
+            response = loop.run_until_complete(general_exception_handler(request, exc))
+        finally:
+            loop.close()
+        
+        assert response.status_code == 500
+        
+        # Verify the exception was logged structured
+        assert mock_logger_exception.called
+        log_args, log_kwargs = mock_logger_exception.call_args
+        assert "GET" in log_args[0]
+        assert "/test-path" in log_args[0]
+        assert "request_id" in log_kwargs["extra"]
+        assert log_kwargs["extra"]["user_id"] == 999
+        assert log_kwargs["extra"]["endpoint"] == "/test-path"
+        assert log_kwargs["extra"]["method"] == "GET"
+
+
+class TestEmailRetryLogicStandard:
+    """Verifies that send_email_async retries standardly: 3 attempts with 1s and 5s delays."""
+
+    @patch("app.services.email_service.asyncio.sleep")
+    @patch("app.services.email_service._send_via_smtp_helper")
+    def test_email_retries_standard_sequence(self, mock_smtp_helper, mock_sleep):
+        import asyncio
+        from app.services.email_service import send_email_async
+
+        # Make smtp helper fail
+        mock_smtp_helper.return_value = {"success": False, "error": "SMTP Connection Refused"}
+
+        # Run email sender
+        loop = asyncio.new_event_loop()
+        try:
+            res = loop.run_until_complete(
+                send_email_async("candidate@example.com", "Subject", "Body", provider="smtp")
+            )
+        finally:
+            loop.close()
+
+        assert not res["success"]
+        assert mock_smtp_helper.call_count == 3
+        
+        # Verify delays: 1.0s after attempt 1, 5.0s after attempt 2
+        assert mock_sleep.call_count == 2
+        mock_sleep.assert_any_call(1.0)
+        mock_sleep.assert_any_call(5.0)
+
+

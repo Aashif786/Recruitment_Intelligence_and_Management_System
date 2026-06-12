@@ -16,8 +16,12 @@ except ImportError:
 import functools
 
 def resolve_bucket_and_path(bucket: str, path: str):
+    if bucket == "MAIL_ATTACHMENTS":
+        bucket = settings.supabase_bucket_resumes
     if path and path.startswith("MAIL_ATTACHMENTS/"):
-        return "MAIL_ATTACHMENTS", path.replace("MAIL_ATTACHMENTS/", "", 1)
+        return settings.supabase_bucket_resumes, path.replace("MAIL_ATTACHMENTS/", "", 1)
+    if path and path.startswith("resumes/"):
+        return settings.supabase_bucket_resumes, path.replace("resumes/", "", 1)
     return bucket, path
 
 # Use lru_cache for thread-safe lazy initialization
