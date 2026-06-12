@@ -107,7 +107,7 @@ export default function PipelineIndexPage() {
 
             <Card className="bg-card/45 backdrop-blur-xl border border-border/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-2xl overflow-hidden">
                 <Table>
-                    <TableHeader className="bg-muted/30 border-b border-border/40">
+                    <TableHeader className="">
                         <TableRow className="hover:bg-transparent border-none">
                             <TableHead className="font-bold py-4">Job Title & ID</TableHead>
                             <TableHead className="font-bold text-center">Status</TableHead>

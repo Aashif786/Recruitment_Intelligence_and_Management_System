@@ -744,7 +744,7 @@ export default function ReportsPage() {
                       ) : (
                         <>
                           {viewingReport.overall_score > 6 && <Badge className="capsule-badge capsule-badge-success border-none shadow-none text-sm">Suggestion: Select</Badge>}
-                          {(viewingReport.overall_score > 4 && viewingReport.overall_score <= 6) && <Badge className="capsule-badge capsule-badge-warning border-none shadow-none text-sm">Suggestion: Consider</Badge>}
+                          {(viewingReport.overall_score > 4 && viewingReport.overall_score <= 6) && <Badge className="capsule-badge capsule-badge-warning border-none shadow-none text-sm">Suggestion: Hold</Badge>}
                           {viewingReport.overall_score <= 4 && <Badge className="capsule-badge capsule-badge-destructive border-none shadow-none text-sm">Suggestion: Reject</Badge>}
                         </>
                       )}

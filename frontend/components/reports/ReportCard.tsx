@@ -65,7 +65,7 @@ const ReportCardImpl = ({ report, onClick }: ReportCardProps) => {
                             if (report.termination_reason) return 'Terminated'
                             if (notCompleted) return 'Incomplete'
                             if (score > 6) return 'Select'
-                            if (score > 4) return 'Consider'
+                            if (score > 4) return 'Hold'
                             return 'Reject'
                         })()}
                     </div>
