@@ -706,28 +706,21 @@ async def send_hired_email(to_email: str, job_title: str, interview=None, offer_
     body = get_templated_email(content_html, subject)
     attachments = []
     if offer_letter_path:
-        # 1. Try local disk (legacy support for manual uploads)
-        if os.path.exists(offer_letter_path):
-            try:
-                with open(offer_letter_path, "rb") as f:
-                    content = base64.b64encode(f.read()).decode("utf-8")
-                    attachments.append({
-                        "filename": os.path.basename(offer_letter_path),
-                        "content": content,
-                    })
-            except Exception as e:
-                logger.error(f"Failed to read local offer letter: {e}")
-        
-        # 2. Try Cloud Storage (New template-driven flow)
-        else:
+        # Determine storage type: Supabase storage paths (e.g. "offer_letters/offer_123_456.pdf")
+        # must ALWAYS be fetched from cloud — never from local disk — to prevent a stale local
+        # file from silently shadowing the canonical Supabase copy.
+        is_supabase_path = "offer_letters/" in offer_letter_path and not os.path.isabs(offer_letter_path)
+
+        # 1. Cloud Storage (primary for all template-driven offer letters)
+        if is_supabase_path:
             try:
                 from app.core.storage import download_file
                 from app.core.config import get_settings
                 settings = get_settings()
-                
+
                 logger.info(f"Fetching offer letter from cloud storage: {offer_letter_path}")
                 content_bytes = download_file(settings.supabase_bucket_offers, offer_letter_path)
-                
+
                 if content_bytes:
                     content_b64 = base64.b64encode(content_bytes).decode("utf-8")
                     attachments.append({
@@ -738,6 +731,21 @@ async def send_hired_email(to_email: str, job_title: str, interview=None, offer_
                     logger.error(f"Offer letter not found in bucket {settings.supabase_bucket_offers}: {offer_letter_path}")
             except Exception as e:
                 logger.error(f"Cloud storage attachment failed for {offer_letter_path}: {e}")
+
+        # 2. Local disk (legacy fallback for absolute paths from manual uploads only)
+        elif os.path.exists(offer_letter_path):
+            try:
+                with open(offer_letter_path, "rb") as f:
+                    content = base64.b64encode(f.read()).decode("utf-8")
+                    attachments.append({
+                        "filename": os.path.basename(offer_letter_path),
+                        "content": content,
+                    })
+            except Exception as e:
+                logger.error(f"Failed to read local offer letter: {e}")
+
+        else:
+            logger.warning(f"Offer letter path not found locally or in cloud: {offer_letter_path}")
 
     return await execute_email_with_retries(
         to_email, subject, body, 
