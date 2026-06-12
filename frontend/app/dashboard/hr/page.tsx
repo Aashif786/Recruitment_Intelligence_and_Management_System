@@ -51,7 +51,7 @@ const DashboardChart = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-[300px] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-10 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -309,10 +309,10 @@ export default function HRDashboard() {
       </div>
 
       {/* Charts & Tables Section */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
 
         {/* Chart Section */}
-        <div className="lg:col-span-2 animate-in fade-in duration-500 delay-300">
+        <div className="lg:col-span-3 animate-in fade-in duration-500 delay-300">
           <Card className="h-full pt-0 overflow-hidden">
             <CardHeader className="bg-muted/35 border-b border-border/60 pb-4 pt-5">
               <div className="flex items-center justify-between">
@@ -335,12 +335,12 @@ export default function HRDashboard() {
         </div>
 
         {/* Recent Activity / Quick Actions */}
-        <div className="space-y-6 animate-in fade-in duration-500 delay-500">
-          <Card className="pt-0 overflow-hidden">
-            <CardHeader className="bg-muted/35 border-b border-border/60 pb-4 pt-5">
+        <div className="lg:col-span-1 animate-in fade-in duration-500 delay-500">
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-muted/35 border-b border-border/60 pt-5 pb-5">
               <CardTitle >Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 pt-6 stagger-children">
+            <CardContent className="space-y-4 py-5 stagger-children">
               <ActionButton href="/dashboard/hr/applications" label="Review Applications" />
               <ActionButton href="/dashboard/hr/pipeline" label="Hiring Pipeline" />
               <ActionButton href="/dashboard/hr/reports" label="View Reports" />
@@ -359,7 +359,7 @@ export default function HRDashboard() {
 const StatsCard = React.memo(({ title, subtitle, value, icon: Icon, color, bg, isInteractive = false }: any) => {
   return (
     <Card className={cn(
-      "group overflow-hidden",
+      "group overflow-hidden py-3",
       isInteractive && "hover-premium-lift cursor-pointer active:scale-[0.98] transition-transform duration-200"
     )}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
