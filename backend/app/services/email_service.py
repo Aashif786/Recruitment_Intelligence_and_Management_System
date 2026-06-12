@@ -242,84 +242,80 @@ async def _send_via_resend(to_email: str, subject: str, html_body: str) -> dict:
 
 async def _send_via_smtp_helper(to_email: str, subject: str, html_body: str, attachments: list = None) -> dict:
     loop = asyncio.get_running_loop()
-    max_retries = 2
-    last_error = "Unknown error"
-
-    for attempt in range(max_retries + 1):
-        result = await loop.run_in_executor(
-            None,
-            _send_via_smtp,
-            to_email,
-            subject,
-            html_body,
-            attachments,
-        )
-        if result["success"]:
-            return {**result, "provider": "smtp"}
-
-        if result.get("deferred"):
-            return {
-                "success": False,
-                "provider": "smtp",
-                "deferred": True,
-                "error": result.get("error") or "Deferred due to SMTP quota",
-            }
-
-        last_error = result["error"]
-        if attempt < max_retries:
-            wait_time = (attempt + 1) * 2  # Exponential-ish backoff: 2s, 4s
-            logger.warning(f"Retrying SMTP email to {_safe_email_target(to_email)} in {wait_time}s (Attempt {attempt + 1}/{max_retries})...")
-            await asyncio.sleep(wait_time)
-
-    return {"success": False, "provider": "smtp", "error": f"Failed after {max_retries + 1} attempts: {last_error}", "deferred": False}
+    result = await loop.run_in_executor(
+        None,
+        _send_via_smtp,
+        to_email,
+        subject,
+        html_body,
+        attachments,
+    )
+    return {**result, "provider": "smtp"}
 
 
 async def _send_via_resend_helper(to_email: str, subject: str, html_body: str) -> dict:
-    # Retry Resend up to 3 times with 5 second delay
-    resend_max_retries = 2
-    resend_last_error = "Unknown error"
-    for resend_attempt in range(resend_max_retries + 1):
-        result = await _send_via_resend(to_email, subject, html_body)
-        if result["success"]:
-            return {**result, "provider": "resend"}
-        resend_last_error = result["error"]
-        if resend_attempt < resend_max_retries:
-            await asyncio.sleep(5)
+    result = await _send_via_resend(to_email, subject, html_body)
+    if result["success"]:
+        return {**result, "provider": "resend"}
 
-    last_error = resend_last_error
+    # Fallback to SMTP if SMTP is configured
     smtp_configured = bool(settings.smtp_host and settings.smtp_user and settings.smtp_password)
     if smtp_configured:
         logger.warning(
-            f"[EMAIL FALLBACK TO SMTP] Resend failed for {_safe_email_target(to_email)} ({last_error}); falling back to SMTP."
+            f"[EMAIL FALLBACK TO SMTP] Resend failed for {_safe_email_target(to_email)} ({result.get('error')}); falling back to SMTP."
         )
         return await _send_via_smtp_helper(to_email, subject, html_body, None)
 
-    return {"success": False, "provider": "resend", "error": f"Failed after Resend attempt: {last_error}", "deferred": False}
+    return {**result, "provider": "resend"}
 
 
 async def send_email_async(to_email: str, subject: str, html_body: str, attachments: list = None, provider: Optional[str] = None) -> dict:
-    """Async wrapper for SMTP / Resend selection with fallback and retries."""
-    if provider == "smtp":
-        return await _send_via_smtp_helper(to_email, subject, html_body, attachments)
-    elif provider == "resend":
-        return await _send_via_resend_helper(to_email, subject, html_body)
+    """Async wrapper for SMTP / Resend selection with fallback and standardized retries:
+    Attempt 1 -> 1s delay -> Attempt 2 -> 5s delay -> Attempt 3.
+    """
+    retry_delays = [1.0, 5.0]
+    last_result = {"success": False, "error": "Not attempted"}
+
+    for attempt in range(3):
+        if provider == "smtp":
+            result = await _send_via_smtp_helper(to_email, subject, html_body, attachments)
+        elif provider == "resend":
+            result = await _send_via_resend_helper(to_email, subject, html_body)
+        else:
+            if attachments:
+                result = await _send_via_smtp_helper(to_email, subject, html_body, attachments)
+            else:
+                resend_api_key = (getattr(settings, "resend_api_key", "") or "").strip()
+                resend_from = (getattr(settings, "resend_from", "") or "").strip()
+                if resend_api_key and resend_from:
+                    result = await _send_via_resend_helper(to_email, subject, html_body)
+                else:
+                    result = await _send_via_smtp_helper(to_email, subject, html_body, attachments)
         
-    if attachments:
-        return await _send_via_smtp_helper(to_email, subject, html_body, attachments)
+        if result["success"]:
+            return result
+        
+        last_result = result
+        if result.get("deferred"):
+            # If SMTP deferred (Gmail daily sending limit or quota error), do not retry
+            return result
+            
+        if attempt < 2:
+            wait_time = retry_delays[attempt]
+            logger.warning(
+                f"[EMAIL RETRY] Attempt {attempt + 1} failed for {_safe_email_target(to_email)}. "
+                f"Retrying in {wait_time}s... Error: {result.get('error')}"
+            )
+            await asyncio.sleep(wait_time)
 
-    resend_api_key = (getattr(settings, "resend_api_key", "") or "").strip()
-    resend_from = (getattr(settings, "resend_from", "") or "").strip()
-    if resend_api_key and resend_from:
-        return await _send_via_resend_helper(to_email, subject, html_body)
-
-    return await _send_via_smtp_helper(to_email, subject, html_body, attachments)
+    return last_result
 
 async def execute_email_with_retries(
     to_email: str, 
     subject: str, 
     body: str, 
     application: Any = None, 
-    max_retries: int = 3,
+    max_retries: int = 3, # Standard retry logic is now embedded in send_email_async
     event_type: str = "GENERIC",
     attachments: list = None
 ):
@@ -354,40 +350,34 @@ async def execute_email_with_retries(
             if hasattr(application, 'email_sent_at') and application.email_sent_at:
                 return True
 
-    # 2. Retry Loop
-    for attempt in range(max_retries):
-        try:
-            result = await send_email_async(to_email, subject, body, attachments)
-            if result["success"]:
-                logger.info(f"[EMAIL][EXECUTED] (Event: {event_id}) successfully sent to {_safe_email_target(to_email)}")
-                
-                # 3. Update Persistence
-                if application and hasattr(application, 'id'):
-                    try:
-                        from app.infrastructure.database import SessionLocal
-                        from app.domain.models import Application
-                        from sqlalchemy import update
-                        with SessionLocal() as db:
-                            db.execute(
-                                update(Application)
-                                .where(Application.id == application.id)
-                                .values(email_sent_at=datetime.utcnow(), email_status='sent')
-                            )
-                            db.commit()
-                    except Exception as db_err:
-                        logger.warning(f"[EMAIL][DB_UPDATE_FAILED] Could not persist status (Event: {event_id}): {db_err}")
-                
-                return True
+    # 2. Call standard sender (which handles internal retries)
+    try:
+        result = await send_email_async(to_email, subject, body, attachments)
+        if result["success"]:
+            logger.info(f"[EMAIL][EXECUTED] (Event: {event_id}) successfully sent to {_safe_email_target(to_email)}")
             
+            # 3. Update Persistence
+            if application and hasattr(application, 'id'):
+                try:
+                    from app.infrastructure.database import SessionLocal
+                    from app.domain.models import Application
+                    from sqlalchemy import update
+                    with SessionLocal() as db:
+                        db.execute(
+                            update(Application)
+                            .where(Application.id == application.id)
+                            .values(email_sent_at=datetime.utcnow(), email_status='sent')
+                        )
+                        db.commit()
+                except Exception as db_err:
+                    logger.warning(f"[EMAIL][DB_UPDATE_FAILED] Could not persist status (Event: {event_id}): {db_err}")
+            
+            return True
+        else:
             error_msg = result.get("error")
-            logger.warning(f"[EMAIL][RETRY] (Event: {event_id}) Attempt {attempt+1}/{max_retries} failed: {error_msg}")
-            if attempt < max_retries - 1:
-                await asyncio.sleep(2 ** attempt) # Exponential backoff
-            
-        except Exception as e:
-            logger.error(f"[EMAIL][RETRY_ERROR] (Event: {event_id}) Unexpected error: {str(e)}")
-            if attempt < max_retries - 1:
-                await asyncio.sleep(1)
+            logger.error(f"[EMAIL][FAILURE] (Event: {event_id}) failed: {error_msg}")
+    except Exception as e:
+        logger.error(f"[EMAIL][ERROR] (Event: {event_id}) Unexpected error: {str(e)}")
 
     # 4. Final Failure Update
     if application and hasattr(application, 'id'):
@@ -405,7 +395,7 @@ async def execute_email_with_retries(
         except Exception as e:
             logger.warning(f"Failed to update email status for application {application.id}: {e}")
 
-    logger.error(f"[EMAIL][PERMANENT_FAILURE] (Event: {event_id}) Failed after {max_retries} attempts for {_safe_email_target(to_email)}")
+    logger.error(f"[EMAIL][PERMANENT_FAILURE] (Event: {event_id}) Failed for {_safe_email_target(to_email)}")
     return False
 
 def get_branding_dict() -> dict:

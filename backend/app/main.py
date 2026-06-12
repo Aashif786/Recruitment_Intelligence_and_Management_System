@@ -474,6 +474,19 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Requested-With", "TEST_ADMIN_SECRET", "X-Request-Source"],
 )
 
+def check_tcp_connection(host: str, port: int, timeout: float = 2.0) -> str:
+    """Helper to check TCP connection to a host and port.
+    Returns 'ok', 'error', or 'not_configured'.
+    """
+    if not host:
+        return "not_configured"
+    import socket
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return "ok"
+    except Exception:
+        return "error"
+
 @app.get("/health", tags=["System"])
 def health_check():
     uptime_seconds = round(time.time() - app.state.start_time, 2)
@@ -548,8 +561,23 @@ def health_check():
         else:
             imap_status = "ok"
 
+    smtp_status = "not_configured"
+    if settings.smtp_host:
+        smtp_status = check_tcp_connection(settings.smtp_host, settings.smtp_port)
+
+    ai_provider_status = "not_configured"
+    has_groq = bool((getattr(settings, "groq_api_key", None) or "").strip() or (getattr(settings, "groq_keys", []) != []))
+    if has_groq:
+        ai_provider_status = check_tcp_connection("api.groq.com", 443)
+
+    is_healthy = (
+        db_status == "ok" and
+        smtp_status not in ["error", "unavailable"] and
+        supabase_status not in ["error", "unavailable"]
+    )
+
     response_data = {
-        "status": "ok" if db_status == "ok" else "degraded",
+        "status": "healthy" if is_healthy else "unhealthy",
         "timestamp": datetime.utcnow().isoformat(),
         "uptime_seconds": uptime_seconds,
         "services": {
@@ -557,13 +585,74 @@ def health_check():
             "redis": redis_status,
             "supabase": supabase_status,
             "rate_limit": rate_limiter_status,
-            "imap_polling": imap_status
+            "imap_polling": imap_status,
+            "smtp": smtp_status,
+            "ai_provider": ai_provider_status
         }
     }
     if settings.enable_linkedin_posting:
         response_data["services"]["linkedin"] = linkedin_status
         response_data["warnings"] = [linkedin_warning] if linkedin_warning else []
     return response_data
+
+@app.get("/live", tags=["System"])
+def liveness_check():
+    return {"status": "healthy"}
+
+@app.get("/ready", tags=["System"])
+def readiness_check():
+    db_status = "ok"
+    try:
+        from sqlalchemy import text
+        from app.infrastructure.database import SessionLocal
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "error"
+
+    supabase_status = "not_configured"
+    if settings.supabase_url:
+        try:
+            from app.core.storage import get_supabase_client
+            client = get_supabase_client()
+            if client:
+                client.table("users").select("id").limit(1).execute()
+                supabase_status = "ok"
+            else:
+                supabase_status = "unavailable"
+        except Exception:
+            supabase_status = "error"
+
+    smtp_status = "not_configured"
+    if settings.smtp_host:
+        smtp_status = check_tcp_connection(settings.smtp_host, settings.smtp_port)
+
+    ai_provider_status = "not_configured"
+    has_groq = bool((getattr(settings, "groq_api_key", None) or "").strip() or (getattr(settings, "groq_keys", []) != []))
+    if has_groq:
+        ai_provider_status = check_tcp_connection("api.groq.com", 443)
+
+    is_ready = (
+        db_status == "ok" and
+        supabase_status not in ["error", "unavailable"] and
+        smtp_status not in ["error", "unavailable"]
+    )
+
+    if not is_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "status": "unhealthy",
+                "services": {
+                    "database": db_status,
+                    "supabase": supabase_status,
+                    "smtp": smtp_status,
+                    "ai_provider": ai_provider_status
+                }
+            }
+        )
+
+    return {"status": "healthy"}
 
 @app.get("/", tags=["System"])
 def root():
@@ -618,6 +707,29 @@ async def request_validation_exception_handler(request: FastAPIRequest, exc: Req
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: FastAPIRequest, exc: HTTPException):
+    from app.core.observability import get_request_id
+    request_id = get_request_id(request)
+    user_id = getattr(request.state, "user_id", None)
+    
+    if exc.status_code >= 500:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.exception(
+            f"HTTP exception on {request.method} {request.url.path} (request_id={request_id}, user_id={user_id}): {exc.detail}",
+            extra={
+                "request_id": request_id,
+                "user_id": user_id,
+                "endpoint": request.url.path,
+                "method": request.method,
+                "error": str(exc.detail),
+                "stack_trace": error_trace
+            }
+        )
+    else:
+        logger.warning(
+            f"HTTP {exc.status_code} on {request.method} {request.url.path} (request_id={request_id}, user_id={user_id}): {exc.detail}"
+        )
+
     response = JSONResponse(
         status_code=exc.status_code,
         content={
@@ -635,7 +747,24 @@ async def http_exception_handler(request: FastAPIRequest, exc: HTTPException):
 
 @app.exception_handler(SQLAlchemyError)
 async def database_exception_handler(request: FastAPIRequest, exc: SQLAlchemyError):
-    logger.error(f"DATABASE ERROR: {str(exc)}")
+    import traceback
+    error_trace = traceback.format_exc()
+    from app.core.observability import get_request_id
+    request_id = get_request_id(request)
+    user_id = getattr(request.state, "user_id", None)
+    
+    logger.exception(
+        f"Database exception on {request.method} {request.url.path} (request_id={request_id}, user_id={user_id}): {exc}",
+        extra={
+            "request_id": request_id,
+            "user_id": user_id,
+            "endpoint": request.url.path,
+            "method": request.method,
+            "error": str(exc),
+            "stack_trace": error_trace
+        }
+    )
+
     response = JSONResponse(
         status_code=500,
         content={
@@ -655,8 +784,21 @@ async def database_exception_handler(request: FastAPIRequest, exc: SQLAlchemyErr
 async def general_exception_handler(request: FastAPIRequest, exc: Exception):
     import traceback
     error_trace = traceback.format_exc()
-    error_msg = f"[GLOBAL EXCEPTION] Unhandled error: {str(exc)}\n{error_trace}"
-    logger.error(error_msg)
+    from app.core.observability import get_request_id
+    request_id = get_request_id(request)
+    user_id = getattr(request.state, "user_id", None)
+    
+    logger.exception(
+        f"Unhandled exception on {request.method} {request.url.path} (request_id={request_id}, user_id={user_id}): {exc}",
+        extra={
+            "request_id": request_id,
+            "user_id": user_id,
+            "endpoint": request.url.path,
+            "method": request.method,
+            "error": str(exc),
+            "stack_trace": error_trace
+        }
+    )
     
     detail = str(exc) if settings.debug else "An unexpected internal server error occurred."
     response = JSONResponse(

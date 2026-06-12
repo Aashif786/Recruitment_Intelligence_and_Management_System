@@ -157,6 +157,9 @@ function Start-Backend {
 
     Write-Host "Starting backend on port $PORT..." -ForegroundColor Green
 
+    # Set UTF-8 encoding so emoji/Unicode in log lines don't crash the process on Windows
+    $env:PYTHONIOENCODING = "utf-8"
+
     Write-Host "Server running on http://127.0.0.1:$PORT"
     # Run python directly so all logs and traceback output are displayed in the console
     & ".\venv\Scripts\python.exe" run_server.py

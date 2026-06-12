@@ -222,7 +222,7 @@ def verify_otp(request: Request, verification_data: UserVerifyOTP, db: Session =
         raise HTTPException(status_code=500, detail="Verification finalization failed safely.")
 
 @router.post("/login")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def login(request: Request, response: Response, credentials: UserLogin, db: Session = Depends(get_db)):
     """Login and set secure JWT HttpOnly cookie"""
     from sqlalchemy import update as sa_update
@@ -479,7 +479,7 @@ from app.core.redis_store import get_redis_client
 from app.core.auth import verify_token
 
 @router.post("/logout")
-def logout(request: Request, response: Response):
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     """Clear both authentication cookies (access_token and hr_token).
     BUG-013 Fix: hr_token was not cleared on logout, leaving HR sessions active.
     BUG-010 Fix: Adds the token to Redis blocklist to prevent reuse.
@@ -526,6 +526,32 @@ def logout(request: Request, response: Response):
                     detail="Authentication service temporarily offline.",
                 )
 
+        # Database-backed token revocation
+        try:
+            from app.core.auth import verify_token
+            payload = verify_token(token)
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            if jti and exp:
+                from app.domain.models import RevokedToken
+                existing = db.query(RevokedToken).filter(RevokedToken.jti == jti).first()
+                if not existing:
+                    exp_dt = datetime.fromtimestamp(exp, tz=timezone.utc).replace(tzinfo=None)
+                    revoked = RevokedToken(jti=jti, expires_at=exp_dt)
+                    db.add(revoked)
+                    db.commit()
+                    logger.info(f"Token JTI successfully blocklisted in DB: {jti}")
+        except HTTPException:
+            # Token already expired/invalid: skip DB blocklisting
+            pass
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to save revoked token to DB (failing closed): {e}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service temporarily offline.",
+            )
+
     response.delete_cookie(
         key="access_token",
         httponly=True,
@@ -568,7 +594,7 @@ def update_current_user_info(
         raise HTTPException(status_code=500, detail="Failed to update profile")
 
 @router.post("/forgot-password")
-@limiter.limit("5/minute")
+@limiter.limit("3/hour")
 def forgot_password(request: Request, data: ForgotPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Generate a password reset OTP and send email"""
     user = db.query(User).filter(User.email == data.email.lower()).first()
@@ -594,7 +620,7 @@ def forgot_password(request: Request, data: ForgotPasswordRequest, background_ta
         raise HTTPException(status_code=500, detail="Failed to process request")
 
 @router.post("/reset-password")
-@limiter.limit("5/minute")
+@limiter.limit("3/hour")
 def reset_password(request: Request, data: ResetPasswordRequest, db: Session = Depends(get_db)):
     """Reset password using OTP"""
     user = db.query(User).filter(User.email == data.email.lower()).first()

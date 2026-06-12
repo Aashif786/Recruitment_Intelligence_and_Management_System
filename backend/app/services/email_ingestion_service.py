@@ -668,11 +668,11 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str, hr_id:
                 logger.error(f"Error processing email {email_id.decode() if isinstance(email_id, bytes) else email_id}: {e}", exc_info=True)
                 error_count += 1
 
-        logger.info(f"   • UNSEEN: {len(unseen_ids)}, SINCE {since_date_str}: {len(since_ids)}")
-        logger.info(f"   • Processed: {len(email_ids)}")
-        logger.info(f"   • ✅ Saved: {saved_count}")
-        logger.info(f"   • ⏭️  Duplicates: {duplicate_count}")
-        logger.info(f"   • ❌ Errors: {error_count}")
+        logger.info(f"   [UNSEEN] {len(unseen_ids)}, SINCE {since_date_str}: {len(since_ids)}")
+        logger.info(f"   [Processed] {len(email_ids)}")
+        logger.info(f"   [Saved] {saved_count}")
+        logger.info(f"   [Duplicates] {duplicate_count}")
+        logger.info(f"   [Errors] {error_count}")
 
         # ── Save global checkpoint only if hr_id is None ────────────────
         if hr_id is None:
