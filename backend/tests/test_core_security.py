@@ -280,7 +280,7 @@ class TestOfferLetterEmailRouting:
 
     def _is_supabase_path(self, path: str) -> bool:
         """Mirror of the routing guard added to send_hired_email."""
-        return "offer_letters/" in path and not os.path.isabs(path)
+        return "offer_letters/" in path and not (os.path.isabs(path) or path.startswith("/") or path.startswith("\\"))
 
     @pytest.mark.parametrize("path", [
         "offer_letters/offer_42_1718000000.pdf",

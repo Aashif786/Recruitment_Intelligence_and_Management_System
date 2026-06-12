@@ -512,108 +512,129 @@ def fetch_resume_attachments(db: Session, imap_user: str, imap_pass: str, hr_id:
                                 content_type = part.get_content_type()
                                 content_disposition = str(part.get("Content-Disposition", ""))
                                 
-                                if content_disposition and ("attachment" in content_disposition or "inline" in content_disposition):
-                                    filename = part.get_filename()
-                                    if not filename:
-                                        filename = part.get_param('name')
-                                    
-                                    if filename:
-                                        filename = _decode_filename(filename)
-                                        
-                                        if not filename:
-                                            ext = mimetypes.guess_extension(content_type) or '.bin'
-                                            filename = f"resume_{int(time.time())}{ext}"
-                                            logger.warning(f"Generated fallback filename: {filename}")
-                                        
-                                        is_resume = filename.lower().endswith((".pdf", ".doc", ".docx"))
-                                        if not is_resume:
-                                            continue
-                                        
-                                        file_data = part.get_payload(decode=True)
-                                        if not file_data or len(file_data) == 0:
-                                            logger.warning(f"Empty attachment data for {filename} from {raw_email}")
-                                            continue
-                                        
-                                        if len(file_data) > 10 * 1024 * 1024:
-                                            logger.warning(f"Attachment {filename} exceeds 10MB limit ({len(file_data)} bytes)")
-                                            continue
-                                        
-                                        ext_lower = filename.lower()
-                                        magic_valid = True
-                                        if ext_lower.endswith(".pdf") and not file_data.startswith(b"%PDF"):
-                                            logger.warning(f"Rejecting attachment '{filename}': invalid PDF magic bytes.")
-                                            magic_valid = False
-                                        elif ext_lower.endswith(".docx") and not file_data.startswith(b"PK\x03\x04"):
-                                            logger.warning(f"Rejecting attachment '{filename}': invalid DOCX magic bytes.")
-                                            magic_valid = False
-                                        elif ext_lower.endswith(".doc") and not file_data.startswith(b"\xd0\xcf\x11\xe0"):
-                                            logger.warning(f"Rejecting attachment '{filename}': invalid DOC magic bytes.")
-                                            magic_valid = False
-                                        if not magic_valid:
-                                            continue
- 
-                                        if not content_type or content_type == 'application/octet-stream':
-                                            content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
-                                        
-                                        from app.core.storage import upload_file, get_signed_url, delete_file
-                                        
-                                        safe_sender = raw_email.split("@")[0].replace(".", "_")
-                                        safe_filename = re.sub(r'[^\w\.-]', '_', filename)
-                                        random_suffix = str(uuid.uuid4())[:6]
-                                        storage_path = f"ingested/{safe_sender}_{int(time.time())}_{random_suffix}_{safe_filename}"
-                                        
-                                        upload_res = upload_file('MAIL_ATTACHMENTS', storage_path, file_data, content_type)
-                                        if not upload_res:
-                                            time.sleep(2)
-                                            upload_res = upload_file('MAIL_ATTACHMENTS', storage_path, file_data, content_type)
-                                        
-                                        if not upload_res:
-                                            logger.error(f"Failed to upload {filename} after retry. Skipping.")
-                                            continue
-                                        
-                                        file_url = get_signed_url('MAIL_ATTACHMENTS', storage_path, expires_in=86400)
-                                        if not file_url:
-                                            time.sleep(2)
-                                            file_url = get_signed_url('MAIL_ATTACHMENTS', storage_path, expires_in=86400)
-                                        
-                                        if not file_url:
-                                            if upload_res:
-                                                try:
-                                                    delete_file('MAIL_ATTACHMENTS', storage_path)
-                                                    logger.warning(f"Deleted orphaned file {storage_path} after signed URL failure.")
-                                                except Exception as del_err:
-                                                    logger.error(f"Failed to delete orphaned file {storage_path}: {del_err}")
-                                            logger.error(f"Failed to get signed URL for {filename}. Skipping.")
-                                            continue
-                                        
-                                        # Create database record
-                                        new_resume = AttachmentResume(
-                                            message_id=msg_id,
-                                            sender_email=sender,
-                                            subject=subject,
-                                            file_name=safe_filename,
-                                            file_url=file_url,
-                                            file_data=None, 
-                                            email_body=email_body,
-                                            mime_type=content_type,
-                                            received_at=received_at,
-                                            retry_count=0,
-                                            last_error=None,
-                                            hr_id=hr_id
-                                        )
-                                        with SessionLocal() as local_db:
-                                            existing_check = local_db.query(AttachmentResume).filter(
-                                                AttachmentResume.message_id == msg_id
-                                            ).first()
-                                            if not existing_check:
-                                                local_db.add(new_resume)
-                                                local_db.commit()
-                                                saved_count += 1
-                                                resume_count += 1
-                                                found_resume = True
-                                                logger.info(f"Ingested new resume from {raw_email}: {safe_filename}")
-                                            else:
-                                                duplicate_count += 1
+                                is_attachment = bool(
+                                    content_disposition and (
+                                        "attachment" in content_disposition
+                                        or "inline" in content_disposition
+                                    )
+                                )
+
+                                # Gmail and some clients omit Content-Disposition entirely
+                                # but still include the filename in Content-Type's name= param.
+                                # Detect those parts by checking for a resume-named Content-Type name.
+                                if not is_attachment:
+                                    ct_name = part.get_param("name")
+                                    if ct_name:
+                                        ct_name_decoded = _decode_filename(ct_name) or ct_name
+                                        if ct_name_decoded.lower().endswith((".pdf", ".doc", ".docx")):
+                                            is_attachment = True
+
+                                if not is_attachment:
+                                    continue
+
+                                # Extract filename (from Content-Disposition or Content-Type name param)
+                                filename = part.get_filename()
+                                if not filename:
+                                    filename = part.get_param('name')
+
+                                if filename:
+                                    filename = _decode_filename(filename)
+
+                                if not filename:
+                                    ext = mimetypes.guess_extension(content_type) or '.bin'
+                                    filename = f"resume_{int(time.time())}{ext}"
+                                    logger.warning(f"Generated fallback filename: {filename}")
+
+                                is_resume = filename.lower().endswith((".pdf", ".doc", ".docx"))
+                                if not is_resume:
+                                    continue
+
+                                file_data = part.get_payload(decode=True)
+                                if not file_data or len(file_data) == 0:
+                                    logger.warning(f"Empty attachment data for {filename} from {raw_email}")
+                                    continue
+
+                                if len(file_data) > 10 * 1024 * 1024:
+                                    logger.warning(f"Attachment {filename} exceeds 10MB limit ({len(file_data)} bytes)")
+                                    continue
+
+                                ext_lower = filename.lower()
+                                magic_valid = True
+                                if ext_lower.endswith(".pdf") and not file_data.startswith(b"%PDF"):
+                                    logger.warning(f"Rejecting attachment '{filename}': invalid PDF magic bytes.")
+                                    magic_valid = False
+                                elif ext_lower.endswith(".docx") and not file_data.startswith(b"PK\x03\x04"):
+                                    logger.warning(f"Rejecting attachment '{filename}': invalid DOCX magic bytes.")
+                                    magic_valid = False
+                                elif ext_lower.endswith(".doc") and not file_data.startswith(b"\xd0\xcf\x11\xe0"):
+                                    logger.warning(f"Rejecting attachment '{filename}': invalid DOC magic bytes.")
+                                    magic_valid = False
+                                if not magic_valid:
+                                    continue
+
+                                if not content_type or content_type == 'application/octet-stream':
+                                    content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+
+                                from app.core.storage import upload_file, get_signed_url, delete_file
+
+                                safe_sender = raw_email.split("@")[0].replace(".", "_")
+                                safe_filename = re.sub(r'[^\w\.-]', '_', filename)
+                                random_suffix = str(uuid.uuid4())[:6]
+                                storage_path = f"ingested/{safe_sender}_{int(time.time())}_{random_suffix}_{safe_filename}"
+
+                                upload_res = upload_file('MAIL_ATTACHMENTS', storage_path, file_data, content_type)
+                                if not upload_res:
+                                    time.sleep(2)
+                                    upload_res = upload_file('MAIL_ATTACHMENTS', storage_path, file_data, content_type)
+
+                                if not upload_res:
+                                    logger.error(f"Failed to upload {filename} after retry. Skipping.")
+                                    continue
+
+                                file_url = get_signed_url('MAIL_ATTACHMENTS', storage_path, expires_in=86400)
+                                if not file_url:
+                                    time.sleep(2)
+                                    file_url = get_signed_url('MAIL_ATTACHMENTS', storage_path, expires_in=86400)
+
+                                if not file_url:
+                                    if upload_res:
+                                        try:
+                                            delete_file('MAIL_ATTACHMENTS', storage_path)
+                                            logger.warning(f"Deleted orphaned file {storage_path} after signed URL failure.")
+                                        except Exception as del_err:
+                                            logger.error(f"Failed to delete orphaned file {storage_path}: {del_err}")
+                                    logger.error(f"Failed to get signed URL for {filename}. Skipping.")
+                                    continue
+
+                                # Create database record
+                                new_resume = AttachmentResume(
+                                    message_id=msg_id,
+                                    sender_email=sender,
+                                    subject=subject,
+                                    file_name=safe_filename,
+                                    file_url=file_url,
+                                    file_data=None,
+                                    email_body=email_body,
+                                    mime_type=content_type,
+                                    received_at=received_at,
+                                    retry_count=0,
+                                    last_error=None,
+                                    hr_id=hr_id
+                                )
+                                with SessionLocal() as local_db:
+                                    existing_check = local_db.query(AttachmentResume).filter(
+                                        AttachmentResume.message_id == msg_id
+                                    ).first()
+                                    if not existing_check:
+                                        local_db.add(new_resume)
+                                        local_db.commit()
+                                        saved_count += 1
+                                        resume_count += 1
+                                        found_resume = True
+                                        logger.info(f"Ingested new resume from {raw_email}: {safe_filename}")
+                                    else:
+                                        duplicate_count += 1
+
                         
                         if resume_count == 0:
                             logger.info(f"Email from {raw_email} had no resume attachments. Ingesting email metadata only.")
@@ -841,6 +862,9 @@ async def run_batch_resume_processing(db: Session = None, hr_id: int = None):
                 if resume.file_url and "/MAIL_ATTACHMENTS/" in resume.file_url:
                     bucket_path = resume.file_url.split("/MAIL_ATTACHMENTS/")[-1].split("?")[0]
                     resume_file_path = f"MAIL_ATTACHMENTS/{bucket_path}"
+                elif resume.file_url and "/resumes/" in resume.file_url:
+                    bucket_path = resume.file_url.split("/resumes/")[-1].split("?")[0]
+                    resume_file_path = f"resumes/{bucket_path}"
                 
                 if not resume_file_path:
                     logger.error(f"Resume file path could not be determined for resume {resume.id}")

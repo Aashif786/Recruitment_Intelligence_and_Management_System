@@ -709,7 +709,7 @@ async def send_hired_email(to_email: str, job_title: str, interview=None, offer_
         # Determine storage type: Supabase storage paths (e.g. "offer_letters/offer_123_456.pdf")
         # must ALWAYS be fetched from cloud — never from local disk — to prevent a stale local
         # file from silently shadowing the canonical Supabase copy.
-        is_supabase_path = "offer_letters/" in offer_letter_path and not os.path.isabs(offer_letter_path)
+        is_supabase_path = "offer_letters/" in offer_letter_path and not (os.path.isabs(offer_letter_path) or offer_letter_path.startswith("/") or offer_letter_path.startswith("\\"))
 
         # 1. Cloud Storage (primary for all template-driven offer letters)
         if is_supabase_path:
