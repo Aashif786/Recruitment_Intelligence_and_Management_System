@@ -220,7 +220,7 @@ export const ReportFilters = React.memo(function ReportFilters({
                   <TooltipTrigger asChild>
                     <Input
                       id="search"
-                      placeholder="Search Candidate Name"
+                      placeholder="Search Candidate name"
                       className="pl-8 hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200 rounded-xl"
                       value={searchQuery}
                       onKeyDown={(e) => {

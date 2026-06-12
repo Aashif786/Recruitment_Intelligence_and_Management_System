@@ -156,6 +156,9 @@ ACTION_DISPLAY_NAMES = {
 
 def get_user_friendly_fsm_error(e: Exception) -> str:
     if isinstance(e, InvalidTransitionError):
+        # If a custom message was provided instead of the default, use it.
+        if e.message and not e.message.startswith("Invalid transition:"):
+            return e.message
         state_display = STATE_DISPLAY_NAMES.get(e.current_state, e.current_state.replace('_', ' ').title() if e.current_state else "unknown")
         action_display = ACTION_DISPLAY_NAMES.get(e.action, e.action.replace('_', ' ').lower() if e.action else "unknown")
         return f"Cannot {action_display} because the candidate is currently in the '{state_display}' stage."
@@ -398,8 +401,8 @@ class CandidateStateMachine:
                         "Resume analysis must complete successfully before approving for interview.",
                     )
 
-        # Precondition: To HIRE, the interview must be completed.
-        if action == TransitionAction.HIRE:
+        # Precondition: To HIRE, the interview must be completed (unless coming from physical interview where they might not have a digital interview).
+        if action == TransitionAction.HIRE and application.status != CandidateState.PHYSICAL_INTERVIEW.value:
             if not application.interview or not application.interview.first_level_completed:
                 raise InvalidTransitionError(
                     application.status, action.value,
